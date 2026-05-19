@@ -342,7 +342,6 @@ async function useMedia(id) {
 }
 
 async function deleteMedia(id) {
-  if (!confirm('Remove from library?')) return;
   await deleteFileFromIDB(id);
   delete _imgCache[id];
   state.mediaLibrary = (state.mediaLibrary||[]).filter(m=>m.id!==id);
