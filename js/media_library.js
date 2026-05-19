@@ -1,22 +1,87 @@
 /* ============================================================
-   MEDIA LIBRARY  —  memory-safe upload
+   MEDIA LIBRARY — IndexedDB storage
    
-   CRITICAL FIX: Never use FileReader + base64 for images.
-   Base64 inflates file size by 33% and storing multiple
-   images in memory crashes Chrome ("Out of Memory").
-   
-   Solution: URL.createObjectURL() — creates a tiny pointer
-   to the file in browser memory. No inflation, no crash.
-   Works perfectly within the session.
+   WHY INDEXEDDB:
+   - localStorage: 5MB limit → crashes on images
+   - URL.createObjectURL: dies on page reload
+   - IndexedDB: stores actual binary files, no size limit,
+     survives reloads, works offline, built into every browser
    ============================================================ */
 
-// Object URL store — tiny pointers, not base64 blobs
-const _mediaBlobs = {};
+const DB_NAME    = 'socialhub_media';
+const DB_VERSION = 1;
+const STORE_NAME = 'files';
+let   _idb       = null;
+
+/* ── Open IndexedDB ─────────────────────────────────────────── */
+function openMediaDB() {
+  return new Promise((resolve, reject) => {
+    if (_idb) { resolve(_idb); return; }
+    const req = indexedDB.open(DB_NAME, DB_VERSION);
+    req.onupgradeneeded = e => {
+      const db = e.target.result;
+      if (!db.objectStoreNames.contains(STORE_NAME)) {
+        db.createObjectStore(STORE_NAME, { keyPath: 'id' });
+      }
+    };
+    req.onsuccess = e => { _idb = e.target.result; resolve(_idb); };
+    req.onerror   = e => reject(e.target.error);
+  });
+}
+
+async function saveFileToIDB(id, file) {
+  const db   = await openMediaDB();
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      const tx    = db.transaction(STORE_NAME, 'readwrite');
+      const store = tx.objectStore(STORE_NAME);
+      store.put({ id, data: e.target.result, type: file.type, name: file.name });
+      tx.oncomplete = () => resolve(e.target.result);
+      tx.onerror    = err => reject(err);
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+async function getFileFromIDB(id) {
+  const db = await openMediaDB();
+  return new Promise((resolve, reject) => {
+    const tx    = db.transaction(STORE_NAME, 'readonly');
+    const store = tx.objectStore(STORE_NAME);
+    const req   = store.get(id);
+    req.onsuccess = e => resolve(e.target.result ? e.target.result.data : null);
+    req.onerror   = e => reject(e.target.error);
+  });
+}
+
+async function deleteFileFromIDB(id) {
+  const db = await openMediaDB();
+  return new Promise((resolve) => {
+    const tx    = db.transaction(STORE_NAME, 'readwrite');
+    const store = tx.objectStore(STORE_NAME);
+    store.delete(id);
+    tx.oncomplete = () => resolve();
+  });
+}
+
+/* In-memory cache so we don't re-read IDB every render */
+const _imgCache = {};
+
+async function getThumb(m) {
+  if (_imgCache[m.id]) return _imgCache[m.id];
+  if (m.source === 'drive' && m.url) { _imgCache[m.id] = m.url; return m.url; }
+  try {
+    const data = await getFileFromIDB(m.id);
+    if (data) { _imgCache[m.id] = data; return data; }
+  } catch(e) {}
+  return null;
+}
 
 /* ── RENDER ───────────────────────────────────────────────── */
 function renderMediaLibrary() {
   _renderMediaStats();
-  renderMediaGrid('all');
+  renderMediaGridAsync('all');
 }
 
 function _renderMediaStats() {
@@ -33,7 +98,7 @@ function _renderMediaStats() {
     <div class="meta-stat-card"><div class="msc-label">Drive imports</div><div class="msc-val">${drives}</div><div class="msc-sub">From Google Drive</div></div>`;
 }
 
-function renderMediaGrid(filter) {
+async function renderMediaGridAsync(filter) {
   const el = document.getElementById('mediaGrid');
   if (!el) return;
   const lib   = state.mediaLibrary || [];
@@ -48,7 +113,7 @@ function renderMediaGrid(filter) {
       <div style="grid-column:1/-1;text-align:center;padding:50px;color:var(--text3)">
         <div style="font-size:48px;margin-bottom:14px">📁</div>
         <div style="font-size:16px;font-weight:800;color:var(--text2);margin-bottom:8px">Media library is empty</div>
-        <div style="font-size:13px;margin-bottom:18px">Upload multiple images or videos at once, or import from Google Drive</div>
+        <div style="font-size:13px;margin-bottom:18px">Upload images or videos — they save permanently and survive page reloads</div>
         <label class="btn btn-primary" style="cursor:pointer;display:inline-flex;align-items:center;gap:8px">
           <input type="file" accept="image/*,video/*" multiple style="display:none" onchange="handleDeviceUpload(this)">
           📁 Upload files
@@ -57,108 +122,93 @@ function renderMediaGrid(filter) {
     return;
   }
 
-  el.innerHTML = items.map(m => {
-    const src  = _mediaBlobs[m.id] || (m.source === 'drive' ? m.url : null);
-    const icon = m.type === 'video' ? '🎬' : '🖼️';
-    // Use <img> tag — works with blob: URLs from file:// pages
-    // CSS background-image does NOT work with blob: from file://
-    const thumbInner = src
-      ? `<img src="${src}" loading="lazy"
-           style="width:100%;height:100%;object-fit:cover;display:block;border-radius:var(--r-md) var(--r-md) 0 0"
-           onerror="this.style.display='none';this.parentElement.innerHTML+='<div style=\'display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:4px\'><span style=\'font-size:28px\'>${icon}</span><span style=\'font-size:9px;color:var(--text3)\'>Re-upload</span></div>'">`
-      : `<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:4px;background:var(--surface3)">
-           <span style="font-size:28px">${icon}</span>
-           <span style="font-size:9px;color:var(--text3);text-align:center;padding:0 8px">Re-upload to preview</span>
-         </div>`;
-
-    return `<div class="media-card" onclick="toggleSelectMedia(${m.id})">
-      <div class="media-thumb" style="position:relative;background:var(--surface3);overflow:hidden">
-        ${thumbInner}
-        <div class="media-overlay" style="position:absolute;inset:0;background:rgba(15,23,42,.5);display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .18s">
-          <button class="btn btn-primary btn-sm" onclick="event.stopPropagation();useMedia(${m.id})">Use in post</button>
-        </div>
+  // Show skeleton first
+  el.innerHTML = items.map(m => `
+    <div class="media-card" id="mc-${m.id}">
+      <div class="media-thumb" style="background:var(--surface3);display:flex;align-items:center;justify-content:center">
+        <div style="font-size:24px;opacity:.4">${m.type==='video'?'🎬':'🖼️'}</div>
       </div>
       <div class="media-info">
         <div class="media-name" title="${m.name}">${m.name}</div>
         <div class="media-meta">${m.size||''} · ${m.source==='drive'?'☁️ Drive':'📱 Device'}</div>
-        <div class="media-tags">${(m.tags||[]).map(t=>`<span class="media-tag">${t}</span>`).join('')}</div>
       </div>
-      <button class="media-delete" onclick="event.stopPropagation();deleteMedia(${m.id})" title="Remove">✕</button>
-    </div>`;
-  }).join('');
+    </div>`).join('');
+
+  // Load thumbnails asynchronously
+  for (const m of items) {
+    const card = document.getElementById('mc-' + m.id);
+    if (!card) continue;
+    const src = await getThumb(m);
+    const thumb = card.querySelector('.media-thumb');
+    if (thumb) {
+      if (src) {
+        thumb.innerHTML = `
+          <img src="${src}" style="width:100%;height:140px;object-fit:cover;display:block;border-radius:var(--r-md) var(--r-md) 0 0"
+            onerror="this.parentElement.innerHTML='<div style=\\'display:flex;align-items:center;justify-content:center;height:140px;font-size:28px\\'>🖼️</div>'">
+          <div class="media-overlay">
+            <button class="btn btn-primary btn-sm" onclick="event.stopPropagation();useMedia(${m.id})">Use in post</button>
+          </div>`;
+      } else {
+        thumb.innerHTML = `
+          <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:140px;gap:6px;background:var(--surface3)">
+            <span style="font-size:28px">${m.type==='video'?'🎬':'🖼️'}</span>
+            <span style="font-size:10px;color:var(--text3)">No preview</span>
+          </div>
+          <div class="media-overlay">
+            <button class="btn btn-primary btn-sm" onclick="event.stopPropagation();useMedia(${m.id})">Use in post</button>
+          </div>`;
+      }
+    }
+    // Re-wire click and delete
+    card.onclick = () => selectMediaCard(m.id, card);
+    card.innerHTML += `<button class="media-delete" onclick="event.stopPropagation();deleteMedia(${m.id})" title="Remove">✕</button>`;
+  }
 }
 
+function renderMediaGrid(filter) { renderMediaGridAsync(filter || 'all'); }
 function filterMedia(type, el) {
   document.querySelectorAll('#view-media .ftab').forEach(b => b.classList.remove('active'));
   if (el) el.classList.add('active');
-  renderMediaGrid(type);
+  renderMediaGridAsync(type);
 }
 
-/* ── BULK DEVICE UPLOAD ─────────────────────────────────────
-   Uses URL.createObjectURL — zero memory inflation, no crash.
-   Works for 50+ images at once.
-───────────────────────────────────────────────────────────── */
-function handleDeviceUpload(input) {
+/* ── UPLOAD ───────────────────────────────────────────────── */
+async function handleDeviceUpload(input) {
   const files = Array.from(input.files || []);
   if (!files.length) return;
+  input.value = '';
 
-  showToast(`📁 Adding ${files.length} file${files.length>1?'s':''}…`);
+  showToast(`📁 Saving ${files.length} file${files.length>1?'s':''}…`);
 
   let added = 0;
   if (!state.mediaLibrary) state.mediaLibrary = [];
 
-  files.forEach(file => {
+  for (const file of files) {
     const isImg = file.type.startsWith('image/');
     const isVid = file.type.startsWith('video/');
-    if (!isImg && !isVid) return;
+    if (!isImg && !isVid) continue;
 
-    const id  = genId();
-    // createObjectURL = tiny pointer, no base64, no memory issue
-    const url = URL.createObjectURL(file);
-    _mediaBlobs[id] = url;
+    const id = genId();
+    try {
+      const dataUrl = await saveFileToIDB(id, file);
+      _imgCache[id] = dataUrl; // cache immediately
 
-    state.mediaLibrary.push({
-      id,
-      name:   file.name,
-      type:   isVid ? 'video' : 'image',
-      size:   _fmtSize(file.size),
-      tags:   [],
-      date:   new Date().toISOString().split('T')[0],
-      source: 'upload',
-      url:    null,   // never store blob in localStorage
-      thumb:  null,
-    });
-    added++;
-  });
+      state.mediaLibrary.push({
+        id, name: file.name,
+        type: isVid ? 'video' : 'image',
+        size: _fmtSize(file.size),
+        tags: [], date: new Date().toISOString().split('T')[0],
+        source: 'upload', url: null, thumb: null,
+      });
+      added++;
+    } catch(e) {
+      console.warn('Failed to save file:', file.name, e);
+    }
+  }
 
-  input.value = '';
   _saveMetadataOnly();
   renderMediaLibrary();
-  _renderMediaStats();
-  showToast(`✅ ${added} file${added>1?'s':''} added!`, 'success');
-}
-
-/* Save only metadata — never image data — to localStorage */
-function _saveMetadataOnly() {
-  try {
-    const safe = {
-      ...state,
-      mediaLibrary: (state.mediaLibrary || []).map(m => ({
-        id: m.id, name: m.name, type: m.type, size: m.size,
-        tags: m.tags, date: m.date, source: m.source,
-        // Only preserve Drive URLs (they are short strings, not blobs)
-        url:   m.source === 'drive' ? m.url   : null,
-        thumb: m.source === 'drive' ? m.thumb : null,
-      }))
-    };
-    localStorage.setItem('socialhub_v2', JSON.stringify(safe));
-  } catch(e) {
-    console.warn('Storage full:', e);
-    // Last resort — save state without media list
-    try {
-      localStorage.setItem('socialhub_v2', JSON.stringify({...state, mediaLibrary:[]}));
-    } catch(e2) {}
-  }
+  showToast(`✅ ${added} file${added>1?'s':''} saved permanently!`, 'success');
 }
 
 /* ── GOOGLE DRIVE IMPORT ──────────────────────────────────── */
@@ -166,9 +216,8 @@ function importFromDrive() {
   document.getElementById('modalTitle').textContent = '☁️ Import from Google Drive';
   document.getElementById('modalBody').innerHTML = `
 
-    <!-- Big Open Drive button -->
     <div style="display:flex;align-items:center;gap:14px;padding:16px 18px;background:linear-gradient(135deg,#F0F9FF,#DBEAFE);border:2px solid #93C5FD;border-radius:var(--r-xl);margin-bottom:16px">
-      <div style="width:48px;height:48px;background:#fff;border-radius:var(--r-lg);display:flex;align-items:center;justify-content:center;font-size:26px;box-shadow:var(--sh-sm);flex-shrink:0">☁️</div>
+      <div style="font-size:28px">☁️</div>
       <div style="flex:1">
         <div style="font-size:14px;font-weight:800;color:var(--text)">Step 1 — Open Google Drive</div>
         <div style="font-size:11px;color:var(--text3);margin-top:2px">Find your image → right-click → Share → "Anyone with link" → Copy link</div>
@@ -179,7 +228,6 @@ function importFromDrive() {
       </button>
     </div>
 
-    <!-- Step 2: Paste -->
     <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:8px">Step 2 — Paste the link</div>
     <div style="position:relative;margin-bottom:10px">
       <input class="form-input" id="drive-url"
@@ -193,11 +241,9 @@ function importFromDrive() {
       </button>
     </div>
 
-    <!-- Live preview -->
     <div id="drive-modal-preview" style="margin-bottom:14px"></div>
 
-    <!-- File details -->
-    <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:8px">Step 3 — Confirm details</div>
+    <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:8px">Step 3 — Name & save</div>
     <div class="form-row">
       <div class="form-group">
         <label class="form-label">File name</label>
@@ -212,22 +258,16 @@ function importFromDrive() {
       </div>
     </div>
     <div class="form-group">
-      <label class="form-label">Tags (optional, comma-separated)</label>
+      <label class="form-label">Tags (optional)</label>
       <input class="form-input" id="drive-tags" placeholder="summer, product, sale">
-    </div>
-
-    <!-- Bulk tip -->
-    <div style="background:var(--amber-light);border:1.5px solid var(--amber);border-radius:var(--r-lg);padding:10px 14px;font-size:11px;color:#92400E;line-height:1.6">
-      💡 <strong>Bulk import:</strong> Import files one at a time. After each import, click "Import from Drive" again for the next file.
     </div>`;
 
   document.getElementById('modalFooter').innerHTML = `
     <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
     <button class="btn btn-ghost" onclick="window.open('https://drive.google.com/drive/my-drive','_blank')">☁️ Open Drive</button>
-    <button class="btn btn-primary" onclick="saveDriveImport()">⬇ Import to library</button>`;
+    <button class="btn btn-primary" onclick="saveDriveImport()">⬇ Import</button>`;
   document.getElementById('modalOverlay').classList.add('open');
 
-  // Auto-paste if clipboard already has a Drive URL
   setTimeout(async () => {
     try {
       const t = await navigator.clipboard.readText();
@@ -243,88 +283,56 @@ function previewDriveModalImage(url) {
   const el = document.getElementById('drive-modal-preview');
   if (!el) return;
   if (!url || !url.includes('drive.google.com')) { el.innerHTML = ''; return; }
-
   const m = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
-  if (!m) {
-    el.innerHTML = `<div style="padding:10px;background:var(--coral-light);border-radius:var(--r-md);font-size:12px;color:var(--coral)">
-      ❌ This doesn't look like a Drive file link. Make sure the URL contains <code>/d/</code>
-    </div>`;
-    return;
-  }
-
+  if (!m) { el.innerHTML = `<div style="color:var(--coral);font-size:12px;padding:8px">Not a valid Drive file link</div>`; return; }
   const fileId = m[1];
-  // Use thumbnail URL — much faster than full uc?export=view
   const thumb  = `https://drive.google.com/thumbnail?id=${fileId}&sz=w480`;
   const direct = `https://drive.google.com/uc?export=view&id=${fileId}`;
-
-  // Auto-fill name
   const nameEl = document.getElementById('drive-name');
   if (nameEl && !nameEl.value) nameEl.value = `drive-file-${fileId.slice(0,8)}.jpg`;
-
-  // Store the direct URL for import
-  window._driveImportUrl = direct;
-
   el.innerHTML = `
     <div style="background:var(--surface2);border:1.5px solid var(--border);border-radius:var(--r-lg);padding:12px;text-align:center">
-      <div style="font-size:11px;color:var(--text3);margin-bottom:8px">Preview loading…</div>
-      <img src="${thumb}" alt="Drive preview"
-        style="max-height:180px;max-width:100%;object-fit:contain;border-radius:var(--r-md);display:block;margin:0 auto;border:1.5px solid var(--border)"
-        onload="this.previousSibling.textContent='✅ Preview loaded — ready to import';this.previousSibling.style.color='var(--green)';this.previousSibling.style.fontWeight='700'"
-        onerror="this.style.display='none';this.previousSibling.innerHTML='❌ Could not load preview.<br><strong>Fix:</strong> In Drive → right-click file → Share → change to <strong>Anyone with the link</strong> → Copy → paste again.';this.previousSibling.style.color='var(--coral)'">
-      <div style="margin-top:8px">
-        <a href="${direct}" target="_blank" style="font-size:11px;color:var(--brand)">Open full size ↗</a>
-      </div>
+      <div style="font-size:11px;color:var(--text3);margin-bottom:8px">Loading preview…</div>
+      <img src="${thumb}" style="max-height:160px;max-width:100%;object-fit:contain;border-radius:var(--r-md);display:block;margin:0 auto;border:1.5px solid var(--border)"
+        onload="this.previousSibling.textContent='✅ Preview loaded';this.previousSibling.style.color='var(--green)';this.previousSibling.style.fontWeight='700'"
+        onerror="this.style.display='none';this.previousSibling.innerHTML='❌ Cannot load — make sure sharing is set to <strong>Anyone with the link</strong>';this.previousSibling.style.color='var(--coral)'">
     </div>`;
+  window._driveImportUrl = direct;
 }
 
 function saveDriveImport() {
-  const url  = (document.getElementById('drive-url').value  || '').trim();
+  const url  = (document.getElementById('drive-url').value || '').trim();
   const name = (document.getElementById('drive-name').value || '').trim() || 'drive-file.jpg';
   if (!url) { showToast('Paste a Google Drive link first', 'error'); return; }
-
   const m = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
   if (!m) { showToast('Not a valid Drive file link', 'error'); return; }
-
-  const fileId   = m[1];
-  const directUrl= `https://drive.google.com/uc?export=view&id=${fileId}`;
-  const type     = document.getElementById('drive-type').value;
-  const tags     = (document.getElementById('drive-tags').value||'').split(',').map(t=>t.trim()).filter(Boolean);
-  const id       = genId();
-
-  _mediaBlobs[id] = directUrl;
-
+  const fileId    = m[1];
+  const directUrl = `https://drive.google.com/uc?export=view&id=${fileId}`;
+  const type      = document.getElementById('drive-type').value;
+  const tags      = (document.getElementById('drive-tags').value||'').split(',').map(t=>t.trim()).filter(Boolean);
+  const id        = genId();
+  _imgCache[id]   = directUrl;
   if (!state.mediaLibrary) state.mediaLibrary = [];
-  state.mediaLibrary.push({
-    id, name, type,
-    url: directUrl, thumb: directUrl,
-    size: 'Drive', tags,
-    date: new Date().toISOString().split('T')[0],
-    source: 'drive'
-  });
-
-  saveState();
-  closeModal();
-  renderMediaLibrary();
+  state.mediaLibrary.push({ id, name, type, url: directUrl, thumb: directUrl, size: 'Drive', tags, date: new Date().toISOString().split('T')[0], source: 'drive' });
+  saveState(); closeModal(); renderMediaLibrary();
   showToast('☁️ Drive file imported!', 'success');
 }
 
 /* ── ACTIONS ──────────────────────────────────────────────── */
-function toggleSelectMedia(id) {
-  const m = (state.mediaLibrary||[]).find(x=>x.id===id);
-  if (m) { m._selected = !m._selected; renderMediaGrid('all'); }
+function selectMediaCard(id, card) {
+  document.querySelectorAll('.media-card').forEach(c => c.classList.remove('selected'));
+  card.classList.toggle('selected');
 }
 
-function useMedia(id) {
+async function useMedia(id) {
   const m   = (state.mediaLibrary||[]).find(x=>x.id===id);
-  const url = _mediaBlobs[id] || (m&&m.url);
-  if (!url) { showToast('Image not available — re-upload it', 'error'); return; }
-
+  const url = await getThumb(m) || (m&&m.url);
+  if (!url) { showToast('Image not available', 'error'); return; }
   const preview = document.getElementById('cadd-file-preview');
   if (preview) {
     preview.innerHTML = `<img src="${url}" style="width:100%;max-height:120px;object-fit:cover;border-radius:var(--r-lg);border:1.5px solid var(--border)">
       <div style="font-size:11px;color:var(--green);font-weight:600;margin-top:4px">✅ ${m?m.name:'Image'} selected</div>`;
     window._caddAttachment = { url, name: m?m.name:'image' };
-    // Switch to device tab to show preview
     const devTab = document.querySelector('.mat-tab');
     if (devTab) switchMediaTab('device', devTab);
     showToast(`✅ "${m?m.name:'Image'}" ready`, 'success');
@@ -333,9 +341,10 @@ function useMedia(id) {
   }
 }
 
-function deleteMedia(id) {
+async function deleteMedia(id) {
   if (!confirm('Remove from library?')) return;
-  if (_mediaBlobs[id]) { URL.revokeObjectURL(_mediaBlobs[id]); delete _mediaBlobs[id]; }
+  await deleteFileFromIDB(id);
+  delete _imgCache[id];
   state.mediaLibrary = (state.mediaLibrary||[]).filter(m=>m.id!==id);
   _saveMetadataOnly();
   renderMediaLibrary();
@@ -343,28 +352,35 @@ function deleteMedia(id) {
 }
 
 /* ── MINI LIBRARY (inside add post modal) ─────────────────── */
-function _populateMiniLibrary() {
+async function _populateMiniLibrary() {
   const el = document.getElementById('cadd-library-grid');
   if (!el) return;
-  const lib = (state.mediaLibrary||[]).filter(m => _mediaBlobs[m.id] || (m.source==='drive'&&m.url));
+  const lib = (state.mediaLibrary||[]).filter(m => m.source === 'drive' ? m.url : true);
   if (!lib.length) {
     el.innerHTML = '<div style="color:var(--text3);font-size:12px;padding:12px;text-align:center;grid-column:1/-1">No images yet — upload some first</div>';
     return;
   }
-  el.innerHTML = lib.map(m => {
-    const src = _mediaBlobs[m.id] || m.url;
-    return `<div class="media-mini-card" onclick="selectLibraryMedia(${m.id})" id="mmc-${m.id}" title="${m.name}"
-      style="background:var(--surface3);min-height:60px;display:flex;align-items:center;justify-content:center">
-      <img src="${src}" style="width:100%;height:60px;object-fit:cover;display:block"
-        onerror="this.style.display='none';this.parentElement.innerHTML='<span style=\'font-size:18px\'>🖼️</span>'">
-    </div>`;
-  }).join('');
+  el.innerHTML = '<div style="color:var(--text3);font-size:12px;padding:8px;grid-column:1/-1">Loading…</div>';
+  const cards = [];
+  for (const m of lib) {
+    const src = await getThumb(m);
+    if (src) cards.push({ m, src });
+  }
+  if (!cards.length) {
+    el.innerHTML = '<div style="color:var(--text3);font-size:12px;padding:12px;text-align:center;grid-column:1/-1">No previews available — upload images first</div>';
+    return;
+  }
+  el.innerHTML = cards.map(({m, src}) =>
+    `<div class="media-mini-card" onclick="selectLibraryMedia(${m.id})" id="mmc-${m.id}" title="${m.name}">
+      <img src="${src}" style="width:100%;height:60px;object-fit:cover;display:block">
+    </div>`
+  ).join('');
 }
 
-function selectLibraryMedia(id) {
+async function selectLibraryMedia(id) {
   const m   = (state.mediaLibrary||[]).find(x=>x.id===id);
-  const url = _mediaBlobs[id] || (m&&m.url);
-  if (!url) { showToast('Image not available — re-upload it', 'error'); return; }
+  const url = await getThumb(m);
+  if (!url) { showToast('Image not available', 'error'); return; }
   document.querySelectorAll('.media-mini-card').forEach(c=>c.classList.remove('selected'));
   const card = document.getElementById('mmc-'+id);
   if (card) card.classList.add('selected');
@@ -374,10 +390,55 @@ function selectLibraryMedia(id) {
   showToast('✅ Image selected', 'success');
 }
 
+/* ── METADATA SAVE (no binary data in localStorage) ─────── */
+function _saveMetadataOnly() {
+  try {
+    const safe = {
+      ...state,
+      mediaLibrary: (state.mediaLibrary||[]).map(m => ({
+        id:m.id, name:m.name, type:m.type, size:m.size,
+        tags:m.tags, date:m.date, source:m.source,
+        url:   m.source==='drive' ? m.url   : null,
+        thumb: m.source==='drive' ? m.thumb : null,
+      }))
+    };
+    localStorage.setItem('socialhub_v2', JSON.stringify(safe));
+  } catch(e) { console.warn('Save error:', e); }
+}
+
+/* ── HANDLE UPLOAD FROM ADD POST MODAL ───────────────────── */
+async function handleCaddFile(input, source) {
+  const file = input.files[0];
+  if (!file) return;
+  const id     = genId();
+  const dataUrl = await saveFileToIDB(id, file);
+  _imgCache[id] = dataUrl;
+  window._caddAttachment = { url: dataUrl, name: file.name, id };
+
+  const previewId = source === 'drive' ? 'cadd-drive-file-preview' : 'cadd-file-preview';
+  const preview   = document.getElementById(previewId);
+  if (preview) {
+    if (file.type.startsWith('image/')) {
+      preview.innerHTML = `<img src="${dataUrl}" style="width:100%;max-height:130px;object-fit:cover;border-radius:var(--r-lg);border:1.5px solid var(--border)">
+        <div style="font-size:11px;color:var(--green);font-weight:600;margin-top:4px">✅ ${file.name} saved</div>`;
+    } else {
+      preview.innerHTML = `<div style="background:var(--surface2);border-radius:var(--r-lg);padding:10px;font-size:12px;color:var(--green);font-weight:600">🎬 ${file.name} ready</div>`;
+    }
+  }
+
+  // Add to media library too
+  if (!state.mediaLibrary) state.mediaLibrary = [];
+  if (!state.mediaLibrary.find(m=>m.id===id)) {
+    state.mediaLibrary.push({ id, name:file.name, type:file.type.startsWith('video/')?'video':'image', size:_fmtSize(file.size), tags:[], date:new Date().toISOString().split('T')[0], source:source||'upload', url:null, thumb:null });
+    _saveMetadataOnly();
+  }
+  input.value = '';
+}
+
 /* ── HELPERS ──────────────────────────────────────────────── */
 function _fmtSize(bytes) {
   if (!bytes) return '';
-  if (bytes < 1024)         return bytes + ' B';
-  if (bytes < 1024*1024)    return (bytes/1024).toFixed(1) + ' KB';
+  if (bytes < 1024)       return bytes + ' B';
+  if (bytes < 1024*1024)  return (bytes/1024).toFixed(1) + ' KB';
   return (bytes/(1024*1024)).toFixed(1) + ' MB';
 }
