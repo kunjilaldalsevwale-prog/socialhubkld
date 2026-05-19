@@ -1,119 +1,72 @@
 /* ============================================================
-   MEDIA LIBRARY — IndexedDB storage
-   
-   WHY INDEXEDDB:
-   - localStorage: 5MB limit → crashes on images
-   - URL.createObjectURL: dies on page reload
-   - IndexedDB: stores actual binary files, no size limit,
-     survives reloads, works offline, built into every browser
+   MEDIA LIBRARY — Cloudinary cloud storage
+   Cloud name: dtegieseu
+   Auto-uploads images/videos → permanent URLs → shared across all team members
    ============================================================ */
 
-const DB_NAME    = 'socialhub_media';
-const DB_VERSION = 1;
-const STORE_NAME = 'files';
-let   _idb       = null;
+const CLOUDINARY_CLOUD = 'dtegieseu';
+const CLOUDINARY_PRESET = 'PASTE_PRESET_NAME_HERE'; // unsigned upload preset
 
-/* ── Open IndexedDB ─────────────────────────────────────────── */
-function openMediaDB() {
+/* ── Upload a file to Cloudinary ────────────────────────────── */
+async function uploadToCloudinary(file, onProgress) {
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('upload_preset', CLOUDINARY_PRESET);
+  formData.append('folder', 'socialhub');
+
   return new Promise((resolve, reject) => {
-    if (_idb) { resolve(_idb); return; }
-    const req = indexedDB.open(DB_NAME, DB_VERSION);
-    req.onupgradeneeded = e => {
-      const db = e.target.result;
-      if (!db.objectStoreNames.contains(STORE_NAME)) {
-        db.createObjectStore(STORE_NAME, { keyPath: 'id' });
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD}/auto/upload`);
+
+    xhr.upload.onprogress = e => {
+      if (e.lengthComputable && onProgress) {
+        onProgress(Math.round((e.loaded / e.total) * 100));
       }
     };
-    req.onsuccess = e => { _idb = e.target.result; resolve(_idb); };
-    req.onerror   = e => reject(e.target.error);
-  });
-}
 
-async function saveFileToIDB(id, file) {
-  const db   = await openMediaDB();
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = e => {
-      const tx    = db.transaction(STORE_NAME, 'readwrite');
-      const store = tx.objectStore(STORE_NAME);
-      store.put({ id, data: e.target.result, type: file.type, name: file.name });
-      tx.oncomplete = () => resolve(e.target.result);
-      tx.onerror    = err => reject(err);
+    xhr.onload = () => {
+      if (xhr.status === 200) {
+        const res = JSON.parse(xhr.responseText);
+        resolve({ url: res.secure_url, publicId: res.public_id, width: res.width, height: res.height });
+      } else {
+        reject(new Error('Upload failed: ' + xhr.status));
+      }
     };
-    reader.readAsDataURL(file);
+    xhr.onerror = () => reject(new Error('Network error'));
+    xhr.send(formData);
   });
 }
 
-async function getFileFromIDB(id) {
-  const db = await openMediaDB();
-  return new Promise((resolve, reject) => {
-    const tx    = db.transaction(STORE_NAME, 'readonly');
-    const store = tx.objectStore(STORE_NAME);
-    const req   = store.get(id);
-    req.onsuccess = e => resolve(e.target.result ? e.target.result.data : null);
-    req.onerror   = e => reject(e.target.error);
-  });
-}
-
-async function deleteFileFromIDB(id) {
-  const db = await openMediaDB();
-  return new Promise((resolve) => {
-    const tx    = db.transaction(STORE_NAME, 'readwrite');
-    const store = tx.objectStore(STORE_NAME);
-    store.delete(id);
-    tx.oncomplete = () => resolve();
-  });
-}
-
-/* In-memory cache so we don't re-read IDB every render */
-const _imgCache = {};
-
-async function getThumb(m) {
-  if (_imgCache[m.id]) return _imgCache[m.id];
-  if (m.source === 'drive' && m.url) { _imgCache[m.id] = m.url; return m.url; }
-  try {
-    const data = await getFileFromIDB(m.id);
-    if (data) { _imgCache[m.id] = data; return data; }
-  } catch(e) {}
-  return null;
-}
-
-/* ── RENDER ───────────────────────────────────────────────── */
+/* ══════════════════════════════════════════════════════════
+   RENDER
+══════════════════════════════════════════════════════════ */
 function renderMediaLibrary() {
   _renderMediaStats();
-  renderMediaGridAsync('all');
+  _renderMediaGrid();
 }
 
 function _renderMediaStats() {
-  const el = document.getElementById('mediaStats');
+  const el  = document.getElementById('mediaStats');
   if (!el) return;
-  const lib    = state.mediaLibrary || [];
-  const images = lib.filter(m => m.type === 'image').length;
-  const videos = lib.filter(m => m.type === 'video').length;
-  const drives = lib.filter(m => m.source === 'drive').length;
+  const lib = state.mediaLibrary || [];
   el.innerHTML = `
     <div class="meta-stat-card"><div class="msc-label">Total files</div><div class="msc-val">${lib.length}</div><div class="msc-sub">In library</div></div>
-    <div class="meta-stat-card"><div class="msc-label">Images</div><div class="msc-val">${images}</div><div class="msc-sub">Photos & graphics</div></div>
-    <div class="meta-stat-card"><div class="msc-label">Videos</div><div class="msc-val">${videos}</div><div class="msc-sub">Reels & clips</div></div>
-    <div class="meta-stat-card"><div class="msc-label">Drive imports</div><div class="msc-val">${drives}</div><div class="msc-sub">From Google Drive</div></div>`;
+    <div class="meta-stat-card"><div class="msc-label">Images</div><div class="msc-val">${lib.filter(m=>m.type==='image').length}</div><div class="msc-sub">Photos & graphics</div></div>
+    <div class="meta-stat-card"><div class="msc-label">Videos</div><div class="msc-val">${lib.filter(m=>m.type==='video').length}</div><div class="msc-sub">Reels & clips</div></div>
+    <div class="meta-stat-card"><div class="msc-label">Cloud stored</div><div class="msc-val">${lib.filter(m=>m.source==='cloudinary').length}</div><div class="msc-sub">On Cloudinary</div></div>`;
 }
 
-async function renderMediaGridAsync(filter) {
-  const el = document.getElementById('mediaGrid');
+function _renderMediaGrid() {
+  const el    = document.getElementById('mediaGrid');
+  const items = state.mediaLibrary || [];
   if (!el) return;
-  const lib   = state.mediaLibrary || [];
-  let   items = filter && filter !== 'all' ? lib.filter(m => m.type === filter) : [...lib];
-
-  document.querySelectorAll('#view-media .ftab').forEach(b => b.classList.remove('active'));
-  const tab = document.querySelector(`#view-media .ftab[data-filter="${filter}"]`);
-  if (tab) tab.classList.add('active');
 
   if (!items.length) {
     el.innerHTML = `
       <div style="grid-column:1/-1;text-align:center;padding:50px;color:var(--text3)">
         <div style="font-size:48px;margin-bottom:14px">📁</div>
         <div style="font-size:16px;font-weight:800;color:var(--text2);margin-bottom:8px">Media library is empty</div>
-        <div style="font-size:13px;margin-bottom:18px">Upload images or videos — they save permanently and survive page reloads</div>
+        <div style="font-size:13px;margin-bottom:18px">Upload images or videos — stored permanently on Cloudinary, shared with your whole team</div>
         <label class="btn btn-primary" style="cursor:pointer;display:inline-flex;align-items:center;gap:8px">
           <input type="file" accept="image/*,video/*" multiple style="display:none" onchange="handleDeviceUpload(this)">
           📁 Upload files
@@ -122,322 +75,334 @@ async function renderMediaGridAsync(filter) {
     return;
   }
 
-  // Show skeleton first
-  el.innerHTML = items.map(m => `
-    <div class="media-card" id="mc-${m.id}">
-      <div class="media-thumb" style="background:var(--surface3);display:flex;align-items:center;justify-content:center">
-        <div style="font-size:24px;opacity:.4">${m.type==='video'?'🎬':'🖼️'}</div>
+  el.innerHTML = items.map(m => {
+    const thumb = m.url
+      ? (m.type === 'image'
+          ? m.url.replace('/upload/', '/upload/w_400,h_280,c_fill/')
+          : m.url.replace('/upload/', '/upload/so_0,w_400,h_280,c_fill/'))
+      : null;
+    return `<div class="media-card" id="mc-${m.id}" onclick="selectMediaCard(${m.id})">
+      <div class="media-thumb" style="height:140px;overflow:hidden;position:relative;background:var(--surface3)">
+        ${thumb
+          ? `<img src="${thumb}" style="width:100%;height:140px;object-fit:cover;display:block"
+              onerror="this.style.display='none'">`
+          : `<div style="display:flex;align-items:center;justify-content:center;height:140px;font-size:32px">${m.type==='video'?'🎬':'🖼️'}</div>`}
+        <div class="media-overlay">
+          <button class="btn btn-primary btn-sm" onclick="event.stopPropagation();useMedia(${m.id})">Use in post</button>
+        </div>
+        ${m.source==='cloudinary'?'<div style="position:absolute;top:6px;left:6px;background:rgba(0,0,0,.55);color:#fff;font-size:9px;font-weight:700;padding:2px 6px;border-radius:10px">☁️ Cloud</div>':''}
       </div>
       <div class="media-info">
         <div class="media-name" title="${m.name}">${m.name}</div>
-        <div class="media-meta">${m.size||''} · ${m.source==='drive'?'☁️ Drive':'📱 Device'}</div>
+        <div class="media-meta">${m.size||''} · ${m.source==='cloudinary'?'☁️ Cloudinary':m.source==='drive'?'☁️ Drive':'📱 Device'}</div>
+        <div class="media-tags">${(m.tags||[]).map(t=>`<span class="media-tag">${t}</span>`).join('')}</div>
       </div>
-    </div>`).join('');
-
-  // Load thumbnails asynchronously
-  for (const m of items) {
-    const card = document.getElementById('mc-' + m.id);
-    if (!card) continue;
-    const src = await getThumb(m);
-    const thumb = card.querySelector('.media-thumb');
-    if (thumb) {
-      if (src) {
-        thumb.innerHTML = `
-          <img src="${src}" style="width:100%;height:140px;object-fit:cover;display:block;border-radius:var(--r-md) var(--r-md) 0 0"
-            onerror="this.parentElement.innerHTML='<div style=\\'display:flex;align-items:center;justify-content:center;height:140px;font-size:28px\\'>🖼️</div>'">
-          <div class="media-overlay">
-            <button class="btn btn-primary btn-sm" onclick="event.stopPropagation();useMedia(${m.id})">Use in post</button>
-          </div>`;
-      } else {
-        thumb.innerHTML = `
-          <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:140px;gap:6px;background:var(--surface3)">
-            <span style="font-size:28px">${m.type==='video'?'🎬':'🖼️'}</span>
-            <span style="font-size:10px;color:var(--text3)">No preview</span>
-          </div>
-          <div class="media-overlay">
-            <button class="btn btn-primary btn-sm" onclick="event.stopPropagation();useMedia(${m.id})">Use in post</button>
-          </div>`;
-      }
-    }
-    // Re-wire click and delete
-    card.onclick = () => selectMediaCard(m.id, card);
-    card.innerHTML += `<button class="media-delete" onclick="event.stopPropagation();deleteMedia(${m.id})" title="Remove">✕</button>`;
-  }
+      <button class="media-delete" onclick="event.stopPropagation();deleteMedia(${m.id})" title="Remove">✕</button>
+    </div>`;
+  }).join('');
 }
 
-function renderMediaGrid(filter) { renderMediaGridAsync(filter || 'all'); }
 function filterMedia(type, el) {
   document.querySelectorAll('#view-media .ftab').forEach(b => b.classList.remove('active'));
   if (el) el.classList.add('active');
-  renderMediaGridAsync(type);
+  const items = type && type !== 'all'
+    ? (state.mediaLibrary||[]).filter(m => m.type === type)
+    : (state.mediaLibrary||[]);
+  // re-render with filter
+  const orig = state.mediaLibrary;
+  state.mediaLibrary = items;
+  _renderMediaGrid();
+  state.mediaLibrary = orig;
 }
 
-/* ── UPLOAD ───────────────────────────────────────────────── */
+/* ══════════════════════════════════════════════════════════
+   UPLOAD — auto uploads to Cloudinary, no URL pasting
+══════════════════════════════════════════════════════════ */
 async function handleDeviceUpload(input) {
   const files = Array.from(input.files || []);
   if (!files.length) return;
   input.value = '';
 
-  showToast(`📁 Saving ${files.length} file${files.length>1?'s':''}…`);
+  if (CLOUDINARY_PRESET === 'PASTE_PRESET_NAME_HERE') {
+    showToast('⚠️ Set up Cloudinary preset first — see Media Library settings', 'error');
+    _showCloudinarySetup();
+    return;
+  }
 
-  let added = 0;
+  // Show progress UI
+  const grid = document.getElementById('mediaGrid');
+  const progressHtml = files.map((f, i) => `
+    <div id="upload-prog-${i}" style="background:var(--white);border:1.5px solid var(--border);border-radius:var(--r-xl);padding:14px;box-shadow:var(--sh-sm)">
+      <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${f.name}</div>
+      <div style="background:var(--surface3);border-radius:4px;height:6px;overflow:hidden">
+        <div id="bar-${i}" style="height:100%;background:var(--brand);border-radius:4px;width:0%;transition:width .3s"></div>
+      </div>
+      <div id="pct-${i}" style="font-size:11px;color:var(--text3);margin-top:4px">0%</div>
+    </div>`).join('');
+
+  if (grid) grid.innerHTML = `
+    <div style="grid-column:1/-1;margin-bottom:12px;font-size:14px;font-weight:800;color:var(--text)">
+      ☁️ Uploading ${files.length} file${files.length>1?'s':''} to Cloudinary…
+    </div>
+    ${progressHtml}`;
+
+  let uploaded = 0;
   if (!state.mediaLibrary) state.mediaLibrary = [];
 
-  for (const file of files) {
+  for (let i = 0; i < files.length; i++) {
+    const file = files[i];
     const isImg = file.type.startsWith('image/');
     const isVid = file.type.startsWith('video/');
     if (!isImg && !isVid) continue;
 
-    const id = genId();
     try {
-      const dataUrl = await saveFileToIDB(id, file);
-      _imgCache[id] = dataUrl; // cache immediately
+      const result = await uploadToCloudinary(file, pct => {
+        const bar = document.getElementById('bar-' + i);
+        const lbl = document.getElementById('pct-' + i);
+        if (bar) bar.style.width = pct + '%';
+        if (lbl) lbl.textContent = pct + '%';
+      });
+
+      // Mark complete
+      const prog = document.getElementById('upload-prog-' + i);
+      if (prog) prog.style.background = 'var(--green-light)';
+      const lbl = document.getElementById('pct-' + i);
+      if (lbl) { lbl.textContent = '✅ Done'; lbl.style.color = 'var(--green)'; lbl.style.fontWeight = '700'; }
 
       state.mediaLibrary.push({
-        id, name: file.name,
-        type: isVid ? 'video' : 'image',
-        size: _fmtSize(file.size),
-        tags: [], date: new Date().toISOString().split('T')[0],
-        source: 'upload', url: null, thumb: null,
+        id:     genId(),
+        name:   file.name,
+        type:   isVid ? 'video' : 'image',
+        size:   _fmtSize(file.size),
+        url:    result.url,
+        thumb:  result.url,
+        tags:   [],
+        date:   new Date().toISOString().split('T')[0],
+        source: 'cloudinary',
+        publicId: result.publicId,
       });
-      added++;
-    } catch(e) {
-      console.warn('Failed to save file:', file.name, e);
+      uploaded++;
+    } catch(err) {
+      const lbl = document.getElementById('pct-' + i);
+      if (lbl) { lbl.textContent = '❌ Failed — ' + err.message; lbl.style.color = 'var(--coral)'; }
     }
   }
 
-  _saveMetadataOnly();
-  renderMediaLibrary();
-  showToast(`✅ ${added} file${added>1?'s':''} saved permanently!`, 'success');
+  saveState();
+  setTimeout(() => { renderMediaLibrary(); }, 1200);
+  showToast(`✅ ${uploaded} file${uploaded>1?'s':''} uploaded to Cloudinary!`, 'success');
 }
 
-/* ── GOOGLE DRIVE IMPORT ──────────────────────────────────── */
+/* ── Upload from add post modal ─────────────────────────── */
+async function handleCaddFile(input, source) {
+  const file = input.files[0];
+  if (!file) return;
+  input.value = '';
+
+  const previewId = source === 'drive' ? 'cadd-drive-file-preview' : 'cadd-file-preview';
+  const preview   = document.getElementById(previewId);
+
+  if (CLOUDINARY_PRESET === 'PASTE_PRESET_NAME_HERE') {
+    // Fallback: use object URL for this session only
+    const url = URL.createObjectURL(file);
+    window._caddAttachment = { url, name: file.name };
+    if (preview && file.type.startsWith('image/')) {
+      preview.innerHTML = `<img src="${url}" style="width:100%;max-height:130px;object-fit:cover;border-radius:var(--r-lg);border:1.5px solid var(--border)">
+        <div style="font-size:11px;color:var(--amber);font-weight:600;margin-top:4px">⚠️ Temporary — set up Cloudinary for permanent storage</div>`;
+    }
+    return;
+  }
+
+  if (preview) preview.innerHTML = `<div style="padding:10px;font-size:12px;color:var(--brand);font-weight:600">☁️ Uploading to Cloudinary…</div>`;
+
+  try {
+    const result = await uploadToCloudinary(file, pct => {
+      if (preview) preview.innerHTML = `
+        <div style="background:var(--surface2);border-radius:var(--r-lg);padding:10px">
+          <div style="font-size:11px;color:var(--brand);font-weight:600;margin-bottom:6px">☁️ Uploading… ${pct}%</div>
+          <div style="background:var(--border);border-radius:4px;height:4px"><div style="height:100%;background:var(--brand);border-radius:4px;width:${pct}%"></div></div>
+        </div>`;
+    });
+
+    window._caddAttachment = { url: result.url, name: file.name, source: 'cloudinary' };
+
+    if (preview) {
+      preview.innerHTML = file.type.startsWith('image/')
+        ? `<img src="${result.url}" style="width:100%;max-height:130px;object-fit:cover;border-radius:var(--r-lg);border:1.5px solid var(--border)">
+           <div style="font-size:11px;color:var(--green);font-weight:600;margin-top:4px">✅ Uploaded to Cloudinary — permanent & shared</div>`
+        : `<div style="background:var(--green-light);border-radius:var(--r-lg);padding:10px;font-size:12px;color:var(--green);font-weight:600">✅ ${file.name} uploaded to Cloudinary</div>`;
+    }
+
+    // Also add to media library
+    if (!state.mediaLibrary) state.mediaLibrary = [];
+    state.mediaLibrary.push({ id:genId(), name:file.name, type:file.type.startsWith('video/')?'video':'image', size:_fmtSize(file.size), url:result.url, thumb:result.url, tags:[], date:new Date().toISOString().split('T')[0], source:'cloudinary', publicId:result.publicId });
+    saveState();
+  } catch(err) {
+    if (preview) preview.innerHTML = `<div style="color:var(--coral);font-size:12px;padding:8px">❌ Upload failed. Check your internet connection.</div>`;
+  }
+}
+
+/* ══════════════════════════════════════════════════════════
+   GOOGLE DRIVE IMPORT
+══════════════════════════════════════════════════════════ */
 function importFromDrive() {
   document.getElementById('modalTitle').textContent = '☁️ Import from Google Drive';
   document.getElementById('modalBody').innerHTML = `
-
-    <div style="display:flex;align-items:center;gap:14px;padding:16px 18px;background:linear-gradient(135deg,#F0F9FF,#DBEAFE);border:2px solid #93C5FD;border-radius:var(--r-xl);margin-bottom:16px">
+    <div style="display:flex;align-items:center;gap:14px;padding:16px;background:linear-gradient(135deg,#F0F9FF,#DBEAFE);border:2px solid #93C5FD;border-radius:var(--r-xl);margin-bottom:16px">
       <div style="font-size:28px">☁️</div>
       <div style="flex:1">
-        <div style="font-size:14px;font-weight:800;color:var(--text)">Step 1 — Open Google Drive</div>
-        <div style="font-size:11px;color:var(--text3);margin-top:2px">Find your image → right-click → Share → "Anyone with link" → Copy link</div>
+        <div style="font-size:14px;font-weight:800;color:var(--text)">Open Google Drive</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:2px">Find file → Share → Anyone with link → Copy link</div>
       </div>
       <button onclick="window.open('https://drive.google.com/drive/my-drive','_blank')"
-        style="padding:10px 18px;background:#1A73E8;color:#fff;border:none;border-radius:24px;font-size:13px;font-weight:800;cursor:pointer;white-space:nowrap;font-family:var(--font);box-shadow:0 3px 12px rgba(26,115,232,.35);flex-shrink:0">
+        style="padding:10px 18px;background:#1A73E8;color:#fff;border:none;border-radius:24px;font-size:13px;font-weight:800;cursor:pointer;font-family:var(--font)">
         Open Drive ↗
       </button>
     </div>
-
-    <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:8px">Step 2 — Paste the link</div>
     <div style="position:relative;margin-bottom:10px">
-      <input class="form-input" id="drive-url"
-        placeholder="Paste Google Drive link here — preview appears automatically"
-        style="padding-right:86px"
+      <input class="form-input" id="drive-url" placeholder="Paste Google Drive link"
         oninput="previewDriveModalImage(this.value)"
         onpaste="setTimeout(()=>previewDriveModalImage(document.getElementById('drive-url').value),60)">
-      <button onclick="(async()=>{try{const t=await navigator.clipboard.readText();const i=document.getElementById('drive-url');if(i){i.value=t;previewDriveModalImage(t);}}catch(e){showToast('Paste with Ctrl+V','');}})()"
+      <button onclick="(async()=>{try{const t=await navigator.clipboard.readText();const i=document.getElementById('drive-url');if(i){i.value=t;previewDriveModalImage(t);}}catch(e){};})()"
         style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:var(--brand);color:#fff;border:none;border-radius:16px;padding:5px 12px;font-size:11px;font-weight:700;cursor:pointer;font-family:var(--font)">
         📋 Paste
       </button>
     </div>
-
-    <div id="drive-modal-preview" style="margin-bottom:14px"></div>
-
-    <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:8px">Step 3 — Name & save</div>
+    <div id="drive-modal-preview" style="margin-bottom:12px"></div>
     <div class="form-row">
-      <div class="form-group">
-        <label class="form-label">File name</label>
-        <input class="form-input" id="drive-name" placeholder="e.g. summer-banner.jpg">
-      </div>
-      <div class="form-group">
-        <label class="form-label">Type</label>
+      <div class="form-group"><label class="form-label">File name</label>
+        <input class="form-input" id="drive-name" placeholder="e.g. banner.jpg"></div>
+      <div class="form-group"><label class="form-label">Type</label>
         <select class="form-select" id="drive-type">
           <option value="image">🖼 Image</option>
           <option value="video">🎬 Video</option>
-        </select>
-      </div>
-    </div>
-    <div class="form-group">
-      <label class="form-label">Tags (optional)</label>
-      <input class="form-input" id="drive-tags" placeholder="summer, product, sale">
+        </select></div>
     </div>`;
-
   document.getElementById('modalFooter').innerHTML = `
     <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
-    <button class="btn btn-ghost" onclick="window.open('https://drive.google.com/drive/my-drive','_blank')">☁️ Open Drive</button>
-    <button class="btn btn-primary" onclick="saveDriveImport()">⬇ Import</button>`;
+    <button class="btn btn-primary" onclick="saveDriveImport()">Import</button>`;
   document.getElementById('modalOverlay').classList.add('open');
-
-  setTimeout(async () => {
-    try {
-      const t = await navigator.clipboard.readText();
-      if (t && t.includes('drive.google.com')) {
-        const inp = document.getElementById('drive-url');
-        if (inp && !inp.value) { inp.value = t; previewDriveModalImage(t); }
-      }
-    } catch(e) {}
-  }, 200);
 }
 
 function previewDriveModalImage(url) {
   const el = document.getElementById('drive-modal-preview');
-  if (!el) return;
-  if (!url || !url.includes('drive.google.com')) { el.innerHTML = ''; return; }
+  if (!el || !url) return;
   const m = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
-  if (!m) { el.innerHTML = `<div style="color:var(--coral);font-size:12px;padding:8px">Not a valid Drive file link</div>`; return; }
+  if (!m) return;
   const fileId = m[1];
   const thumb  = `https://drive.google.com/thumbnail?id=${fileId}&sz=w480`;
-  const direct = `https://drive.google.com/uc?export=view&id=${fileId}`;
   const nameEl = document.getElementById('drive-name');
-  if (nameEl && !nameEl.value) nameEl.value = `drive-file-${fileId.slice(0,8)}.jpg`;
-  el.innerHTML = `
-    <div style="background:var(--surface2);border:1.5px solid var(--border);border-radius:var(--r-lg);padding:12px;text-align:center">
-      <div style="font-size:11px;color:var(--text3);margin-bottom:8px">Loading preview…</div>
-      <img src="${thumb}" style="max-height:160px;max-width:100%;object-fit:contain;border-radius:var(--r-md);display:block;margin:0 auto;border:1.5px solid var(--border)"
-        onload="this.previousSibling.textContent='✅ Preview loaded';this.previousSibling.style.color='var(--green)';this.previousSibling.style.fontWeight='700'"
-        onerror="this.style.display='none';this.previousSibling.innerHTML='❌ Cannot load — make sure sharing is set to <strong>Anyone with the link</strong>';this.previousSibling.style.color='var(--coral)'">
-    </div>`;
-  window._driveImportUrl = direct;
+  if (nameEl && !nameEl.value) nameEl.value = `drive-${fileId.slice(0,8)}.jpg`;
+  el.innerHTML = `<img src="${thumb}" style="max-height:140px;max-width:100%;object-fit:contain;border-radius:var(--r-lg);border:1.5px solid var(--border);display:block"
+    onerror="this.style.display='none'">`;
+  window._driveImportUrl = `https://drive.google.com/uc?export=view&id=${fileId}`;
 }
 
 function saveDriveImport() {
-  const url  = (document.getElementById('drive-url').value || '').trim();
-  const name = (document.getElementById('drive-name').value || '').trim() || 'drive-file.jpg';
-  if (!url) { showToast('Paste a Google Drive link first', 'error'); return; }
+  const url  = (document.getElementById('drive-url').value||'').trim();
+  const name = (document.getElementById('drive-name').value||'').trim() || 'drive-file.jpg';
+  if (!url) { showToast('Paste a Drive link', 'error'); return; }
   const m = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
-  if (!m) { showToast('Not a valid Drive file link', 'error'); return; }
-  const fileId    = m[1];
-  const directUrl = `https://drive.google.com/uc?export=view&id=${fileId}`;
-  const type      = document.getElementById('drive-type').value;
-  const tags      = (document.getElementById('drive-tags').value||'').split(',').map(t=>t.trim()).filter(Boolean);
-  const id        = genId();
-  _imgCache[id]   = directUrl;
+  if (!m) { showToast('Invalid Drive link', 'error'); return; }
+  const directUrl = `https://drive.google.com/uc?export=view&id=${m[1]}`;
+  const type = document.getElementById('drive-type').value;
   if (!state.mediaLibrary) state.mediaLibrary = [];
-  state.mediaLibrary.push({ id, name, type, url: directUrl, thumb: directUrl, size: 'Drive', tags, date: new Date().toISOString().split('T')[0], source: 'drive' });
+  state.mediaLibrary.push({ id:genId(), name, type, url:directUrl, thumb:directUrl, size:'Drive', tags:[], date:new Date().toISOString().split('T')[0], source:'drive' });
   saveState(); closeModal(); renderMediaLibrary();
   showToast('☁️ Drive file imported!', 'success');
 }
 
-/* ── ACTIONS ──────────────────────────────────────────────── */
-function selectMediaCard(id, card) {
+/* ══════════════════════════════════════════════════════════
+   ACTIONS
+══════════════════════════════════════════════════════════ */
+function selectMediaCard(id) {
   document.querySelectorAll('.media-card').forEach(c => c.classList.remove('selected'));
-  card.classList.toggle('selected');
+  const card = document.getElementById('mc-' + id);
+  if (card) card.classList.toggle('selected');
 }
 
-async function useMedia(id) {
-  const m   = (state.mediaLibrary||[]).find(x=>x.id===id);
-  const url = await getThumb(m) || (m&&m.url);
-  if (!url) { showToast('Image not available', 'error'); return; }
+function useMedia(id) {
+  const m = (state.mediaLibrary||[]).find(x=>x.id===id);
+  if (!m || !m.url) { showToast('No URL for this file', 'error'); return; }
   const preview = document.getElementById('cadd-file-preview');
   if (preview) {
-    preview.innerHTML = `<img src="${url}" style="width:100%;max-height:120px;object-fit:cover;border-radius:var(--r-lg);border:1.5px solid var(--border)">
-      <div style="font-size:11px;color:var(--green);font-weight:600;margin-top:4px">✅ ${m?m.name:'Image'} selected</div>`;
-    window._caddAttachment = { url, name: m?m.name:'image' };
+    preview.innerHTML = `<img src="${m.url}" style="width:100%;max-height:120px;object-fit:cover;border-radius:var(--r-lg);border:1.5px solid var(--border)">
+      <div style="font-size:11px;color:var(--green);font-weight:600;margin-top:4px">✅ ${m.name} selected</div>`;
+    window._caddAttachment = { url:m.url, name:m.name };
     const devTab = document.querySelector('.mat-tab');
     if (devTab) switchMediaTab('device', devTab);
-    showToast(`✅ "${m?m.name:'Image'}" ready`, 'success');
+    showToast(`✅ "${m.name}" ready`, 'success');
   } else {
-    showToast('Open a post form first, then pick from Library tab', '');
+    showToast('Open a post form first', '');
   }
 }
 
-async function deleteMedia(id) {
-  await deleteFileFromIDB(id);
-  delete _imgCache[id];
+function deleteMedia(id) {
   state.mediaLibrary = (state.mediaLibrary||[]).filter(m=>m.id!==id);
-  _saveMetadataOnly();
-  renderMediaLibrary();
-  showToast('File removed');
+  saveState(); renderMediaLibrary(); showToast('File removed');
 }
 
-/* ── MINI LIBRARY (inside add post modal) ─────────────────── */
-async function _populateMiniLibrary() {
-  const el = document.getElementById('cadd-library-grid');
+/* ── Mini library in add post modal ─────────────────────── */
+function _populateMiniLibrary() {
+  const el  = document.getElementById('cadd-library-grid');
   if (!el) return;
-  const lib = (state.mediaLibrary||[]).filter(m => m.source === 'drive' ? m.url : true);
+  const lib = (state.mediaLibrary||[]).filter(m=>m.url && m.type==='image');
   if (!lib.length) {
-    el.innerHTML = '<div style="color:var(--text3);font-size:12px;padding:12px;text-align:center;grid-column:1/-1">No images yet — upload some first</div>';
+    el.innerHTML = '<div style="color:var(--text3);font-size:12px;padding:12px;text-align:center;grid-column:1/-1">No images yet</div>';
     return;
   }
-  el.innerHTML = '<div style="color:var(--text3);font-size:12px;padding:8px;grid-column:1/-1">Loading…</div>';
-  const cards = [];
-  for (const m of lib) {
-    const src = await getThumb(m);
-    if (src) cards.push({ m, src });
-  }
-  if (!cards.length) {
-    el.innerHTML = '<div style="color:var(--text3);font-size:12px;padding:12px;text-align:center;grid-column:1/-1">No previews available — upload images first</div>';
-    return;
-  }
-  el.innerHTML = cards.map(({m, src}) =>
-    `<div class="media-mini-card" onclick="selectLibraryMedia(${m.id})" id="mmc-${m.id}" title="${m.name}">
-      <img src="${src}" style="width:100%;height:60px;object-fit:cover;display:block">
-    </div>`
-  ).join('');
+  el.innerHTML = lib.map(m => {
+    const thumb = m.url.includes('cloudinary') ? m.url.replace('/upload/','/upload/w_120,h_80,c_fill/') : m.url;
+    return `<div class="media-mini-card" onclick="selectLibraryMedia(${m.id})" id="mmc-${m.id}" title="${m.name}">
+      <img src="${thumb}" style="width:100%;height:60px;object-fit:cover;display:block"
+        onerror="this.parentElement.innerHTML='<div style=\\'font-size:18px;text-align:center;padding:12px\\'>🖼️</div>'">
+    </div>`;
+  }).join('');
 }
 
-async function selectLibraryMedia(id) {
-  const m   = (state.mediaLibrary||[]).find(x=>x.id===id);
-  const url = await getThumb(m);
-  if (!url) { showToast('Image not available', 'error'); return; }
+function selectLibraryMedia(id) {
+  const m = (state.mediaLibrary||[]).find(x=>x.id===id);
+  if (!m||!m.url) { showToast('No URL available','error'); return; }
   document.querySelectorAll('.media-mini-card').forEach(c=>c.classList.remove('selected'));
   const card = document.getElementById('mmc-'+id);
   if (card) card.classList.add('selected');
-  window._caddAttachment = { url, name: m?m.name:'image' };
+  window._caddAttachment = { url:m.url, name:m.name };
   const lbl = document.getElementById('cadd-library-selected');
-  if (lbl) { lbl.textContent=`✅ "${m?m.name:'Image'}" selected`; lbl.style.display=''; }
-  showToast('✅ Image selected', 'success');
+  if (lbl) { lbl.textContent=`✅ "${m.name}" selected`; lbl.style.display=''; }
+  showToast('✅ Image selected','success');
 }
 
-/* ── METADATA SAVE (no binary data in localStorage) ─────── */
-function _saveMetadataOnly() {
-  try {
-    const safe = {
-      ...state,
-      mediaLibrary: (state.mediaLibrary||[]).map(m => ({
-        id:m.id, name:m.name, type:m.type, size:m.size,
-        tags:m.tags, date:m.date, source:m.source,
-        url:   m.source==='drive' ? m.url   : null,
-        thumb: m.source==='drive' ? m.thumb : null,
-      }))
-    };
-    localStorage.setItem('socialhub_v2', JSON.stringify(safe));
-  } catch(e) { console.warn('Save error:', e); }
+/* ══════════════════════════════════════════════════════════
+   CLOUDINARY SETUP GUIDE
+══════════════════════════════════════════════════════════ */
+function _showCloudinarySetup() {
+  document.getElementById('modalTitle').textContent = '☁️ Set up Cloudinary';
+  document.getElementById('modalBody').innerHTML = `
+    <div style="text-align:center;padding:16px 0 8px">
+      <div style="font-size:32px;margin-bottom:8px">☁️</div>
+      <div style="font-size:15px;font-weight:800;color:var(--text);margin-bottom:4px">One-time setup needed</div>
+      <div style="font-size:12px;color:var(--text3)">Takes 2 minutes · Free forever</div>
+    </div>
+    ${[
+      ['Go to Cloudinary', 'Settings → Upload → Upload presets → Add upload preset'],
+      ['Set signing mode', 'Change "Signing mode" to <strong>Unsigned</strong> → Save'],
+      ['Copy preset name', 'Copy the preset name (e.g. <code>ml_default</code>)'],
+      ['Paste in sync.js', 'Open <code>js/media_library.js</code> → line 5 → replace <code>PASTE_PRESET_NAME_HERE</code> with your preset name → push to GitHub'],
+    ].map(([t,d],i)=>`
+      <div style="display:flex;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)">
+        <div style="width:24px;height:24px;border-radius:50%;background:var(--brand);color:#fff;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">${i+1}</div>
+        <div><div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:3px">${t}</div><div style="font-size:12px;color:var(--text2);line-height:1.6">${d}</div></div>
+      </div>`).join('')}`;
+  document.getElementById('modalFooter').innerHTML = `
+    <button class="btn btn-ghost" onclick="closeModal()">Close</button>
+    <button class="btn btn-primary" onclick="window.open('https://console.cloudinary.com/settings/upload','_blank')">Open Cloudinary ↗</button>`;
+  document.getElementById('modalOverlay').classList.add('open');
 }
 
-/* ── HANDLE UPLOAD FROM ADD POST MODAL ───────────────────── */
-async function handleCaddFile(input, source) {
-  const file = input.files[0];
-  if (!file) return;
-  const id     = genId();
-  const dataUrl = await saveFileToIDB(id, file);
-  _imgCache[id] = dataUrl;
-  window._caddAttachment = { url: dataUrl, name: file.name, id };
-
-  const previewId = source === 'drive' ? 'cadd-drive-file-preview' : 'cadd-file-preview';
-  const preview   = document.getElementById(previewId);
-  if (preview) {
-    if (file.type.startsWith('image/')) {
-      preview.innerHTML = `<img src="${dataUrl}" style="width:100%;max-height:130px;object-fit:cover;border-radius:var(--r-lg);border:1.5px solid var(--border)">
-        <div style="font-size:11px;color:var(--green);font-weight:600;margin-top:4px">✅ ${file.name} saved</div>`;
-    } else {
-      preview.innerHTML = `<div style="background:var(--surface2);border-radius:var(--r-lg);padding:10px;font-size:12px;color:var(--green);font-weight:600">🎬 ${file.name} ready</div>`;
-    }
-  }
-
-  // Add to media library too
-  if (!state.mediaLibrary) state.mediaLibrary = [];
-  if (!state.mediaLibrary.find(m=>m.id===id)) {
-    state.mediaLibrary.push({ id, name:file.name, type:file.type.startsWith('video/')?'video':'image', size:_fmtSize(file.size), tags:[], date:new Date().toISOString().split('T')[0], source:source||'upload', url:null, thumb:null });
-    _saveMetadataOnly();
-  }
-  input.value = '';
-}
-
-/* ── HELPERS ──────────────────────────────────────────────── */
-function _fmtSize(bytes) {
-  if (!bytes) return '';
-  if (bytes < 1024)       return bytes + ' B';
-  if (bytes < 1024*1024)  return (bytes/1024).toFixed(1) + ' KB';
-  return (bytes/(1024*1024)).toFixed(1) + ' MB';
+/* ── Helpers ─────────────────────────────────────────────── */
+function _fmtSize(b) {
+  if (!b) return '';
+  if (b < 1024)       return b + ' B';
+  if (b < 1024*1024)  return (b/1024).toFixed(1) + ' KB';
+  return (b/(1024*1024)).toFixed(1) + ' MB';
 }
