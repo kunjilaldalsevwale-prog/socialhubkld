@@ -140,14 +140,14 @@ function _renderMediaGrid() {
           ? m.url.replace('/upload/', '/upload/w_400,h_280,c_fill/')
           : m.url.replace('/upload/', '/upload/so_0,w_400,h_280,c_fill/'))
       : null;
-    return `<div class="media-card" id="mc-${m.id}" onclick="openMediaLightbox(${m.id})">
-      <div class="media-thumb" style="height:140px;overflow:hidden;position:relative;background:var(--surface3)">
+    return `<div class="media-card" id="mc-${m.id}">
+      <div class="media-thumb" style="height:140px;overflow:hidden;position:relative;background:var(--surface3);cursor:zoom-in" onclick="openMediaLightbox(${m.id})">
         ${thumb
-          ? `<img src="${thumb}" style="width:100%;height:140px;object-fit:cover;display:block"
+          ? `<img src="${thumb}" style="width:100%;height:140px;object-fit:cover;display:block;pointer-events:none"
               onerror="this.style.display='none'">`
-          : `<div style="display:flex;align-items:center;justify-content:center;height:140px;font-size:32px">${m.type==='video'?'🎬':'🖼️'}</div>`}
-        <div class="media-overlay">
-          <button class="btn btn-primary btn-sm" onclick="event.stopPropagation();useMedia(${m.id})">Use in post</button>
+          : `<div style="display:flex;align-items:center;justify-content:center;height:140px;font-size:32px;pointer-events:none">${m.type==='video'?'🎬':'🖼️'}</div>`}
+        <div class="media-overlay" style="pointer-events:none">
+          <button class="btn btn-primary btn-sm" style="pointer-events:all" onclick="event.stopPropagation();useMedia(${m.id})">Use in post</button>
         </div>
         ${m.source==='cloudinary'?'<div style="position:absolute;top:6px;left:6px;background:rgba(0,0,0,.55);color:#fff;font-size:9px;font-weight:700;padding:2px 6px;border-radius:10px">☁️ Cloud</div>':''}
       </div>
