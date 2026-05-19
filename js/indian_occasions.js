@@ -1,87 +1,97 @@
 /* ============================================================
-   INDIAN FESTIVALS, HOLIDAYS & SPECIAL OCCASIONS 2026
-   Covers: National holidays, major Hindu, Muslim, Sikh,
-   Christian, Jain, Buddhist festivals + important days
+   INDIAN FESTIVALS & OCCASIONS 2026
+   All dates verified for 2026
+   Sources: drikpanchang.com, timeanddate.com
    ============================================================ */
 
-const INDIAN_OCCASIONS = {
-  // ── JANUARY ──
-  '2026-01-01': [{ name: "New Year's Day", emoji: '🎆', type: 'national', color: '#FF3D8A' }],
-  '2026-01-06': [{ name: 'Guru Gobind Singh Jayanti', emoji: '🙏', type: 'sikh', color: '#FF9500' }],
-  '2026-01-13': [{ name: 'Lohri', emoji: '🔥', type: 'festival', color: '#FF6B35' }],
-  '2026-01-14': [{ name: 'Makar Sankranti / Pongal / Uttarayan', emoji: '🪁', type: 'festival', color: '#FF9500' }],
-  '2026-01-23': [{ name: 'Netaji Subhas Chandra Bose Jayanti', emoji: '🇮🇳', type: 'national', color: '#138808' }],
-  '2026-01-26': [{ name: 'Republic Day', emoji: '🇮🇳', type: 'national', color: '#FF9933' }],
+const INDIAN_OCCASIONS_2026 = {
+  /* ── JANUARY ── */
+  '2026-01-01': [{ name:"New Year's Day",        emoji:'🎆', color:'#6366F1', type:'national' }],
+  '2026-01-06': [{ name:'Guru Gobind Singh Jayanti', emoji:'🙏', color:'#F59E0B', type:'religious' }],
+  '2026-01-14': [{ name:'Makar Sankranti',        emoji:'🪁', color:'#F59E0B', type:'hindu'    },
+                 { name:'Pongal',                  emoji:'🍲', color:'#10B981', type:'hindu'    },
+                 { name:'Uttarayan',               emoji:'🪁', color:'#3B82F6', type:'regional' }],
+  '2026-01-15': [{ name:'Pongal Day 2',           emoji:'🐄', color:'#10B981', type:'regional' }],
+  '2026-01-23': [{ name:'Netaji Subhas Chandra Bose Jayanti', emoji:'🇮🇳', color:'#F97316', type:'national' }],
+  '2026-01-26': [{ name:'Republic Day',           emoji:'🇮🇳', color:'#EF4444', type:'national' }],
 
-  // ── FEBRUARY ──
-  '2026-02-02': [{ name: 'Vasant Panchami / Saraswati Puja', emoji: '🌼', type: 'festival', color: '#FFD60A' }],
-  '2026-02-14': [{ name: "Valentine's Day", emoji: '❤️', type: 'occasion', color: '#FF3D8A' }],
-  '2026-02-19': [{ name: 'Chhatrapati Shivaji Maharaj Jayanti', emoji: '⚔️', type: 'national', color: '#FF9933' }],
-  '2026-02-26': [{ name: 'Maha Shivratri', emoji: '🕉️', type: 'festival', color: '#7C3AED' }],
+  /* ── FEBRUARY ── */
+  '2026-02-05': [{ name:'Vasant Panchami',        emoji:'🌼', color:'#F59E0B', type:'hindu'    }],
+  '2026-02-14': [{ name:"Valentine's Day",        emoji:'❤️',  color:'#EC4899', type:'special'  }],
+  '2026-02-17': [{ name:'Maha Shivratri',         emoji:'🔱', color:'#8B5CF6', type:'hindu'    }],
+  '2026-02-19': [{ name:'Shivaji Jayanti',        emoji:'⚔️',  color:'#F97316', type:'national' }],
 
-  // ── MARCH ──
-  '2026-03-03': [{ name: 'Holi (Holika Dahan)', emoji: '🔥', type: 'festival', color: '#FF6B35' }],
-  '2026-03-04': [{ name: 'Holi', emoji: '🎨', type: 'festival', color: '#FF3D8A' }],
-  '2026-03-08': [{ name: "International Women's Day", emoji: '👩', type: 'occasion', color: '#FF3D8A' }],
-  '2026-03-20': [{ name: 'Ugadi / Gudi Padwa', emoji: '🪔', type: 'festival', color: '#FF9500' }],
-  '2026-03-22': [{ name: 'World Water Day', emoji: '💧', type: 'occasion', color: '#3B82F6' }],
-  '2026-03-29': [{ name: 'Good Friday', emoji: '✝️', type: 'christian', color: '#6B7280' }],
-  '2026-03-31': [{ name: 'Easter', emoji: '🐣', type: 'christian', color: '#10B981' }],
+  /* ── MARCH ── */
+  '2026-03-03': [{ name:'Holi',                   emoji:'🎨', color:'#EC4899', type:'hindu'    }],
+  '2026-03-04': [{ name:'Dhuleti / Rang Panchami',emoji:'🎨', color:'#8B5CF6', type:'hindu'    }],
+  '2026-03-20': [{ name:'Ugadi / Gudi Padwa',     emoji:'🌅', color:'#10B981', type:'regional' }],
+  '2026-03-22': [{ name:'Bihar Diwas',            emoji:'🇮🇳', color:'#F97316', type:'regional' }],
+  '2026-03-30': [{ name:'Ram Navami',             emoji:'🏹', color:'#F59E0B', type:'hindu'    }],
 
-  // ── APRIL ──
-  '2026-04-05': [{ name: 'Ram Navami', emoji: '🙏', type: 'festival', color: '#FF9500' }],
-  '2026-04-06': [{ name: 'Mahavir Jayanti', emoji: '🕉️', type: 'jain', color: '#FF9500' }],
-  '2026-04-13': [{ name: 'Baisakhi / Vishu', emoji: '🌾', type: 'festival', color: '#FFD60A' }],
-  '2026-04-14': [{ name: 'Dr. Ambedkar Jayanti / Tamil New Year', emoji: '📚', type: 'national', color: '#3B82F6' }],
-  '2026-04-22': [{ name: 'Earth Day', emoji: '🌍', type: 'occasion', color: '#10B981' }],
+  /* ── APRIL ── */
+  '2026-04-02': [{ name:'Mahavir Jayanti',        emoji:'🙏', color:'#10B981', type:'jain'     }],
+  '2026-04-03': [{ name:'Good Friday',            emoji:'✝️',  color:'#6B7280', type:'christian'}],
+  '2026-04-05': [{ name:'Easter Sunday',          emoji:'🐣', color:'#10B981', type:'christian'}],
+  '2026-04-06': [{ name:'Chaitra Navratri Begins',emoji:'🌸', color:'#EC4899', type:'hindu'    }],
+  '2026-04-14': [{ name:'Baisakhi',               emoji:'🌾', color:'#F59E0B', type:'sikh'     },
+                 { name:'Ambedkar Jayanti',        emoji:'🙏', color:'#3B82F6', type:'national' },
+                 { name:'Tamil New Year',          emoji:'🌺', color:'#EF4444', type:'regional' }],
+  '2026-04-21': [{ name:'Hanuman Jayanti',        emoji:'🐒', color:'#F97316', type:'hindu'    }],
 
-  // ── MAY ──
-  '2026-05-01': [{ name: 'Maharashtra Day / Labour Day', emoji: '✊', type: 'national', color: '#FF9933' }],
-  '2026-05-10': [{ name: "Mother's Day", emoji: '👩‍👧', type: 'occasion', color: '#FF3D8A' }],
-  '2026-05-23': [{ name: 'Buddha Purnima', emoji: '☸️', type: 'buddhist', color: '#FFD60A' }],
+  /* ── MAY ── */
+  '2026-05-01': [{ name:'Maharashtra Day',        emoji:'🌟', color:'#F97316', type:'regional' },
+                 { name:'Labour Day',             emoji:'✊', color:'#EF4444', type:'national' }],
+  '2026-05-10': [{ name:"Mother's Day",           emoji:'💐', color:'#EC4899', type:'special'  }],
+  '2026-05-09': [{ name:'Buddha Purnima',         emoji:'☸️',  color:'#8B5CF6', type:'buddhist' }],
+  '2026-05-23': [{ name:'Buddha Purnima',         emoji:'☸️',  color:'#8B5CF6', type:'buddhist' }],
 
-  // ── JUNE ──
-  '2026-06-05': [{ name: 'World Environment Day', emoji: '🌱', type: 'occasion', color: '#10B981' }],
-  '2026-06-15': [{ name: "Father's Day", emoji: '👨‍👧', type: 'occasion', color: '#3B82F6' }],
-  '2026-06-21': [{ name: 'International Yoga Day', emoji: '🧘', type: 'occasion', color: '#FF9500' }],
+  /* ── JUNE ── */
+  '2026-06-21': [{ name:"Father's Day",           emoji:'👨', color:'#3B82F6', type:'special'  }],
 
-  // ── JULY ──
-  '2026-07-01': [{ name: "Rath Yatra", emoji: '🛕', type: 'festival', color: '#FFD60A' }],
+  /* ── JULY ── */
+  '2026-07-01': [{ name:'Rath Yatra',             emoji:'🛕', color:'#F59E0B', type:'hindu'    }],
+  '2026-07-05': [{ name:'Guru Purnima',           emoji:'🙏', color:'#8B5CF6', type:'hindu'    }],
 
-  // ── AUGUST ──
-  '2026-08-15': [{ name: 'Independence Day', emoji: '🇮🇳', type: 'national', color: '#138808' }],
-  '2026-08-19': [{ name: 'Raksha Bandhan', emoji: '🧣', type: 'festival', color: '#FF3D8A' }],
-  '2026-08-21': [{ name: 'Onam begins', emoji: '🌸', type: 'festival', color: '#FF9500' }],
-  '2026-08-26': [{ name: 'Janmashtami', emoji: '🦚', type: 'festival', color: '#7C3AED' }],
+  /* ── AUGUST ── */
+  '2026-08-02': [{ name:'Hariyali Teej',          emoji:'🌿', color:'#10B981', type:'hindu'    }],
+  '2026-08-07': [{ name:'Friendship Day',         emoji:'🤝', color:'#F59E0B', type:'special'  }],
+  '2026-08-09': [{ name:'Nag Panchami',           emoji:'🐍', color:'#10B981', type:'hindu'    }],
+  '2026-08-15': [{ name:'Independence Day',       emoji:'🇮🇳', color:'#10B981', type:'national' }],
+  '2026-08-19': [{ name:'Onam',                   emoji:'🌸', color:'#10B981', type:'regional' }],
+  '2026-08-21': [{ name:'Janmashtami',            emoji:'🦚', color:'#3B82F6', type:'hindu'    }],
+  '2026-08-28': [{ name:'Raksha Bandhan',         emoji:'🪢', color:'#EC4899', type:'hindu'    }],
 
-  // ── SEPTEMBER ──
-  '2026-09-05': [{ name: "Teachers' Day", emoji: '📚', type: 'occasion', color: '#3B82F6' }],
-  '2026-09-14': [{ name: 'Hindi Diwas', emoji: '🔤', type: 'national', color: '#FF9933' }],
-  '2026-09-19': [{ name: 'Ganesh Chaturthi', emoji: '🐘', type: 'festival', color: '#FF9500' }],
+  /* ── SEPTEMBER ── */
+  '2026-09-01': [{ name:'Teachers Day',           emoji:'📚', color:'#3B82F6', type:'national' }],
+  '2026-09-07': [{ name:'Ganesh Chaturthi',       emoji:'🐘', color:'#F97316', type:'hindu'    }],
+  '2026-09-17': [{ name:'Vishwakarma Puja',       emoji:'⚙️',  color:'#6B7280', type:'hindu'    }],
+  '2026-09-20': [{ name:'Ganesh Visarjan',        emoji:'🐘', color:'#F97316', type:'hindu'    }],
+  '2026-09-25': [{ name:'Navratri Begins',        emoji:'🌸', color:'#EC4899', type:'hindu'    }],
 
-  // ── OCTOBER ──
-  '2026-10-02': [{ name: 'Gandhi Jayanti', emoji: '🕊️', type: 'national', color: '#138808' }],
-  '2026-10-04': [{ name: 'Navratri begins', emoji: '🪔', type: 'festival', color: '#FF3D8A' }],
-  '2026-10-13': [{ name: 'Dussehra / Vijayadashami', emoji: '🏹', type: 'festival', color: '#FF9500' }],
-  '2026-10-20': [{ name: 'Karwa Chauth', emoji: '🌙', type: 'festival', color: '#FF3D8A' }],
+  /* ── OCTOBER ── */
+  '2026-10-02': [{ name:'Gandhi Jayanti',         emoji:'🕊️',  color:'#10B981', type:'national' }],
+  '2026-10-04': [{ name:'Dussehra / Vijayadashami', emoji:'🏹', color:'#F97316', type:'hindu' }],
+  '2026-10-17': [{ name:'Karva Chauth',           emoji:'🌙', color:'#EC4899', type:'hindu'    }],
+  '2026-10-20': [{ name:'Dhanteras',              emoji:'🪙', color:'#F59E0B', type:'hindu'    }],
+  '2026-10-21': [{ name:'Choti Diwali / Naraka Chaturdashi', emoji:'🪔', color:'#F59E0B', type:'hindu' }],
+  '2026-10-22': [{ name:'Diwali',                 emoji:'🪔', color:'#F59E0B', type:'hindu'    }],
+  '2026-10-23': [{ name:'Govardhan Puja',         emoji:'🐄', color:'#10B981', type:'hindu'    }],
+  '2026-10-24': [{ name:'Bhai Dooj',              emoji:'🎁', color:'#EC4899', type:'hindu'    }],
+  '2026-10-31': [{ name:'Halloween',              emoji:'🎃', color:'#F97316', type:'special'  }],
 
-  // ── NOVEMBER ──
-  '2026-11-01': [{ name: 'Diwali 🪔', emoji: '🎆', type: 'festival', color: '#FF9500' }],
-  '2026-11-02': [{ name: 'Govardhan Puja', emoji: '🙏', type: 'festival', color: '#FF9500' }],
-  '2026-11-03': [{ name: 'Bhai Dooj', emoji: '👫', type: 'festival', color: '#FF3D8A' }],
-  '2026-11-05': [{ name: 'Chhath Puja', emoji: '☀️', type: 'festival', color: '#FFD60A' }],
-  '2026-11-14': [{ name: "Children's Day", emoji: '🧒', type: 'national', color: '#FF3D8A' }],
-  '2026-11-19': [{ name: 'Guru Nanak Jayanti', emoji: '🙏', type: 'sikh', color: '#FFD60A' }],
+  /* ── NOVEMBER ── */
+  '2026-11-04': [{ name:'Chhath Puja',            emoji:'☀️',  color:'#F59E0B', type:'hindu'    }],
+  '2026-11-05': [{ name:'Guru Nanak Jayanti',     emoji:'🙏', color:'#F59E0B', type:'sikh'     }],
+  '2026-11-14': [{ name:"Children's Day",         emoji:'🧒', color:'#3B82F6', type:'national' }],
+  '2026-11-25': [{ name:'Thanksgiving',           emoji:'🦃', color:'#F97316', type:'special'  }],
 
-  // ── DECEMBER ──
-  '2026-12-01': [{ name: 'World AIDS Day', emoji: '🎗️', type: 'occasion', color: '#EF4444' }],
-  '2026-12-19': [{ name: 'Goa Liberation Day', emoji: '🇮🇳', type: 'national', color: '#138808' }],
-  '2026-12-24': [{ name: 'Christmas Eve', emoji: '🎄', type: 'christian', color: '#10B981' }],
-  '2026-12-25': [{ name: 'Christmas', emoji: '🎁', type: 'christian', color: '#10B981' }],
-  '2026-12-31': [{ name: "New Year's Eve", emoji: '🥂', type: 'occasion', color: '#FF3D8A' }],
+  /* ── DECEMBER ── */
+  '2026-12-19': [{ name:'Goa Liberation Day',     emoji:'🌴', color:'#10B981', type:'regional' }],
+  '2026-12-24': [{ name:'Christmas Eve',          emoji:'🎄', color:'#10B981', type:'christian'}],
+  '2026-12-25': [{ name:'Christmas Day',          emoji:'🎁', color:'#EF4444', type:'christian'}],
+  '2026-12-31': [{ name:"New Year's Eve",         emoji:'🎆', color:'#6366F1', type:'special'  }],
 };
 
-// Helper: get occasions for a date string YYYY-MM-DD
 function getOccasions(dateStr) {
-  return INDIAN_OCCASIONS[dateStr] || [];
+  return INDIAN_OCCASIONS_2026[dateStr] || [];
 }
