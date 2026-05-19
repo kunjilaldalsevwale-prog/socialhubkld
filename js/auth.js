@@ -61,7 +61,7 @@ function initAuth() {
 /* ══════════════════════════════════════════════════════════
    LOGIN SCREEN — email + password
 ══════════════════════════════════════════════════════════ */
-function showLoginScreen(tab) {
+function showLoginScreen() {
   document.getElementById('app').style.display = 'none';
   let el = document.getElementById('loginScreen');
   if (!el) { el = document.createElement('div'); el.id = 'loginScreen'; document.body.appendChild(el); }
@@ -80,19 +80,14 @@ function showLoginScreen(tab) {
           </div>
         </div>
 
-        <!-- Tabs: Sign in / Change password -->
-        <div class="login-tabs">
-          <button class="login-tab ${!tab||tab==='signin'?'active':''}" onclick="showLoginScreen('signin')">Sign in</button>
-          <button class="login-tab ${tab==='change'?'active':''}" onclick="showLoginScreen('change')">Change password</button>
-        </div>
+        <h2 class="login-title">Welcome back 👋</h2>
+        <p class="login-sub">Sign in with your work email</p>
 
-        <!-- Error -->
+        <!-- Error / Success -->
         <div id="loginError" class="login-error" style="display:none"></div>
-        <!-- Success -->
         <div id="loginSuccess" class="login-success" style="display:none"></div>
 
-        ${!tab || tab === 'signin' ? `
-        <!-- ══ SIGN IN ══ -->
+        <!-- Email -->
         <div class="login-field">
           <label class="login-label">Work email</label>
           <input class="login-input" type="email" id="loginEmail"
@@ -101,8 +96,8 @@ function showLoginScreen(tab) {
             oninput="previewUserFromEmail(this.value)">
         </div>
 
-        <!-- Avatar preview -->
-        <div id="loginAvatarWrap" style="display:none;margin-bottom:14px;display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--brand-pale);border-radius:var(--r-lg)">
+        <!-- Avatar preview (auto shows when email matched) -->
+        <div id="loginAvatarWrap" style="display:none;margin-bottom:14px;align-items:center;gap:10px;padding:8px 12px;background:var(--brand-pale);border-radius:var(--r-lg)">
           <div id="loginAvatar" class="login-avatar-sm"></div>
           <div>
             <div id="loginUserName" style="font-size:13px;font-weight:700;color:var(--text)"></div>
@@ -110,6 +105,7 @@ function showLoginScreen(tab) {
           </div>
         </div>
 
+        <!-- Password -->
         <div class="login-field">
           <label class="login-label">Password</label>
           <div style="position:relative">
@@ -123,39 +119,8 @@ function showLoginScreen(tab) {
         <button class="login-btn" onclick="doLogin()">Sign in →</button>
 
         <div class="login-hint">
-          <strong>Your email:</strong> yourname@kunjilal.com<br>
-          <strong>Default password:</strong> [yourname]123<br>
-          <span style="opacity:.7">e.g. anusha@kunjilal.com / anusha123</span>
+          <strong>Email:</strong> yourname@kunjilal.com &nbsp;·&nbsp; <strong>Password:</strong> yourname123
         </div>
-        ` : `
-        <!-- ══ CHANGE PASSWORD ══ -->
-        <div class="login-field">
-          <label class="login-label">Work email</label>
-          <input class="login-input" type="email" id="cpEmail" placeholder="yourname@kunjilal.com">
-        </div>
-        <div class="login-field">
-          <label class="login-label">Current password</label>
-          <div style="position:relative">
-            <input class="login-input" type="password" id="cpOld" placeholder="Your current password">
-            <button onclick="toggleLoginPw('cpOld')" class="login-eye">👁</button>
-          </div>
-        </div>
-        <div class="login-field">
-          <label class="login-label">New password</label>
-          <div style="position:relative">
-            <input class="login-input" type="password" id="cpNew" placeholder="Min 6 characters">
-            <button onclick="toggleLoginPw('cpNew')" class="login-eye">👁</button>
-          </div>
-        </div>
-        <div class="login-field">
-          <label class="login-label">Confirm new password</label>
-          <div style="position:relative">
-            <input class="login-input" type="password" id="cpNew2" placeholder="Re-enter new password">
-            <button onclick="toggleLoginPw('cpNew2')" class="login-eye">👁</button>
-          </div>
-        </div>
-        <button class="login-btn" onclick="changePasswordFromLogin()">Update password →</button>
-        `}
 
       </div>
     </div>`;
@@ -275,7 +240,7 @@ function _enterApp() {
 function logout() {
   currentUser = null;
   sessionStorage.removeItem('sh_session');
-  showLoginScreen('signin');
+  showLoginScreen();
 }
 
 /* ══════════════════════════════════════════════════════════
@@ -508,4 +473,110 @@ function saveOwnPassword() {
   state.teamPasswords[currentUser.id]=pw; TEAM_USERS[currentUser.id].password=pw;
   saveState(); closeModal();
   showToast('✅ Password changed!','success');
+}
+
+/* ══════════════════════════════════════════════════════════
+   PROFILE MODAL — accessible from sidebar user chip
+   Contains: profile info + change password
+══════════════════════════════════════════════════════════ */
+function openProfileModal() {
+  if (!currentUser) return;
+  const u = currentUser;
+
+  document.getElementById('modalTitle').textContent = '👤 My Profile';
+  document.getElementById('modalBody').innerHTML = `
+
+    <!-- Profile card -->
+    <div style="display:flex;align-items:center;gap:16px;padding:16px;background:linear-gradient(135deg,${u.color},${u.color}99);border-radius:var(--r-xl);margin-bottom:20px">
+      <div style="width:56px;height:56px;border-radius:50%;background:${u.color};color:${u.textColor};display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:800;border:3px solid rgba(255,255,255,.6);box-shadow:var(--sh-md);flex-shrink:0">${u.avatar}</div>
+      <div>
+        <div style="font-size:18px;font-weight:800;color:var(--text)">${u.name}</div>
+        <div style="font-size:13px;color:var(--text2);margin-top:2px">${u.email}</div>
+        <div style="margin-top:6px">
+          <span style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;background:${u.role==='admin'?'#FEF9C3':'var(--brand-light)'};color:${u.role==='admin'?'#92400E':'var(--brand-dark)'}">
+            ${u.role === 'admin' ? '⭐ Admin' : '👤 Member'}
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Change password section -->
+    <div style="border:1.5px solid var(--border);border-radius:var(--r-xl);overflow:hidden">
+      <div style="padding:14px 16px;background:var(--surface2);border-bottom:1.5px solid var(--border);font-size:14px;font-weight:800;color:var(--text);display:flex;align-items:center;gap:8px">
+        🔑 Change password
+      </div>
+      <div style="padding:16px">
+        <div class="form-group">
+          <label class="form-label">Current password</label>
+          <div style="position:relative">
+            <input class="form-input" type="password" id="prof-old" placeholder="Enter current password" style="padding-right:44px">
+            <button onclick="toggleProfPw('prof-old')" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:15px;color:var(--text3)">👁</button>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">New password</label>
+            <div style="position:relative">
+              <input class="form-input" type="password" id="prof-new" placeholder="Min 6 characters" style="padding-right:44px">
+              <button onclick="toggleProfPw('prof-new')" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:15px;color:var(--text3)">👁</button>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Confirm new</label>
+            <div style="position:relative">
+              <input class="form-input" type="password" id="prof-new2" placeholder="Re-enter" style="padding-right:44px">
+              <button onclick="toggleProfPw('prof-new2')" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:15px;color:var(--text3)">👁</button>
+            </div>
+          </div>
+        </div>
+        <div id="profPwMsg" style="display:none;font-size:12px;font-weight:600;padding:8px 12px;border-radius:var(--r-md);margin-bottom:8px"></div>
+        <button class="btn btn-primary" style="width:100%" onclick="saveProfilePassword()">🔑 Update password</button>
+      </div>
+    </div>
+
+    <!-- Sign out -->
+    <div style="margin-top:14px;text-align:center">
+      <button class="btn btn-ghost btn-sm" onclick="closeModal();logout()" style="color:var(--coral);border-color:var(--coral)">
+        ⏻ Sign out
+      </button>
+    </div>`;
+
+  document.getElementById('modalFooter').innerHTML = `
+    <button class="btn btn-ghost" onclick="closeModal()">Close</button>`;
+  document.getElementById('modalOverlay').classList.add('open');
+}
+
+function toggleProfPw(id) {
+  const el = document.getElementById(id);
+  if (el) el.type = el.type === 'password' ? 'text' : 'password';
+}
+
+function saveProfilePassword() {
+  if (!currentUser) return;
+  const old  = (document.getElementById('prof-old').value  || '');
+  const pw   = (document.getElementById('prof-new').value  || '');
+  const pw2  = (document.getElementById('prof-new2').value || '');
+  const msg  = document.getElementById('profPwMsg');
+
+  const showMsg = (text, ok) => {
+    msg.textContent = text;
+    msg.style.display = '';
+    msg.style.background = ok ? 'var(--green-light)' : 'var(--coral-light)';
+    msg.style.color = ok ? 'var(--green)' : 'var(--coral)';
+  };
+
+  const saved = (state.teamPasswords && state.teamPasswords[currentUser.id]) || currentUser.password;
+  if (old !== saved)          { showMsg('⚠️ Current password is incorrect', false); return; }
+  if (!pw || pw.length < 6)  { showMsg('⚠️ New password must be at least 6 characters', false); return; }
+  if (pw !== pw2)             { showMsg('⚠️ Passwords do not match', false); return; }
+
+  if (!state.teamPasswords) state.teamPasswords = {};
+  state.teamPasswords[currentUser.id] = pw;
+  TEAM_USERS[currentUser.id].password = pw;
+  saveState();
+
+  // Clear fields
+  ['prof-old','prof-new','prof-new2'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  showMsg('✅ Password updated successfully!', true);
+  showToast('✅ Password changed!', 'success');
 }
