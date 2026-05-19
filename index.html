@@ -1,0 +1,1132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SocialHub — Content Command Center</title>
+  <link rel="stylesheet" href="css/main.css">
+  <!-- Firebase SDK (Real-time sync) -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<div id="app">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <div class="brand">
+        <div class="brand-logo">SH</div>
+        <div>
+          <div class="brand-name">SocialHub</div>
+          <div class="brand-tagline">Content Command Center</div>
+        </div>
+      </div>
+      <button class="sidebar-toggle" id="sidebarToggle" title="Collapse / Expand" onclick="toggleSidebar()">&#8249;</button>
+    </div>
+    <!-- Always-visible expand button shown only when sidebar is collapsed -->
+    <button class="sidebar-expand-btn" id="sidebarExpandBtn" onclick="toggleSidebar()" title="Expand sidebar">&#8250;</button>
+
+    <nav class="nav">
+
+      <!-- Calendar with dropdown for 5 channel views -->
+      <div class="nav-section-label">Workspace</div>
+
+      <!-- Calendar parent item + dropdown -->
+      <div class="nav-group" id="navGroupCalendar">
+        <a class="nav-item nav-parent active" data-view="channels" onclick="navigate('channels',this);toggleNavGroup('navGroupCalendar')">
+          <span class="nav-icon">📅</span><span class="nav-label">Calendar</span>
+          <span class="nav-chevron" id="chevron-calendar">▾</span>
+        </a>
+        <div class="nav-dropdown open" id="dropdown-calendar">
+          <a class="nav-sub-item" data-ch="social" onclick="navigateToChannel('social',this)">
+            <span class="nav-sub-dot" style="background:#2563EB"></span><span class="nav-label">Social Media</span>
+          </a>
+          <a class="nav-sub-item" data-ch="email" onclick="navigateToChannel('email',this)">
+            <span class="nav-sub-dot" style="background:#6366F1"></span><span class="nav-label">Email Marketing</span>
+          </a>
+          <a class="nav-sub-item" data-ch="whatsapp" onclick="navigateToChannel('whatsapp',this)">
+            <span class="nav-sub-dot" style="background:#10B981"></span><span class="nav-label">WhatsApp</span>
+          </a>
+          <a class="nav-sub-item" data-ch="meta" onclick="navigateToChannel('meta',this)">
+            <span class="nav-sub-dot" style="background:#7C3AED"></span><span class="nav-label">Meta Ads</span>
+          </a>
+          <a class="nav-sub-item" data-ch="google" onclick="navigateToChannel('google',this)">
+            <span class="nav-sub-dot" style="background:#EA4335"></span><span class="nav-label">Google Ads</span>
+          </a>
+        </div>
+      </div>
+
+      <a class="nav-item" data-view="ideas" onclick="navigate('ideas',this)">
+        <span class="nav-icon">💡</span><span class="nav-label">Ideas Board</span>
+      </a>
+      <a class="nav-item" data-view="media" onclick="navigate('media',this)">
+        <span class="nav-icon">🖼</span><span class="nav-label">Media Library</span>
+      </a>
+
+      <div class="nav-section-label">Channels</div>
+      <a class="nav-item" data-view="email" onclick="navigate('email',this)">
+        <span class="nav-icon">📧</span><span class="nav-label">Email Marketing</span>
+      </a>
+      <a class="nav-item" data-view="whatsapp" onclick="navigate('whatsapp',this)">
+        <span class="nav-icon">💬</span><span class="nav-label">WhatsApp</span>
+      </a>
+      <a class="nav-item" data-view="meta" onclick="navigate('meta',this)">
+        <span class="nav-icon">📊</span><span class="nav-label">Meta Ads</span>
+      </a>
+
+      <div class="nav-section-label">Planning</div>
+      <a class="nav-item" data-view="agenda" onclick="navigate('agenda',this)">
+        <span class="nav-icon">🗒</span><span class="nav-label">Monthly Planner</span>
+      </a>
+      <a class="nav-item" data-view="reminders" onclick="navigate('reminders',this)">
+        <span class="nav-icon">⏰</span><span class="nav-label">Reminders</span>
+        <span class="nav-badge" id="badge-reminders" style="display:none">0</span>
+      </a>
+      <a class="nav-item" data-view="analytics" onclick="navigate('analytics',this)">
+        <span class="nav-icon">📈</span><span class="nav-label">Analytics</span>
+      </a>
+
+      <div class="nav-section-label">Account</div>
+      <a class="nav-item" data-view="integrations" onclick="navigate('integrations',this)">
+        <span class="nav-icon">🔗</span><span class="nav-label">Integrations</span>
+      </a>
+      <a class="nav-item" data-view="team" onclick="navigate('team',this)">
+        <span class="nav-icon">👥</span><span class="nav-label">Team</span>
+      </a>
+      <a class="nav-item" data-view="settings" onclick="navigate('settings',this)">
+        <span class="nav-icon">⚙</span><span class="nav-label">Settings</span>
+      </a>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="user-chip" onclick="navigate('team',document.querySelector('[data-view=team]'))" style="cursor:pointer" title="Go to Team">
+        <div class="user-avatar" id="userAvatar" style="background:var(--brand-light);color:var(--brand-dark)">?</div>
+        <div class="user-info">
+          <div class="user-name" id="userName">Sign in</div>
+          <div class="user-plan" id="userPlan">Loading…</div>
+        </div>
+        <button onclick="event.stopPropagation();logout()" title="Sign out"
+          style="background:none;border:none;cursor:pointer;color:rgba(255,255,255,.4);font-size:13px;margin-left:auto;padding:2px 4px;border-radius:4px;transition:color .13s"
+          onmouseover="this.style.color='rgba(255,255,255,.8)'" onmouseout="this.style.color='rgba(255,255,255,.4)'">
+          ⏻
+        </button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN CONTENT -->
+  <div class="main-wrapper" id="mainWrapper">
+
+    <!-- TOPBAR -->
+    <header class="topbar">
+      <div class="topbar-left">
+        <button class="mobile-menu-btn" onclick="toggleSidebar()">☰</button>
+        <h1 class="page-title" id="pageTitle">Calendar</h1>
+      </div>
+      <div class="topbar-right">
+        <span id="syncIndicator" style="font-size:11px;font-weight:700;opacity:0;transition:opacity .5s;margin-right:4px"></span>
+        <div class="search-box">
+          <span class="search-icon">🔍</span>
+          <input type="text" placeholder="Search posts, campaigns…" id="globalSearch" oninput="globalSearch(this.value)">
+        </div>
+        <button class="btn btn-ghost" onclick="exportData()">⬇ Export</button>
+        <button class="btn btn-primary" onclick="showModal('post')">+ New Post</button>
+      </div>
+    </header>
+
+    <!-- VIEWS -->
+    <main class="content" id="content">
+
+      <!-- CALENDAR VIEW -->
+      <div id="view-calendar" class="view active">
+
+        <!-- Main calendar + sidebar wrapper -->
+        <div class="calendar-layout">
+          <!-- LEFT: calendar grid -->
+          <div class="calendar-main">
+            <div class="cal-toolbar">
+              <div class="cal-nav">
+                <button class="btn btn-ghost btn-sm" onclick="changeMonth(-1)">‹</button>
+                <h2 class="cal-month-label" id="calMonthLabel">May 2026</h2>
+                <button class="btn btn-ghost btn-sm" onclick="changeMonth(1)">›</button>
+              </div>
+              <div style="display:flex;gap:8px;align-items:center">
+                <div class="legend-inline">
+                  <span class="chip chip-ig" style="font-size:10px">📸 IG</span>
+                  <span class="chip chip-fb" style="font-size:10px">📘 FB</span>
+                  <span class="chip chip-wa" style="font-size:10px">💬 WA</span>
+                  <span class="chip chip-meta" style="font-size:10px">📊 Ads</span>
+                </div>
+                <button class="btn btn-ghost btn-sm" onclick="goToday()">Today</button>
+                <button class="btn btn-primary btn-sm" onclick="openDayDrawer(new Date().toISOString().split('T')[0])">+ New post</button>
+              </div>
+            </div>
+            <div class="cal-day-names">
+              <div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div>
+            </div>
+            <div class="cal-grid" id="calGrid"></div>
+
+            <!-- Occasion type legend -->
+            <div class="occasion-legend">
+              <span class="oc-legend-item"><span class="oc-dot" style="background:#FF9933"></span> National holiday</span>
+              <span class="oc-legend-item"><span class="oc-dot" style="background:#FF3D8A"></span> Festival</span>
+              <span class="oc-legend-item"><span class="oc-dot" style="background:#7C3AED"></span> Religious</span>
+              <span class="oc-legend-item"><span class="oc-dot" style="background:#3B82F6"></span> Special day</span>
+            </div>
+          </div>
+
+          <!-- RIGHT: upcoming + quick add -->
+          <div class="calendar-sidebar">
+            <div class="panel">
+              <div class="panel-title">📌 Upcoming posts</div>
+              <div id="upcomingList" class="upcoming-list"></div>
+            </div>
+            <div class="panel" style="margin-top:12px">
+              <div class="panel-title">⚡ Quick add</div>
+              <input class="form-input" id="quickPostTitle" placeholder="Post title…" style="margin-bottom:8px">
+              <input class="form-input" type="date" id="quickPostDate" style="margin-bottom:8px">
+              <select class="form-select" id="quickPostPlatform" style="margin-bottom:8px">
+                <option value="Instagram">📸 Instagram</option>
+                <option value="Facebook">📘 Facebook</option>
+                <option value="WhatsApp">💬 WhatsApp</option>
+                <option value="Twitter/X">🐦 Twitter/X</option>
+                <option value="LinkedIn">💼 LinkedIn</option>
+                <option value="Meta Ad">📊 Meta Ad</option>
+              </select>
+              <button class="btn btn-primary" style="width:100%" onclick="quickAdd()">Add to calendar</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- DAY DRAWER — slides in from the right -->
+        <div class="day-drawer" id="dayDrawer">
+          <div class="drawer-header">
+            <div>
+              <div class="drawer-date-label" id="drawerDateLabel">Select a date</div>
+              <div style="font-size:11px;color:var(--text3);margin-top:2px;font-weight:500">Click any post to edit · Fill the form to plan</div>
+            </div>
+            <button class="drawer-close" onclick="closeDayDrawer()">✕</button>
+          </div>
+
+          <div class="drawer-body" id="drawerBody">
+
+            <!-- Occasions section -->
+            <div class="drawer-section" id="drawerOccasionsSection">
+              <div class="drawer-section-title">🎉 Festivals & occasions</div>
+              <div id="drawerOccasions"></div>
+            </div>
+
+            <!-- Existing posts for this day -->
+            <div class="drawer-section" id="drawerPostsSection">
+              <div class="drawer-section-title">📋 Planned posts</div>
+              <div id="drawerPosts"></div>
+            </div>
+
+            <!-- Inline create form -->
+            <div class="drawer-section">
+              <div id="drawerCreateForm"></div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Drawer backdrop -->
+        <div class="drawer-backdrop" id="drawerBackdrop" onclick="closeDayDrawer()"></div>
+      </div>
+
+      <!-- POSTS VIEW -->
+      <div id="view-posts" class="view">
+        <div class="posts-toolbar">
+          <div class="filter-tabs" id="postFilterTabs">
+            <button class="ftab active" onclick="filterPosts('all',this)">All</button>
+            <button class="ftab" onclick="filterPosts('draft',this)">Drafts</button>
+            <button class="ftab" onclick="filterPosts('scheduled',this)">Scheduled</button>
+            <button class="ftab" onclick="filterPosts('review',this)">In Review</button>
+            <button class="ftab" onclick="filterPosts('published',this)">Published</button>
+          </div>
+          <div style="display:flex;gap:8px">
+            <select class="form-select form-select-sm" onchange="sortPosts(this.value)">
+              <option value="date-desc">Newest first</option>
+              <option value="date-asc">Oldest first</option>
+              <option value="platform">By platform</option>
+            </select>
+            <div class="view-toggle">
+              <button class="vtbtn active" onclick="setPostView('list',this)">☰</button>
+              <button class="vtbtn" onclick="setPostView('grid',this)">⊞</button>
+            </div>
+          </div>
+        </div>
+        <div id="postsList" class="posts-list"></div>
+      </div>
+
+      <!-- CREATE POST VIEW -->
+      <div id="view-create" class="view">
+        <div class="create-layout">
+          <div class="create-form-panel">
+            <div class="form-section">
+              <div class="form-section-title">Post details</div>
+              <div class="form-group">
+                <label class="form-label">Title <span class="required">*</span></label>
+                <input class="form-input" id="createTitle" placeholder="Internal reference title">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Caption / Copy <span class="required">*</span></label>
+                <div class="caption-toolbar">
+                  <button class="cap-btn" onclick="insertEmoji('😊')">😊</button>
+                  <button class="cap-btn" onclick="insertEmoji('🔥')">🔥</button>
+                  <button class="cap-btn" onclick="insertEmoji('✨')">✨</button>
+                  <button class="cap-btn" onclick="insertEmoji('🎉')">🎉</button>
+                  <button class="cap-btn" onclick="insertEmoji('👇')">👇</button>
+                  <button class="cap-btn" onclick="insertEmoji('💯')">💯</button>
+                  <span class="cap-sep">|</span>
+                  <span class="char-count" id="charCount">0 / 2200</span>
+                </div>
+                <textarea class="form-input form-textarea" id="createCaption" placeholder="Write your caption…" oninput="onCaptionInput(this)" maxlength="2200"></textarea>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Hashtags</label>
+                <input class="form-input" id="createHashtags" placeholder="#summer #sale #fashion" oninput="updatePreview()">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Creative brief / Description</label>
+                <textarea class="form-input" id="createBrief" rows="3" placeholder="Describe the visual, tone, goal…"></textarea>
+              </div>
+            </div>
+
+            <div class="form-section">
+              <div class="form-section-title">Platforms</div>
+              <div class="platform-grid" id="platformGrid">
+                <div class="pcheck" data-platform="Instagram" onclick="togglePlatform(this)"><span>📸</span> Instagram</div>
+                <div class="pcheck" data-platform="Facebook" onclick="togglePlatform(this)"><span>📘</span> Facebook</div>
+                <div class="pcheck" data-platform="WhatsApp" onclick="togglePlatform(this)"><span>💬</span> WhatsApp</div>
+                <div class="pcheck" data-platform="Twitter/X" onclick="togglePlatform(this)"><span>🐦</span> Twitter/X</div>
+                <div class="pcheck" data-platform="LinkedIn" onclick="togglePlatform(this)"><span>💼</span> LinkedIn</div>
+                <div class="pcheck" data-platform="Meta Ad" onclick="togglePlatform(this)"><span>📊</span> Meta Ad</div>
+              </div>
+            </div>
+
+            <div class="form-section">
+              <div class="form-section-title">Scheduling</div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="form-label">Date</label>
+                  <input class="form-input" type="date" id="createDate">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Time</label>
+                  <input class="form-input" type="time" id="createTime" value="09:00">
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="form-label">Post type</label>
+                  <select class="form-select" id="createType">
+                    <option>Image post</option>
+                    <option>Video / Reel</option>
+                    <option>Carousel</option>
+                    <option>Story</option>
+                    <option>Text only</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Status</label>
+                  <select class="form-select" id="createStatus">
+                    <option value="draft">Draft</option>
+                    <option value="review">In review</option>
+                    <option value="scheduled">Scheduled</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <div class="form-section">
+              <div class="form-section-title">Team</div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="form-label">Assign to</label>
+                  <select class="form-select" id="createAssign">
+                    <option value="">— unassigned —</option>
+                    <option>Priya Sharma</option>
+                    <option>Arjun Mehta</option>
+                    <option>Neha Gupta</option>
+                    <option>Rahul Das</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Priority</label>
+                  <select class="form-select" id="createPriority">
+                    <option value="normal">Normal</option>
+                    <option value="high">High</option>
+                    <option value="urgent">Urgent</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Notes for team</label>
+                <textarea class="form-input" id="createNotes" rows="2" placeholder="Any additional instructions for the team…"></textarea>
+              </div>
+            </div>
+
+            <div class="form-actions">
+              <button class="btn btn-ghost" onclick="clearForm()">Clear</button>
+              <button class="btn btn-ghost" onclick="saveDraft()">Save draft</button>
+              <button class="btn btn-primary" onclick="savePost()">Save & schedule</button>
+            </div>
+          </div>
+
+          <div class="create-right-panel">
+            <div class="panel">
+              <div class="panel-title">Preview</div>
+              <div class="preview-platform-tabs">
+                <button class="pvtab active" onclick="setPreviewPlatform('instagram',this)">IG</button>
+                <button class="pvtab" onclick="setPreviewPlatform('facebook',this)">FB</button>
+                <button class="pvtab" onclick="setPreviewPlatform('twitter',this)">TW</button>
+              </div>
+              <div class="post-preview" id="postPreview">
+                <div class="preview-header-mock">
+                  <div class="preview-avatar">YB</div>
+                  <div>
+                    <div class="preview-username">@yourbrand</div>
+                    <div class="preview-time">Just now</div>
+                  </div>
+                </div>
+                <div class="preview-image-placeholder">📷 Add image</div>
+                <div class="preview-caption-text" id="previewCaptionText">Your caption will appear here…</div>
+              </div>
+            </div>
+
+            <div class="panel" style="margin-top:12px">
+              <div class="panel-title">Share with team</div>
+              <div id="teamShareList" class="team-share-list"></div>
+            </div>
+
+            <div class="panel" style="margin-top:12px">
+              <div class="panel-title">Media</div>
+              <div class="upload-zone" onclick="document.getElementById('mediaInput').click()">
+                <div class="upload-icon">📁</div>
+                <div class="upload-text">Click to upload image / video</div>
+                <div class="upload-sub">PNG, JPG, MP4 up to 50MB</div>
+                <input type="file" id="mediaInput" accept="image/*,video/*" style="display:none" onchange="handleMedia(this)">
+              </div>
+              <div id="mediaPreview"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- META ADS VIEW -->
+      <div id="view-meta" class="view">
+        <div class="meta-stats-row" id="metaStatsRow"></div>
+        <div class="meta-toolbar">
+          <h3 class="section-title">Active campaigns</h3>
+          <button class="btn btn-primary" onclick="showModal('ad')">+ New campaign</button>
+        </div>
+        <div class="ads-grid" id="adsGrid"></div>
+      </div>
+
+      <!-- WHATSAPP VIEW -->
+      <div id="view-whatsapp" class="view">
+        <div class="wa-layout">
+          <div class="wa-sidebar">
+            <div class="wa-sidebar-header">
+              <input class="form-input" placeholder="Search contacts…" oninput="filterWAContacts(this.value)">
+              <button class="btn btn-primary btn-sm" onclick="showModal('contact')" style="margin-top:8px;width:100%">+ New contact / group</button>
+            </div>
+            <div id="waContactList" class="wa-contact-list"></div>
+          </div>
+          <div class="wa-main">
+            <div class="wa-chat-header" id="waChatHeader">
+              <div style="display:flex;align-items:center;gap:10px">
+                <div class="wa-avatar" id="waActiveAvatar">CG</div>
+                <div>
+                  <div class="wa-chat-name" id="waActiveName">Customers Group</div>
+                  <div class="wa-chat-sub" id="waActiveSub">324 members</div>
+                </div>
+              </div>
+              <div style="display:flex;gap:8px;align-items:center">
+                <button class="btn btn-ghost btn-sm" onclick="showModal('broadcast')">📣 Broadcast</button>
+                <button class="btn btn-ghost btn-sm" onclick="showModal('schedule-wa')">🕐 Schedule</button>
+                <button class="btn btn-sm" style="background:linear-gradient(135deg,#25D366,#128C7E);color:#fff;border-color:transparent;font-weight:700;display:flex;align-items:center;gap:6px"
+                  onclick="openInteraktFromWA()" title="Send via Interakt WhatsApp API">
+                  <span style="font-size:15px">💬</span> Interakt
+                </button>
+              </div>
+            </div>
+            <div class="wa-messages" id="waMessages"></div>
+            <!-- Interakt status banner -->
+            <div id="waInteraktBanner" class="wa-interakt-banner" onclick="navigate('integrations',document.querySelector('[data-view=integrations]'))"></div>
+
+            <div class="wa-templates">
+              <div class="template-label">Quick templates:</div>
+              <div class="template-chips">
+                <span class="tpl-chip" onclick="useTemplate('sale')">🎉 Sale</span>
+                <span class="tpl-chip" onclick="useTemplate('welcome')">👋 Welcome</span>
+                <span class="tpl-chip" onclick="useTemplate('followup')">🔄 Follow-up</span>
+                <span class="tpl-chip" onclick="useTemplate('event')">📅 Event</span>
+                <span class="tpl-chip" onclick="useTemplate('feedback')">⭐ Feedback</span>
+                <span class="tpl-chip" onclick="useTemplate('offer')">💸 Offer</span>
+              </div>
+            </div>
+            <div class="wa-input-row">
+              <button class="btn btn-ghost btn-sm" onclick="attachWAFile()">📎</button>
+              <textarea class="wa-input" id="waInput" placeholder="Type a message…" rows="1" onkeydown="waKeyHandler(event)"></textarea>
+              <button class="btn btn-ghost btn-sm" onclick="showModal('schedule-wa')">🕐</button>
+              <button class="btn btn-primary" onclick="sendWAMessage()">Send</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- AGENDA VIEW -->
+      <!-- ═══════════════════════════════════════════
+           MONTHLY CONTENT PLANNER
+      ═══════════════════════════════════════════ -->
+      <div id="view-agenda" class="view">
+
+        <!-- ── Month navigator ── -->
+        <div class="planner-header">
+          <div class="planner-nav">
+            <button class="btn btn-ghost btn-sm" onclick="changePlannerMonth(-1)">‹</button>
+            <h2 class="planner-month-label" id="plannerMonthLabel">May 2026</h2>
+            <button class="btn btn-ghost btn-sm" onclick="changePlannerMonth(1)">›</button>
+          </div>
+          <div style="font-size:13px;color:var(--text3);font-weight:500">Plan your month — everything saves automatically</div>
+          <div style="display:flex;gap:8px;margin-left:auto">
+            <button class="btn btn-ghost btn-sm" onclick="fillContentGridTemplate()">📋 Fill template</button>
+            <button class="btn btn-primary" onclick="addStickyNote()">📌 Add sticky note</button>
+          </div>
+        </div>
+
+        <div class="planner-layout">
+
+          <!-- ══ LEFT: Main planning area ══ -->
+          <div class="planner-main">
+
+            <!-- 1. Products to target -->
+            <div class="planner-card">
+              <div class="planner-card-title">
+                <span class="planner-card-icon" style="background:#DBEAFE;color:#1D4ED8">🎯</span>
+                Products / Offers to push this month
+              </div>
+              <textarea class="planner-textarea" id="plannerProducts"
+                placeholder="e.g. Summer collection launch, 30% off on kurtis, New arrivals in footwear, Festive gift boxes…"
+                oninput="savePlannerField('products',this.value);autoResizeTA(this)"
+                rows="3"></textarea>
+            </div>
+
+            <!-- 2. Content grid plan -->
+            <div class="planner-card">
+              <div class="planner-card-title">
+                <span class="planner-card-icon" style="background:#DCFCE7;color:#065F46">🗓</span>
+                Content grid plan — what goes where
+                <button class="btn btn-ghost btn-sm" style="margin-left:auto;font-size:11px" onclick="fillContentGridTemplate()">Use template</button>
+              </div>
+              <textarea class="planner-textarea" id="plannerContentGrid"
+                placeholder="Plan your week-by-week content grid here…&#10;&#10;WEEK 1: Product reveal + story poll&#10;WEEK 2: Behind the scenes + reel&#10;WEEK 3: Customer spotlight&#10;WEEK 4: Offers + month recap"
+                oninput="savePlannerField('contentGrid',this.value);autoResizeTA(this)"
+                rows="6"></textarea>
+            </div>
+
+            <!-- 3. Monthly goals -->
+            <div class="planner-card">
+              <div class="planner-card-title">
+                <span class="planner-card-icon" style="background:#EDE9FE;color:#5B21B6">🏆</span>
+                Monthly goals & KPIs
+              </div>
+              <textarea class="planner-textarea" id="plannerGoals"
+                placeholder="e.g. Reach 10k Instagram followers, 500 email opens, ₹2L revenue from Meta ads, grow WhatsApp list to 1000…"
+                oninput="savePlannerField('goals',this.value);autoResizeTA(this)"
+                rows="3"></textarea>
+            </div>
+
+            <!-- 4. Channel themes — one card per channel -->
+            <div class="planner-card">
+              <div class="planner-card-title">
+                <span class="planner-card-icon" style="background:#FEF9C3;color:#92400E">🎨</span>
+                Channel themes this month
+              </div>
+              <div class="channel-theme-grid" id="channelThemeGrid">
+                <div class="channel-theme-card" style="border-color:#DBEAFE">
+                  <div class="ctc-header" style="background:#DBEAFE;color:#1D4ED8">📸 Social Media theme</div>
+                  <textarea class="ctc-textarea" id="theme-social"
+                    placeholder="e.g. Summer vibes, product launches, BTS content, customer stories…"
+                    oninput="savePlannerField('themes',this.value,'social');autoResizeTA(this)" rows="3"></textarea>
+                </div>
+                <div class="channel-theme-card" style="border-color:#ECFDF5">
+                  <div class="ctc-header" style="background:#ECFDF5;color:#065F46">💬 WhatsApp theme</div>
+                  <textarea class="ctc-textarea" id="theme-whatsapp"
+                    placeholder="e.g. Exclusive early access, festive greetings, flash sale alerts…"
+                    oninput="savePlannerField('themes',this.value,'whatsapp');autoResizeTA(this)" rows="3"></textarea>
+                </div>
+                <div class="channel-theme-card" style="border-color:#EEF2FF">
+                  <div class="ctc-header" style="background:#EEF2FF;color:#4338CA">📧 Email Marketing theme</div>
+                  <textarea class="ctc-textarea" id="theme-email"
+                    placeholder="e.g. Monthly newsletter, abandoned cart recovery, re-engagement series…"
+                    oninput="savePlannerField('themes',this.value,'email');autoResizeTA(this)" rows="3"></textarea>
+                </div>
+                <div class="channel-theme-card" style="border-color:#EDE9FE">
+                  <div class="ctc-header" style="background:#EDE9FE;color:#5B21B6">📊 Meta Ads theme</div>
+                  <textarea class="ctc-textarea" id="theme-meta"
+                    placeholder="e.g. Retargeting lapsed customers, awareness for new collection, lookalike audiences…"
+                    oninput="savePlannerField('themes',this.value,'meta');autoResizeTA(this)" rows="3"></textarea>
+                </div>
+                <div class="channel-theme-card" style="border-color:#FEE2E2">
+                  <div class="ctc-header" style="background:#FEE2E2;color:#B91C1C">🔍 Google Ads theme</div>
+                  <textarea class="ctc-textarea" id="theme-google"
+                    placeholder="e.g. Search ads for summer dresses, Shopping campaign, YouTube awareness…"
+                    oninput="savePlannerField('themes',this.value,'google');autoResizeTA(this)" rows="3"></textarea>
+                </div>
+
+                <!-- Brain dump — random ideas -->
+                <div class="channel-theme-card" style="border-color:#FEF9C3;grid-column:1/-1">
+                  <div class="ctc-header" style="background:#FEF9C3;color:#92400E">🧠 Brain dump — random ideas & notes</div>
+                  <textarea class="ctc-textarea" id="plannerBraindump"
+                    placeholder="Just dump everything here — half-baked ideas, things you've seen, trends to try, words that came to mind, anything…&#10;&#10;No structure needed. Just write."
+                    oninput="savePlannerField('braindump',this.value);autoResizeTA(this)"
+                    rows="5" style="font-style:normal;font-size:13px"></textarea>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- ══ RIGHT: Sticky notes board ══ -->
+          <div class="planner-sticky-col">
+            <div class="planner-sticky-header">
+              <div style="font-size:13px;font-weight:800;color:var(--text)">📌 Sticky notes</div>
+              <div style="font-size:11px;color:var(--text3);margin-top:2px">Notes appear as pins on the calendar</div>
+              <button class="btn btn-primary btn-sm" style="margin-top:10px;width:100%" onclick="addStickyNote()">+ Add sticky note</button>
+            </div>
+            <div class="sticky-board" id="stickyBoard">
+              <!-- sticky notes rendered here by JS -->
+              <div class="sticky-add-btn" onclick="addStickyNote()">
+                <span style="font-size:24px">+</span>
+                <div style="font-size:11px;font-weight:700;margin-top:4px">Add sticky note</div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ═══════════════════════════════════════════
+           INTEGRATIONS VIEW
+      ═══════════════════════════════════════════ -->
+      <div id="view-integrations" class="view">
+        <div style="max-width:700px;margin:0 auto">
+
+          <div style="margin-bottom:24px">
+            <h2 style="font-size:22px;font-weight:800;color:var(--text);letter-spacing:-.4px;margin-bottom:6px">🔗 Integrations</h2>
+            <p style="font-size:13px;color:var(--text3)">Connect your marketing tools to send content directly from SocialHub.</p>
+          </div>
+
+          <!-- Interakt Card -->
+          <div class="integration-card">
+            <div class="integration-card-header">
+              <div class="integration-icon" style="background:linear-gradient(135deg,#25D366,#128C7E)">💬</div>
+              <div class="integration-info">
+                <div class="integration-name">Interakt</div>
+                <div class="integration-desc">Official WhatsApp Business API · Send messages, broadcasts & campaigns</div>
+              </div>
+              <div id="interaktNavBadge">
+                <span class="badge badge-draft">○ Not connected</span>
+              </div>
+            </div>
+            <div id="interaktSettingsPanel" style="margin-top:16px"></div>
+          </div>
+
+          <!-- More integrations coming -->
+          <div class="integration-card" style="opacity:.55">
+            <div class="integration-card-header">
+              <div class="integration-icon" style="background:linear-gradient(135deg,#4285F4,#34A853)">📊</div>
+              <div class="integration-info">
+                <div class="integration-name">Google Analytics</div>
+                <div class="integration-desc">Track campaign performance and website traffic</div>
+              </div>
+              <span class="badge badge-draft">Coming soon</span>
+            </div>
+          </div>
+
+          <div class="integration-card" style="opacity:.55">
+            <div class="integration-card-header">
+              <div class="integration-icon" style="background:linear-gradient(135deg,#1877F2,#166FE5)">📘</div>
+              <div class="integration-info">
+                <div class="integration-name">Meta Business Suite</div>
+                <div class="integration-desc">Sync posts directly to Facebook & Instagram</div>
+              </div>
+              <span class="badge badge-draft">Coming soon</span>
+            </div>
+          </div>
+
+          <div class="integration-card" style="opacity:.55">
+            <div class="integration-card-header">
+              <div class="integration-icon" style="background:linear-gradient(135deg,#E1306C,#833AB4)">📸</div>
+              <div class="integration-info">
+                <div class="integration-name">Instagram Graph API</div>
+                <div class="integration-desc">Auto-publish posts and reels to Instagram</div>
+              </div>
+              <span class="badge badge-draft">Coming soon</span>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ANALYTICS VIEW -->
+      <div id="view-analytics" class="view">
+        <div class="analytics-stats" id="analyticsStats"></div>
+        <div class="analytics-grid">
+          <div class="analytics-chart-card">
+            <div class="chart-title">Posts by platform</div>
+            <canvas id="platformChart" width="400" height="220"></canvas>
+          </div>
+          <div class="analytics-chart-card">
+            <div class="chart-title">Posts by status</div>
+            <canvas id="statusChart" width="400" height="220"></canvas>
+          </div>
+          <div class="analytics-chart-card" style="grid-column:1/-1">
+            <div class="chart-title">Posts published over time</div>
+            <canvas id="timelineChart" width="800" height="180"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- TEAM VIEW -->
+      <div id="view-team" class="view">
+        <!-- Built dynamically by renderTeam() in auth.js -->
+        <div class="team-toolbar">
+          <h3 class="section-title">Team members</h3>
+          <button class="btn btn-primary" onclick="showModal('member')">+ Invite member</button>
+        </div>
+        <div class="team-grid" id="teamGrid"></div>
+        <div class="section-title" style="margin-top:24px;margin-bottom:12px">Post assignment overview</div>
+        <div id="assignmentTable"></div>
+      </div>
+
+      <!-- SETTINGS VIEW -->
+      <div id="view-settings" class="view">
+        <div class="settings-layout">
+          <div class="settings-nav">
+            <div class="snav-item active" onclick="setSettingsTab('profile',this)">Profile</div>
+            <div class="snav-item" onclick="setSettingsTab('platforms',this)">Connected platforms</div>
+            <div class="snav-item" data-tab="integrations" onclick="setSettingsTab('integrations',this);renderInteraktSettings()">🔗 Integrations</div>
+            <div class="snav-item" onclick="setSettingsTab('notifications',this)">Notifications</div>
+            <div class="snav-item" onclick="setSettingsTab('team-settings',this)">Team & permissions</div>
+            <div class="snav-item" onclick="setSettingsTab('data',this)">Data & export</div>
+          </div>
+          <div class="settings-content">
+            <div id="stab-profile" class="stab active">
+              <div class="settings-section-title">Brand profile</div>
+              <div class="form-group"><label class="form-label">Brand name</label><input class="form-input" id="sBrandName" value="Your Brand"></div>
+              <div class="form-group"><label class="form-label">Industry</label>
+                <select class="form-select" id="sIndustry">
+                  <option>Fashion & Apparel</option><option>Food & Beverage</option><option>Tech</option><option>Health & Wellness</option><option>Education</option><option>Real Estate</option><option>Other</option>
+                </select>
+              </div>
+              <div class="form-group"><label class="form-label">Timezone</label>
+                <select class="form-select" id="sTimezone">
+                  <option>Asia/Kolkata (IST)</option><option>UTC</option><option>America/New_York</option><option>Europe/London</option>
+                </select>
+              </div>
+              <div class="form-group"><label class="form-label">Default post time</label><input class="form-input" type="time" id="sDefaultTime" value="09:00"></div>
+              <div class="form-group"><label class="form-label">Posting frequency</label>
+                <select class="form-select">
+                  <option>Daily</option><option>3× per week</option><option>Weekdays only</option><option>Custom</option>
+                </select>
+              </div>
+              <button class="btn btn-primary" onclick="saveSettings()">Save profile</button>
+            </div>
+
+            <div id="stab-platforms" class="stab">
+              <div class="settings-section-title">Connected platforms</div>
+              <div class="platform-connections" id="platformConnections"></div>
+            </div>
+
+            <div id="stab-integrations" class="stab">
+              <div class="settings-section-title">🔗 API Integrations</div>
+              <div id="interaktSettingsPanel"></div>
+            </div>
+
+            <div id="stab-notifications" class="stab">
+              <div class="settings-section-title">Notification preferences</div>
+              <div class="notif-row"><div><div class="notif-label">Post scheduled reminder</div><div class="notif-sub">Get notified 1 hour before a post goes live</div></div><label class="toggle"><input type="checkbox" checked><span class="toggle-slider"></span></label></div>
+              <div class="notif-row"><div><div class="notif-label">Draft awaiting review</div><div class="notif-sub">When a team member submits a draft for review</div></div><label class="toggle"><input type="checkbox" checked><span class="toggle-slider"></span></label></div>
+              <div class="notif-row"><div><div class="notif-label">Campaign budget alert</div><div class="notif-sub">When a Meta Ad campaign reaches 80% of budget</div></div><label class="toggle"><input type="checkbox"><span class="toggle-slider"></span></label></div>
+              <div class="notif-row"><div><div class="notif-label">WhatsApp reply</div><div class="notif-sub">When someone replies to a broadcast</div></div><label class="toggle"><input type="checkbox" checked><span class="toggle-slider"></span></label></div>
+              <div class="notif-row"><div><div class="notif-label">Weekly performance report</div><div class="notif-sub">Every Monday at 9am</div></div><label class="toggle"><input type="checkbox"><span class="toggle-slider"></span></label></div>
+            </div>
+
+            <div id="stab-team-settings" class="stab">
+              <div class="settings-section-title">Roles & permissions</div>
+              <div class="roles-table" id="rolesTable"></div>
+            </div>
+
+            <div id="stab-data" class="stab">
+              <div class="settings-section-title">Data & export</div>
+              <div class="export-options">
+                <div class="export-card" onclick="exportPosts('json')"><div class="export-icon">📄</div><div class="export-label">Export posts (JSON)</div><div class="export-sub">All posts, captions, metadata</div></div>
+                <div class="export-card" onclick="exportPosts('csv')"><div class="export-icon">📊</div><div class="export-label">Export calendar (CSV)</div><div class="export-sub">Spreadsheet-friendly format</div></div>
+                <div class="export-card" onclick="exportPosts('pdf')"><div class="export-icon">📑</div><div class="export-label">Content report (PDF)</div><div class="export-sub">Monthly overview report</div></div>
+              </div>
+              <div style="margin-top:24px">
+                <div class="settings-section-title" style="color:var(--red)">Danger zone</div>
+                <button class="btn" style="border-color:var(--red);color:var(--red)" onclick="clearAllData()">Clear all data</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══════════════════════════════════════════
+           CHANNEL CALENDARS VIEW
+      ═══════════════════════════════════════════ -->
+      <div id="view-channels" class="view">
+        <!-- Channel sub-tabs (compact, below the nav dropdown) -->
+        <div class="channel-subtabs-bar">
+          <button class="ch-subtab active" data-ch="social" onclick="setChannel('social',this)">📸 Social</button>
+          <button class="ch-subtab" data-ch="email" onclick="setChannel('email',this)">📧 Email</button>
+          <button class="ch-subtab" data-ch="whatsapp" onclick="setChannel('whatsapp',this)">💬 WhatsApp</button>
+          <button class="ch-subtab" data-ch="meta" onclick="setChannel('meta',this)">📊 Meta</button>
+          <button class="ch-subtab" data-ch="google" onclick="setChannel('google',this)">🔍 Google</button>
+        </div>
+
+        <div class="channel-layout">
+          <!-- Calendar -->
+          <div class="channel-calendar-main" id="channelCalHeader" style="border-top:3px solid var(--pink)">
+            <div class="cal-toolbar">
+              <div class="cal-nav">
+                <button class="btn btn-ghost btn-sm" onclick="changeChannelMonth(-1)">‹</button>
+                <h2 class="cal-month-label cal-month-clickable" id="channelCalLabel"
+                  onclick="openPlannerForCurrentMonth()"
+                  title="Click to open Monthly Planner for this month">May 2026 🗒</h2>
+                <button class="btn btn-ghost btn-sm" onclick="changeChannelMonth(1)">›</button>
+              </div>
+              <div style="display:flex;gap:8px">
+                <button class="btn btn-ghost btn-sm" onclick="channelCalYear=2026;channelCalMonth=4;renderChannelGrid()">Today</button>
+                <button class="btn btn-primary btn-sm" id="channelAddBtn" onclick="openChannelAddModal(new Date().toISOString().split('T')[0])">+ Add</button>
+              </div>
+            </div>
+            <div class="cal-day-names">
+              <div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div>
+            </div>
+            <!-- Monthly sticky notes banner — shows planner notes + add button -->
+            <div class="cal-sticky-banner-row">
+              <div id="calStickyBanner" class="cal-sticky-banner" style="display:none"></div>
+              <button class="cal-sticky-add-btn" onclick="addStickyNoteFromCalendar()" title="Add sticky note for this month">
+                📌 + Note
+              </button>
+            </div>
+            <!-- Floating left arrow -->
+            <button class="cal-float-arrow cal-float-prev" onclick="changeChannelMonth(-1)" title="Previous month">
+              <span>‹</span>
+            </button>
+            <!-- Floating right arrow -->
+            <button class="cal-float-arrow cal-float-next" onclick="changeChannelMonth(1)" title="Next month">
+              <span>›</span>
+            </button>
+
+            <div class="cal-grid" id="channelCalGrid"></div>
+
+            <!-- Bottom month nav bar — always visible at bottom of calendar -->
+            <div class="cal-bottom-nav">
+              <button class="cal-bottom-btn" onclick="changeChannelMonth(-1)">
+                ‹ <span id="calPrevMonthLabel">Prev</span>
+              </button>
+              <button class="cal-bottom-today" onclick="channelCalYear=new Date().getFullYear();channelCalMonth=new Date().getMonth();renderChannelGrid();renderChannelFestivalSidebar()">
+                ⬤ Today
+              </button>
+              <button class="cal-bottom-btn" onclick="changeChannelMonth(1)">
+                <span id="calNextMonthLabel">Next</span> ›
+              </button>
+            </div>
+          </div>
+
+          <!-- RIGHT SIDEBAR: tabs for Festivals + Ideas -->
+          <div class="calendar-sidebar">
+            <div class="panel" style="height:100%;display:flex;flex-direction:column">
+
+              <!-- Tab row -->
+              <div class="cal-sidebar-tabs">
+                <button class="cst-tab active" onclick="switchCalSidebarTab('festivals',this)">🎉 Occasions</button>
+                <button class="cst-tab" onclick="switchCalSidebarTab('ideas',this)">💡 My Ideas</button>
+              </div>
+
+              <!-- FESTIVALS panel -->
+              <div id="csp-festivals" class="cal-sidebar-panel active" style="flex:1;overflow-y:auto">
+                <div id="channelSidebarContent" class="upcoming-list"></div>
+              </div>
+
+              <!-- IDEAS panel -->
+              <div id="csp-ideas" class="cal-sidebar-panel" style="flex:1;overflow-y:auto">
+
+                <!-- Quick add idea form -->
+                <div class="sidebar-idea-form">
+                  <div style="font-size:11px;font-weight:800;color:var(--brand-dark);margin-bottom:8px;text-transform:uppercase;letter-spacing:.06em">+ Quick add idea</div>
+                  <input id="sic-title" placeholder="Idea title…" maxlength="80">
+                  <textarea id="sic-body" placeholder="Details / notes…" rows="2" style="resize:none;min-height:48px"></textarea>
+                  <select id="sic-cat">
+                    <option value="idea">💡 Idea</option>
+                    <option value="video">🎬 Video</option>
+                    <option value="caption">✍️ Caption</option>
+                    <option value="campaign">📣 Campaign</option>
+                    <option value="hashtag"># Hashtag</option>
+                    <option value="trend">🔥 Trend</option>
+                  </select>
+                  <select id="sic-platform" style="margin-bottom:0">
+                    <option value="social">📸 Social Media</option>
+                    <option value="email">📧 Email Marketing</option>
+                    <option value="whatsapp">💬 WhatsApp</option>
+                    <option value="meta">📊 Meta Ads</option>
+                    <option value="google">🔍 Google Ads</option>
+                  </select>
+                  <button class="btn btn-primary btn-sm" style="width:100%;margin-top:8px;border-radius:var(--r-lg)" onclick="quickAddSidebarIdea()">Add idea</button>
+                </div>
+
+                <!-- Drag hint -->
+                <div style="font-size:11px;color:var(--brand);font-weight:600;text-align:center;padding:6px 0 8px;opacity:.75">
+                  ⠿ Drag any card onto a calendar date
+                </div>
+
+                <!-- Idea cards list -->
+                <div id="sidebarIdeaCards"></div>
+
+                <div style="margin-top:10px">
+                  <a onclick="navigate('ideas',document.querySelector('[data-view=ideas]'))" style="font-size:11px;color:var(--brand);font-weight:700;cursor:pointer;text-decoration:none">
+                    View all ideas →
+                  </a>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+        <!-- All items list below -->
+        <div style="margin-top:20px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+            <div class="section-title">All items</div>
+            <button class="btn btn-primary" onclick="openChannelAddModal(new Date().toISOString().split('T')[0])">+ Add new</button>
+          </div>
+          <div id="channelItemsList" class="channel-items-list"></div>
+        </div>
+      </div>
+
+      <!-- ═══════════════════════════════════════════
+           EMAIL MARKETING VIEW
+      ═══════════════════════════════════════════ -->
+      <div id="view-email" class="view">
+        <!-- Stats -->
+        <div class="meta-stats-row" id="emailStats"></div>
+
+        <!-- Notif permission banner -->
+        <div id="notifPermBanner" style="background:var(--amber-light);border:1.5px solid var(--amber);border-radius:var(--r-lg);padding:12px 16px;margin-bottom:16px;display:flex;align-items:center;gap:12px;font-size:13px;color:var(--amber)">
+          <span style="font-size:20px">🔔</span>
+          <span><strong>Enable browser notifications</strong> to get reminded when campaigns are due!</span>
+          <button class="btn btn-sm" style="margin-left:auto;border-color:var(--amber);color:var(--amber)" onclick="requestNotificationPermission()">Enable</button>
+        </div>
+
+        <div class="email-layout">
+          <!-- Left: calendar + customer lists -->
+          <div class="email-main">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+              <div class="section-title">📅 Campaign calendar</div>
+              <button class="btn btn-primary" onclick="showEmailModal(null)">+ New campaign</button>
+            </div>
+            <div id="emailCalendarList" class="email-calendar-list"></div>
+
+            <div style="margin-top:24px;display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+              <div class="section-title">📋 All campaigns</div>
+            </div>
+            <div class="ads-grid" id="emailCampaignCards"></div>
+          </div>
+
+          <!-- Right: customer lists -->
+          <div class="email-sidebar">
+            <div class="panel" style="margin-bottom:14px">
+              <div class="panel-title">👥 Customer lists</div>
+              <div id="customerLists" style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px"></div>
+              <button class="btn btn-primary btn-sm" style="width:100%" onclick="showImportListModal()">+ Import list (Excel/CSV)</button>
+            </div>
+
+            <div class="panel" style="margin-bottom:14px">
+              <div class="panel-title">🛡️ Anti-spam settings</div>
+              <div style="font-size:12px;color:var(--text2);line-height:1.7">
+                <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border)"><span>Batch size</span><strong>50 emails</strong></div>
+                <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border)"><span>Batch delay</span><strong>30 min</strong></div>
+                <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border)"><span>Daily limit</span><strong>500 emails</strong></div>
+                <div style="display:flex;justify-content:space-between;padding:4px 0"><span>Unsubscribe</span><strong style="color:var(--green)">✅ Included</strong></div>
+              </div>
+              <button class="btn btn-ghost btn-sm" style="width:100%;margin-top:10px" onclick="showEmailSettingsModal()">⚙ Configure</button>
+            </div>
+
+            <div class="panel">
+              <div class="panel-title">📧 Quick templates</div>
+              <div id="emailTemplatesList"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══════════════════════════════════════════
+           MEDIA LIBRARY VIEW
+      ═══════════════════════════════════════════ -->
+      <div id="view-media" class="view">
+        <div class="meta-stats-row" id="mediaStats"></div>
+
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px;flex-wrap:wrap">
+          <div class="section-title" style="flex:1">Media Library</div>
+          <div class="filter-tabs">
+            <button class="ftab active" data-filter="all" onclick="filterMedia('all',this)">All</button>
+            <button class="ftab" data-filter="image" onclick="filterMedia('image',this)">Images</button>
+            <button class="ftab" data-filter="video" onclick="filterMedia('video',this)">Videos</button>
+          </div>
+          <button class="btn btn-ghost" onclick="importFromDrive()">☁️ Import from Drive</button>
+          <label class="btn btn-primary" style="cursor:pointer">
+            📁 Upload files
+            <input type="file" multiple accept="image/*,video/*" style="display:none" onchange="handleDeviceUpload(this)">
+          </label>
+        </div>
+
+        <!-- Drive instructions -->
+        <div style="background:var(--blue-light);border:1.5px solid var(--blue);border-radius:var(--r-lg);padding:12px 16px;margin-bottom:18px;font-size:12px;color:var(--blue);display:flex;align-items:center;gap:10px">
+          <span style="font-size:18px">☁️</span>
+          <div><strong>Google Drive & Gallery support:</strong> Click "Upload files" to pick from your device gallery, or "Import from Drive" to link files directly from Google Drive.</div>
+        </div>
+
+        <div class="media-grid" id="mediaGrid"></div>
+      </div>
+
+      <!-- ═══════════════════════════════════════════
+           REMINDERS VIEW
+      ═══════════════════════════════════════════ -->
+      <div id="view-reminders" class="view">
+        <div class="meta-stats-row" id="reminderStats"></div>
+
+        <!-- Notification banner -->
+        <div id="notifPermBannerRem" style="background:var(--amber-light);border:1.5px solid var(--amber);border-radius:var(--r-lg);padding:12px 16px;margin-bottom:16px;display:flex;align-items:center;gap:12px;font-size:13px;color:var(--amber)">
+          <span style="font-size:20px">🔔</span>
+          <div><strong>Enable browser notifications</strong> to get alerted when reminders are due — even if the app is in background.</div>
+          <button class="btn btn-sm" style="margin-left:auto;border-color:var(--amber);color:var(--amber)" onclick="requestNotificationPermission()">Enable notifications</button>
+        </div>
+
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px">
+          <div class="filter-tabs" id="reminderFilterTabs">
+            <button class="ftab active" onclick="filterReminders('all',this)">All</button>
+            <button class="ftab" onclick="filterReminders('today',this)">Today</button>
+            <button class="ftab" onclick="filterReminders('pending',this)">Pending</button>
+            <button class="ftab" onclick="filterReminders('done',this)">Done</button>
+          </div>
+          <button class="btn btn-primary" onclick="showReminderModal(null)">+ New reminder</button>
+        </div>
+
+        <div id="reminderList" style="display:flex;flex-direction:column;gap:10px"></div>
+      </div>
+
+
+      <!-- ═══════════════════════════════════════════
+           IDEAS BOARD VIEW
+      ═══════════════════════════════════════════ -->
+      <div id="view-ideas" class="view">
+        <div class="meta-stats-row" id="ideaStats"></div>
+
+        <div class="ideas-layout">
+          <!-- Left: idea cards board -->
+          <div class="ideas-main">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:10px">
+              <div>
+                <div class="section-title">💡 Ideas Board</div>
+                <div style="font-size:12px;color:var(--text3);margin-top:3px">Drag any card onto the calendar to schedule it · or click "Schedule"</div>
+              </div>
+              <button class="btn btn-primary" onclick="showIdeaModal(null)">+ New idea</button>
+            </div>
+
+            <!-- Category filters -->
+            <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px">
+              <button class="btn btn-sm idea-filter-btn active" onclick="filterIdeas('all',this)">All</button>
+              <button class="btn btn-sm idea-filter-btn" onclick="filterIdeas('idea',this)">💡 Ideas</button>
+              <button class="btn btn-sm idea-filter-btn" onclick="filterIdeas('video',this)">🎬 Video</button>
+              <button class="btn btn-sm idea-filter-btn" onclick="filterIdeas('caption',this)">✍️ Caption</button>
+              <button class="btn btn-sm idea-filter-btn" onclick="filterIdeas('campaign',this)">📣 Campaign</button>
+              <button class="btn btn-sm idea-filter-btn" onclick="filterIdeas('hashtag',this)">🔖 Hashtag</button>
+              <button class="btn btn-sm idea-filter-btn" onclick="filterIdeas('trend',this)">🔥 Trend</button>
+            </div>
+
+            <!-- Drag hint banner -->
+            <div class="idea-drag-banner">
+              <span style="font-size:16px">⠿</span>
+              <div>
+                <div style="font-weight:700;font-size:13px">Drag & drop to schedule</div>
+                <div style="font-size:11px;opacity:.8">Drag any idea card onto any calendar cell to assign it a date. Then click "→ Post" to convert it into a real post.</div>
+              </div>
+            </div>
+
+            <!-- Idea cards grid -->
+            <div class="idea-board-grid" id="ideaBoardGrid"></div>
+          </div>
+
+          <!-- Right: scheduled ideas + mini calendar -->
+          <div class="ideas-sidebar">
+            <div class="panel" style="margin-bottom:14px">
+              <div class="panel-title">📅 Scheduled ideas</div>
+              <div id="scheduledIdeasList"></div>
+            </div>
+
+            <div class="panel">
+              <div class="panel-title">💡 How it works</div>
+              <div style="font-size:12px;color:var(--text2);line-height:1.8">
+                <div style="margin-bottom:6px">1. <strong>Add an idea</strong> — capture any content thought</div>
+                <div style="margin-bottom:6px">2. <strong>Drag it</strong> onto a calendar date — or click Schedule</div>
+                <div style="margin-bottom:6px">3. <strong>Convert to post</strong> — click "→ Post" to make it a real scheduled post</div>
+                <div>4. <strong>Plan & publish</strong> — post appears in your calendar</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modalOverlay" onclick="closeModalOverlay(event)">
+  <div class="modal" id="modal">
+    <div class="modal-header">
+      <h3 class="modal-title" id="modalTitle">New Post</h3>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body" id="modalBody"></div>
+    <div class="modal-footer" id="modalFooter"></div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script src="js/sync.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/data.js"></script>
+<script src="js/app.js"></script>
+<script src="js/indian_occasions.js"></script>
+<script src="js/calendar.js"></script>
+<script src="js/posts.js"></script>
+<script src="js/meta.js"></script>
+<script src="js/whatsapp.js"></script>
+<script src="js/agenda.js"></script>
+<script src="js/analytics.js"></script>
+<script src="js/team.js"></script>
+<script src="js/modal.js"></script>
+<script src="js/settings.js"></script>
+<script src="js/email_marketing.js"></script>
+<script src="js/reminders.js"></script>
+<script src="js/channel_calendars.js"></script>
+<script src="js/media_library.js"></script>
+<script src="js/ideas_board.js"></script>
+<script src="js/monthly_planner.js"></script>
+<script src="js/interakt.js"></script>
+</body>
+</html>

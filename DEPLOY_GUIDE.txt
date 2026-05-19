@@ -1,0 +1,89 @@
+════════════════════════════════════════════════════════════════
+  SOCIALHUB — DEPLOYMENT GUIDE
+  How to make this app accessible to all 7 team members
+════════════════════════════════════════════════════════════════
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 1 — SET UP FIREBASE (FREE, 10 minutes)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+This gives all 7 team members real-time shared data.
+
+1. Open https://console.firebase.google.com
+2. Sign in with your Google account
+3. Click "Create a project" → name it "socialhub-team" → Continue
+4. Disable Google Analytics (not needed) → Create project
+5. In left sidebar: Build → Realtime Database → Create database
+6. Choose a location → Start in TEST mode → Enable
+7. Click the Gear icon (⚙) → Project settings
+8. Scroll to "Your apps" → Click </> (Web)
+9. App nickname: "socialhub" → Register app
+10. Copy the firebaseConfig object (looks like this):
+    {
+      apiKey: "AIza...",
+      authDomain: "socialhub-team.firebaseapp.com",
+      databaseURL: "https://socialhub-team-default-rtdb.firebaseio.com",
+      ...
+    }
+11. Open js/sync.js in any text editor
+12. Replace the FIREBASE_CONFIG = { ... } block with your copied config
+13. Save the file
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 2 — DEPLOY ON NETLIFY (FREE, 2 minutes)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+This gives everyone a URL to open the app.
+
+OPTION A — Drag & Drop (easiest):
+1. Open https://app.netlify.com/drop
+2. Drag the entire "socialhub" folder onto the page
+3. Netlify gives you a URL like: https://random-name.netlify.app
+4. Click "Site settings" → "Change site name" → set e.g. "socialhub-team"
+5. Your URL: https://socialhub-team.netlify.app
+6. Share this URL with all 7 team members
+
+OPTION B — Custom domain (optional):
+1. In Netlify: Domain management → Add custom domain
+2. Enter e.g. "app.yourbrand.com"
+3. Follow DNS instructions (takes ~24 hours to activate)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 3 — SHARE WITH TEAM
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Send each team member:
+  • URL: https://socialhub-team.netlify.app
+  • Their name (to select from dropdown)
+  • Their default password:
+    - Anusha:   anusha123    (Admin)
+    - Anjani:   anjani123    (Admin)
+    - Tejasv:   tejasv123    (Admin)
+    - Ashish:   ashish123    (Member — needs admin to grant access)
+    - Mukul:    mukul123     (Member — needs admin to grant access)
+    - Varshang: varshang123  (Member — needs admin to grant access)
+    - Vidhi:    vidhi123     (Member — needs admin to grant access)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+UPDATING THE APP (after any changes)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1. Make changes to files in the socialhub folder
+2. Go back to Netlify → Deploys → Drag the updated folder again
+3. URL stays the same — all team members see the update immediately
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FIREBASE DATABASE RULES (optional security)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+In Firebase Console → Realtime Database → Rules, paste:
+{
+  "rules": {
+    "socialhub": {
+      ".read": true,
+      ".write": true
+    }
+  }
+}
+This allows your app to read/write freely. For production,
+tighten rules after your team is set up.
+
+════════════════════════════════════════════════════════════════
+  SUPPORT: All data syncs automatically across all devices.
+  Any change by any team member is visible to everyone in ~1 sec.
+════════════════════════════════════════════════════════════════
