@@ -5,9 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>SocialHub — Content Command Center</title>
   <link rel="stylesheet" href="css/main.css">
-  <!-- Firebase SDK (Real-time sync) -->
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <!-- Supabase uses REST API directly — no SDK needed -->
   <link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 </head>
@@ -805,8 +803,19 @@
                   title="Click to open Monthly Planner for this month">May 2026 🗒</h2>
                 <button class="btn btn-ghost btn-sm" onclick="changeChannelMonth(1)">›</button>
               </div>
-              <div style="display:flex;gap:8px">
+              <div style="display:flex;gap:8px;align-items:center">
                 <button class="btn btn-ghost btn-sm" onclick="channelCalYear=2026;channelCalMonth=4;renderChannelGrid()">Today</button>
+                <button class="btn btn-ghost btn-sm docs-attach-btn" onclick="switchCalSidebarTab('docs',document.querySelector('.cst-tab[data-tab=docs]'))"
+                  title="Attach Google Docs" style="display:flex;align-items:center;gap:5px">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="#4285F4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <polyline points="14 2 14 8 20 8" stroke="#4285F4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <line x1="16" y1="13" x2="8" y2="13" stroke="#4285F4" stroke-width="2" stroke-linecap="round"/>
+                    <line x1="16" y1="17" x2="8" y2="17" stroke="#4285F4" stroke-width="2" stroke-linecap="round"/>
+                    <polyline points="10 9 9 9 8 9" stroke="#4285F4" stroke-width="2" stroke-linecap="round"/>
+                  </svg>
+                  Docs
+                </button>
                 <button class="btn btn-primary btn-sm" id="channelAddBtn" onclick="openChannelAddModal(new Date().toISOString().split('T')[0])">+ Add</button>
               </div>
             </div>
@@ -852,7 +861,8 @@
               <!-- Tab row -->
               <div class="cal-sidebar-tabs">
                 <button class="cst-tab active" onclick="switchCalSidebarTab('festivals',this)">🎉 Occasions</button>
-                <button class="cst-tab" onclick="switchCalSidebarTab('ideas',this)">💡 My Ideas</button>
+                <button class="cst-tab" onclick="switchCalSidebarTab('ideas',this)">💡 Ideas</button>
+                <button class="cst-tab" data-tab="docs" onclick="switchCalSidebarTab('docs',this)">📄 Docs</button>
               </div>
 
               <!-- FESTIVALS panel -->
@@ -899,10 +909,44 @@
                     View all ideas →
                   </a>
                 </div>
-              </div>
+              </div><!-- end csp-ideas -->
 
-            </div>
-          </div>
+              <!-- ══ DOCS PANEL ══ -->
+              <div id="csp-docs" class="cal-sidebar-panel" style="flex:1;overflow-y:auto;padding:0 2px">
+
+                <div style="font-size:11px;font-weight:800;color:var(--brand-dark);margin-bottom:10px;text-transform:uppercase;letter-spacing:.06em;padding-top:4px">📄 Attached Google Docs</div>
+
+                <!-- Add form -->
+                <div style="background:var(--brand-pale);border:1.5px dashed var(--brand-mid);border-radius:var(--r-lg);padding:12px;margin-bottom:12px">
+                  <input class="form-input" id="doc-title" placeholder="Name (e.g. May Content Plan)" style="margin-bottom:8px;font-size:12px;padding:8px 12px">
+                  <input class="form-input" id="doc-url" placeholder="Paste Google Doc / Sheet link" style="margin-bottom:8px;font-size:12px;padding:8px 12px">
+                  <select class="form-select" id="doc-type" style="margin-bottom:8px;font-size:12px;padding:8px 12px">
+                    <option value="doc">📄 Google Doc</option>
+                    <option value="sheet">📊 Google Sheet</option>
+                    <option value="slides">📑 Google Slides</option>
+                    <option value="form">📋 Google Form</option>
+                    <option value="drive">📁 Drive folder</option>
+                  </select>
+                  <button class="btn btn-primary btn-sm" style="width:100%;border-radius:var(--r-lg);font-size:12px" onclick="addGoogleDoc()">+ Attach</button>
+                </div>
+
+                <!-- Docs list -->
+                <div id="attachedDocsList">
+                  <div style="text-align:center;padding:20px;color:var(--text3)">
+                    <div style="font-size:28px;margin-bottom:8px">📄</div>
+                    <div style="font-size:12px;font-weight:600">No docs attached yet</div>
+                    <div style="font-size:11px;margin-top:3px">Paste any Google link above</div>
+                  </div>
+                </div>
+
+                <div style="font-size:11px;color:var(--text3);line-height:1.6;margin-top:8px">
+                  💡 Open Google Doc → Share → Anyone with link → Copy → paste above
+                </div>
+
+              </div><!-- end csp-docs -->
+
+            </div><!-- end panel -->
+          </div><!-- end calendar-sidebar -->
         </div>
 
         <!-- All items list below -->

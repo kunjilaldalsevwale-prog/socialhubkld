@@ -1,121 +1,160 @@
 /* ============================================================
-   FIREBASE REAL-TIME SYNC
-   Free plan supports unlimited reads/writes for small teams.
+   SUPABASE REAL-TIME SYNC
+   Project: kunjilaldalsevwale-prog's Project
    
-   SETUP STEPS (one-time, 10 minutes):
-   1. Go to https://console.firebase.google.com
-   2. Click "Create project" → name it "socialhub-yourteam"
-   3. Click "Build" → "Realtime Database" → "Create database"
-   4. Start in TEST mode (you'll secure it later)
-   5. Click "Project settings" (gear icon) → "Your apps" → </>
-   6. Register app → copy the firebaseConfig object
-   7. Replace the FIREBASE_CONFIG below with your config
-   8. Done! All 7 members will now sync in real-time.
+   PASTE YOUR VALUES BELOW:
+   - SUPABASE_URL: from Settings → API Keys → Project URL
+   - SUPABASE_KEY: the sb_publishable_... key (copy icon)
    ============================================================ */
 
-const FIREBASE_CONFIG = {
-  // REPLACE THIS with your Firebase project config
-  // Get it from: Firebase Console → Project Settings → Your apps → Web app
-  apiKey:            "YOUR_API_KEY",
-  authDomain:        "YOUR_PROJECT.firebaseapp.com",
-  databaseURL:       "https://YOUR_PROJECT-default-rtdb.firebaseio.com",
-  projectId:         "YOUR_PROJECT",
-  storageBucket:     "YOUR_PROJECT.appspot.com",
-  messagingSenderId: "YOUR_SENDER_ID",
-  appId:             "YOUR_APP_ID",
-};
+const SUPABASE_URL = 'https://hmnwguaanosjwbrrresv.supabase.co';
+const SUPABASE_KEY = 'PASTE_YOUR_PUBLISHABLE_KEY_HERE';
 
-// Is Firebase configured?
-const FIREBASE_READY = FIREBASE_CONFIG.apiKey !== "YOUR_API_KEY";
+// ── Is Supabase configured? ──────────────────────────────────
+const SUPABASE_READY = SUPABASE_KEY !== 'PASTE_YOUR_PUBLISHABLE_KEY_HERE'
+                    && SUPABASE_URL.includes('supabase.co');
 
-/* ── SYNC STATE ────────────────────────────────────────────── */
-let   _db            = null;
-let   _syncRef       = null;
-let   _syncEnabled   = false;
-let   _lastPushTime  = 0;
-let   _pushTimer     = null;
-const SYNC_DEBOUNCE  = 1200; // ms — batch rapid changes
+let _syncEnabled  = false;
+let _pushTimer    = null;
+let _lastPushTime = 0;
+let _pollInterval = null;
+const SYNC_DEBOUNCE = 1500; // ms
+const POLL_INTERVAL = 8000; // poll every 8 seconds for updates
 
-/* ── INIT ──────────────────────────────────────────────────── */
-function initSync() {
-  if (!FIREBASE_READY) {
-    console.log('Firebase not configured — running in local mode');
+/* ══════════════════════════════════════════════════════════
+   INIT
+══════════════════════════════════════════════════════════ */
+async function initSync() {
+  if (!SUPABASE_READY) {
+    console.log('Supabase not configured — running in local mode');
     _showSyncBanner('local');
     return;
   }
   try {
-    if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
-    _db       = firebase.database();
-    _syncRef  = _db.ref('socialhub/sharedState');
-    _syncEnabled = true;
-    _startListening();
-    _showSyncBanner('connected');
-    console.log('✅ Firebase sync connected');
+    // Test connection by fetching the row
+    const res = await _sbFetch('GET');
+    if (res.ok || res.status === 200) {
+      _syncEnabled = true;
+      _showSyncBanner('connected');
+      // Pull latest data on load
+      await _pullState();
+      // Start polling for other users' changes
+      _startPolling();
+      console.log('✅ Supabase sync connected');
+    } else {
+      // Table might not exist yet — create it
+      await _initTable();
+    }
   } catch(e) {
-    console.warn('Firebase init failed:', e);
+    console.warn('Supabase init error:', e);
     _showSyncBanner('error');
   }
 }
 
-/* ── LISTEN FOR CHANGES FROM OTHER USERS ───────────────────── */
-function _startListening() {
-  if (!_syncRef) return;
+/* ══════════════════════════════════════════════════════════
+   DATABASE TABLE SETUP
+   Run this SQL in Supabase → SQL Editor → New query:
 
-  _syncRef.on('value', snapshot => {
-    const remote = snapshot.val();
-    if (!remote) return;
+   CREATE TABLE IF NOT EXISTS socialhub_state (
+     id TEXT PRIMARY KEY DEFAULT 'shared',
+     data JSONB,
+     updated_at TIMESTAMPTZ DEFAULT NOW(),
+     updated_by TEXT
+   );
+   INSERT INTO socialhub_state (id, data) 
+   VALUES ('shared', '{}') 
+   ON CONFLICT (id) DO NOTHING;
 
-    // Ignore if we just pushed this data ourselves (within 2s)
-    if (Date.now() - _lastPushTime < 2000) return;
+══════════════════════════════════════════════════════════ */
+async function _initTable() {
+  // Try to create and insert via RPC isn't possible from client
+  // Guide user to run the SQL
+  _showSyncBanner('setup');
+  console.log('Run the SQL setup query in Supabase SQL Editor');
+}
 
-    // Merge remote state — preserve local user session
-    const localUser = currentUser;
-    const merged = {
-      ...state,
-      posts:           remote.posts           || state.posts,
-      emailCampaigns:  remote.emailCampaigns  || state.emailCampaigns,
-      ads:             remote.ads             || state.ads,
-      ideas:           remote.ideas           || state.ideas,
-      monthlyPlans:    remote.monthlyPlans    || state.monthlyPlans,
-      reminders:       remote.reminders       || state.reminders,
-      customerLists:   remote.customerLists   || state.customerLists,
-      googleAds:       remote.googleAds       || state.googleAds,
-      teamPermissions: remote.teamPermissions || state.teamPermissions,
-      teamPasswords:   remote.teamPasswords   || state.teamPasswords,
-      settings:        remote.settings        || state.settings,
-      notes:           remote.notes           || state.notes,
-    };
+/* ══════════════════════════════════════════════════════════
+   FETCH HELPERS (Supabase REST API)
+══════════════════════════════════════════════════════════ */
+async function _sbFetch(method, body) {
+  const url = `${SUPABASE_URL}/rest/v1/socialhub_state?id=eq.shared`;
+  const opts = {
+    method,
+    headers: {
+      'apikey':        SUPABASE_KEY,
+      'Authorization': 'Bearer ' + SUPABASE_KEY,
+      'Content-Type':  'application/json',
+      'Prefer':        method === 'POST' ? 'return=minimal' : 'return=representation',
+    },
+  };
+  if (body) opts.body = JSON.stringify(body);
+  return fetch(url, opts);
+}
 
-    // Update state
-    Object.assign(state, merged);
-
-    // Re-render current view
-    _rerenderCurrentView();
-
-    // Show sync indicator
-    _flashSyncIndicator();
-  });
-
-  // Connection status
-  _db.ref('.info/connected').on('value', snap => {
-    _showSyncBanner(snap.val() ? 'connected' : 'offline');
+async function _sbUpsert(body) {
+  const url = `${SUPABASE_URL}/rest/v1/socialhub_state`;
+  return fetch(url, {
+    method: 'POST',
+    headers: {
+      'apikey':        SUPABASE_KEY,
+      'Authorization': 'Bearer ' + SUPABASE_KEY,
+      'Content-Type':  'application/json',
+      'Prefer':        'resolution=merge-duplicates,return=minimal',
+    },
+    body: JSON.stringify(body),
   });
 }
 
-/* ── PUSH STATE TO FIREBASE ────────────────────────────────── */
-function syncPush() {
-  if (!_syncEnabled || !_syncRef) return;
+/* ══════════════════════════════════════════════════════════
+   PULL (receive other users' changes)
+══════════════════════════════════════════════════════════ */
+async function _pullState() {
+  try {
+    const res  = await _sbFetch('GET');
+    if (!res.ok) return;
+    const rows = await res.json();
+    if (!rows || !rows.length || !rows[0].data) return;
 
-  // Debounce — don't push on every keystroke
+    const remote   = rows[0].data;
+    const remoteTs = rows[0].updated_at ? new Date(rows[0].updated_at).getTime() : 0;
+
+    // Don't apply if we just pushed (within 3s)
+    if (Date.now() - _lastPushTime < 3000) return;
+
+    // Merge shared fields into local state
+    const fields = ['posts','emailCampaigns','ads','ideas','monthlyPlans',
+                    'reminders','customerLists','googleAds','teamPermissions',
+                    'teamPasswords','settings','notes'];
+    let changed = false;
+    fields.forEach(f => {
+      if (remote[f] !== undefined) {
+        const remoteStr = JSON.stringify(remote[f]);
+        const localStr  = JSON.stringify(state[f]);
+        if (remoteStr !== localStr) { state[f] = remote[f]; changed = true; }
+      }
+    });
+
+    if (changed) {
+      DB.save(state);
+      _rerenderCurrentView();
+      _flashSyncIndicator(false);
+    }
+  } catch(e) { /* silent — offline */ }
+}
+
+/* ══════════════════════════════════════════════════════════
+   PUSH (send our changes)
+══════════════════════════════════════════════════════════ */
+function syncPush() {
+  if (!_syncEnabled) return;
   clearTimeout(_pushTimer);
   _pushTimer = setTimeout(_doPush, SYNC_DEBOUNCE);
 }
 
-function _doPush() {
-  if (!_syncRef) return;
+async function _doPush() {
+  if (!_syncEnabled) return;
   _lastPushTime = Date.now();
 
-  // Only sync shared data — not media blobs (too large)
   const shared = {
     posts:           state.posts           || [],
     emailCampaigns:  state.emailCampaigns  || [],
@@ -129,83 +168,137 @@ function _doPush() {
     teamPasswords:   state.teamPasswords   || {},
     settings:        state.settings        || {},
     notes:           state.notes           || '',
-    _lastEditor:     currentUser ? currentUser.name : 'Unknown',
-    _lastEditTime:   Date.now(),
   };
 
-  _syncRef.set(shared)
-    .then(() => _flashSyncIndicator(true))
-    .catch(e => { console.warn('Sync push failed:', e); _showSyncBanner('error'); });
+  try {
+    const res = await _sbUpsert({
+      id:         'shared',
+      data:       shared,
+      updated_at: new Date().toISOString(),
+      updated_by: currentUser ? currentUser.name : 'Unknown',
+    });
+    if (res.ok || res.status === 201) {
+      _flashSyncIndicator(true);
+      _showSyncBanner('connected');
+    } else {
+      const err = await res.text();
+      if (err.includes('does not exist')) {
+        _showSyncBanner('setup');
+      }
+    }
+  } catch(e) {
+    _showSyncBanner('offline');
+  }
 }
 
-/* ── RE-RENDER CURRENT VIEW ─────────────────────────────────── */
-function _rerenderCurrentView() {
-  const renders = {
-    channels: renderChannelCalendars, email: renderEmail,
-    whatsapp: renderWhatsApp, meta: renderMetaAds,
-    media: renderMediaLibrary, ideas: renderIdeasBoard,
-    agenda: renderMonthlyPlanner, reminders: renderReminders,
-    analytics: renderAnalytics, team: renderTeam,
-  };
-  const fn = renders[currentView];
-  if (fn) try { fn(); } catch(e) {}
+/* ══════════════════════════════════════════════════════════
+   POLLING (check for other users' changes)
+══════════════════════════════════════════════════════════ */
+function _startPolling() {
+  _pollInterval = setInterval(_pullState, POLL_INTERVAL);
+  // Also pull immediately when tab becomes visible again
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) _pullState();
+  });
 }
 
-/* ── UI INDICATORS ─────────────────────────────────────────── */
+/* ══════════════════════════════════════════════════════════
+   UI
+══════════════════════════════════════════════════════════ */
 function _showSyncBanner(status) {
   const el = document.getElementById('syncStatusBar');
   if (!el) return;
 
   const configs = {
-    connected: { bg:'#ECFDF5', border:'#6EE7B7', color:'#065F46', text:'☁️ Live sync on — all team changes sync in real-time', dot:'#10B981' },
-    local:     { bg:'#FFFBEB', border:'#FCD34D', color:'#92400E', text:'📴 Local mode — configure Firebase for team sync', dot:'#F59E0B' },
-    offline:   { bg:'#FEF2F2', border:'#FCA5A5', color:'#991B1B', text:'📡 Offline — reconnecting…', dot:'#EF4444' },
-    error:     { bg:'#FEF2F2', border:'#FCA5A5', color:'#991B1B', text:'⚠️ Sync error — check Firebase config', dot:'#EF4444' },
+    connected: { bg:'#ECFDF5', border:'#6EE7B7', color:'#065F46',
+      text:'☁️ Supabase sync active — all team changes sync automatically', dot:'#10B981', anim:true },
+    local:     { bg:'#FFFBEB', border:'#FCD34D', color:'#92400E',
+      text:'📴 Local mode — paste your Supabase key in js/sync.js to enable team sync', dot:'#F59E0B' },
+    offline:   { bg:'#FEF2F2', border:'#FCA5A5', color:'#991B1B',
+      text:'📡 Offline — changes saved locally, will sync when reconnected', dot:'#EF4444' },
+    error:     { bg:'#FEF2F2', border:'#FCA5A5', color:'#991B1B',
+      text:'⚠️ Sync error — check Supabase key in js/sync.js', dot:'#EF4444' },
+    setup:     { bg:'#EFF6FF', border:'#93C5FD', color:'#1D4ED8',
+      text:'🔧 Supabase table not set up yet — click to see instructions', dot:'#3B82F6' },
   };
+
   const cfg = configs[status] || configs.local;
-  el.style.cssText = `display:flex;align-items:center;gap:8px;padding:7px 14px;background:${cfg.bg};border-bottom:1.5px solid ${cfg.border};font-size:11px;font-weight:600;color:${cfg.color}`;
-  el.innerHTML = `<span style="width:7px;height:7px;border-radius:50%;background:${cfg.dot};flex-shrink:0;${status==='connected'?'animation:pulse 2s infinite':''}"></span>${cfg.text}
-    ${status==='local'?`<a onclick="openSyncSetupModal()" style="margin-left:auto;color:var(--brand);font-weight:700;cursor:pointer;text-decoration:underline">Set up →</a>`:''}`;
+  el.style.cssText = `display:flex;align-items:center;gap:8px;padding:7px 16px;
+    background:${cfg.bg};border-bottom:1.5px solid ${cfg.border};
+    font-size:11px;font-weight:600;color:${cfg.color};cursor:${status==='setup'?'pointer':'default'}`;
+  el.onclick = status === 'setup' ? openSyncSetupModal : null;
+  el.innerHTML = `
+    <span style="width:7px;height:7px;border-radius:50%;background:${cfg.dot};flex-shrink:0;${cfg.anim?'animation:pulse 2s infinite':''}"></span>
+    ${cfg.text}
+    ${status === 'local' ? `<button onclick="openSyncSetupModal()" style="margin-left:auto;background:var(--brand);color:#fff;border:none;border-radius:12px;padding:3px 10px;font-size:10px;font-weight:700;cursor:pointer;font-family:var(--font)">Set up →</button>` : ''}
+    ${status === 'setup' ? `<span style="margin-left:auto;font-weight:700;text-decoration:underline">View instructions →</span>` : ''}`;
 }
 
 function _flashSyncIndicator(isPush) {
   const el = document.getElementById('syncIndicator');
   if (!el) return;
   el.style.opacity = '1';
-  el.textContent = isPush ? '↑ Saved' : '↓ Updated';
-  el.style.color = isPush ? 'var(--green)' : 'var(--brand)';
-  setTimeout(() => { el.style.opacity = '0'; }, 2000);
+  el.textContent   = isPush ? '↑ Synced' : '↓ Updated';
+  el.style.color   = isPush ? '#10B981' : '#2563EB';
+  setTimeout(() => { el.style.opacity = '0'; }, 2500);
 }
 
-/* ── SETUP MODAL ─────────────────────────────────────────────── */
+function _rerenderCurrentView() {
+  const renders = {
+    channels:renderChannelCalendars, email:renderEmail, whatsapp:renderWhatsApp,
+    meta:renderMetaAds, media:renderMediaLibrary, ideas:renderIdeasBoard,
+    agenda:renderMonthlyPlanner, reminders:renderReminders, team:renderTeam,
+  };
+  const fn = renders[currentView];
+  if (fn) try { fn(); } catch(e) {}
+}
+
+/* ══════════════════════════════════════════════════════════
+   SETUP MODAL
+══════════════════════════════════════════════════════════ */
 function openSyncSetupModal() {
-  document.getElementById('modalTitle').textContent = '☁️ Set up Team Sync (Firebase)';
+  document.getElementById('modalTitle').textContent = '☁️ Supabase Sync Setup';
   document.getElementById('modalBody').innerHTML = `
+
     <div style="background:linear-gradient(135deg,#EFF6FF,#DBEAFE);border-radius:var(--r-lg);padding:16px;margin-bottom:16px;text-align:center">
-      <div style="font-size:28px;margin-bottom:6px">☁️</div>
-      <div style="font-size:14px;font-weight:800;color:var(--text)">Free real-time sync for your entire team</div>
-      <div style="font-size:12px;color:var(--text3);margin-top:4px">Firebase free plan — no credit card needed</div>
+      <div style="font-size:24px;margin-bottom:6px">☁️</div>
+      <div style="font-size:14px;font-weight:800;color:var(--text)">Enable real-time sync for your team</div>
+      <div style="font-size:12px;color:var(--text3);margin-top:3px">Supabase free plan — no credit card needed</div>
     </div>
 
-    <div style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:12px">Setup steps (10 minutes, one-time):</div>
-    ${[
-      ['Go to Firebase Console','<a href="https://console.firebase.google.com" target="_blank" style="color:var(--brand);font-weight:700">console.firebase.google.com</a> → Sign in with Google'],
-      ['Create project',"Click \"Add project\" → Name it anything (e.g. \"socialhub-team\") → Continue"],
-      ['Create database',"Build → Realtime Database → Create database → Start in TEST mode → Done"],
-      ['Get config',"Project settings (⚙ gear) → Your apps → Click </> → Register app → Copy the <code>firebaseConfig</code> object"],
-      ['Paste config',"Open <code>js/sync.js</code> in any text editor → replace the <code>FIREBASE_CONFIG</code> block at the top with your config"],
-      ['Deploy on Netlify',"Drag your <code>socialhub</code> folder to <a href='https://app.netlify.com/drop' target='_blank' style='color:var(--brand)'>app.netlify.com/drop</a> → get a shareable URL → send to all 7 team members"],
-    ].map(([title,desc],i)=>`
-      <div style="display:flex;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)">
-        <div style="width:24px;height:24px;border-radius:50%;background:var(--brand);color:#fff;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">${i+1}</div>
-        <div><div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:3px">${title}</div><div style="font-size:12px;color:var(--text2);line-height:1.6">${desc}</div></div>
-      </div>`).join('')}
+    <div style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:10px">Step 1 — Run this SQL in Supabase</div>
+    <div style="background:#0F172A;border-radius:var(--r-lg);padding:14px;margin-bottom:14px;position:relative">
+      <pre id="sqlBlock" style="font-family:var(--font-mono);font-size:11px;color:#E2E8F0;line-height:1.7;margin:0;white-space:pre-wrap">CREATE TABLE IF NOT EXISTS socialhub_state (
+  id TEXT PRIMARY KEY DEFAULT 'shared',
+  data JSONB,
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_by TEXT
+);
+INSERT INTO socialhub_state (id, data)
+VALUES ('shared', '{}')
+ON CONFLICT (id) DO NOTHING;</pre>
+      <button onclick="navigator.clipboard.writeText(document.getElementById('sqlBlock').textContent).then(()=>showToast('SQL copied!','success'))"
+        style="position:absolute;top:10px;right:10px;background:#1E40AF;color:#fff;border:none;border-radius:6px;padding:4px 10px;font-size:11px;font-weight:700;cursor:pointer">
+        📋 Copy
+      </button>
+    </div>
+    <div style="font-size:12px;color:var(--text2);line-height:1.7;margin-bottom:14px">
+      In Supabase → click <strong>SQL Editor</strong> (left sidebar) → <strong>New query</strong> → paste the SQL above → click <strong>Run</strong>
+    </div>
 
-    <div style="margin-top:14px;padding:12px;background:var(--green-light);border-radius:var(--r-lg);font-size:12px;color:var(--green)">
-      ✅ Once done, all 7 team members see the same posts, ideas, and calendar in real-time — from any device, any browser.
+    <div style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:10px">Step 2 — Paste your key into sync.js</div>
+    <div style="font-size:12px;color:var(--text2);line-height:1.7;margin-bottom:6px">
+      Open <code style="background:var(--surface2);padding:1px 5px;border-radius:4px">js/sync.js</code> → find line 8 → replace <code>PASTE_YOUR_PUBLISHABLE_KEY_HERE</code> with your <strong>sb_publishable_...</strong> key
+    </div>
+
+    <div style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:10px">Step 3 — Disable Row Level Security (RLS)</div>
+    <div style="font-size:12px;color:var(--text2);line-height:1.7">
+      In Supabase → <strong>Table Editor</strong> → <strong>socialhub_state</strong> → click the 🔒 lock icon → <strong>Disable RLS</strong><br>
+      <em style="color:var(--text3)">(This lets the app read/write without authentication headers)</em>
     </div>`;
+
   document.getElementById('modalFooter').innerHTML = `
     <button class="btn btn-ghost" onclick="closeModal()">Close</button>
-    <button class="btn btn-primary" onclick="window.open('https://console.firebase.google.com','_blank');closeModal()">Open Firebase →</button>`;
+    <button class="btn btn-primary" onclick="window.open('https://supabase.com/dashboard','_blank')">Open Supabase ↗</button>`;
   document.getElementById('modalOverlay').classList.add('open');
 }

@@ -166,3 +166,93 @@ function _syncInteraktNavBadge() {
     ? '<span class="badge badge-published">● Connected</span>'
     : '<span class="badge badge-draft">○ Not connected</span>';
 }
+
+/* ══════════════════════════════════════════════════════════
+   GOOGLE DOCS PANEL
+══════════════════════════════════════════════════════════ */
+if (!state.attachedDocs) state.attachedDocs = [];
+
+const DOC_ICONS = {
+  doc:    { icon:'📄', color:'#4285F4', label:'Google Doc' },
+  sheet:  { icon:'📊', color:'#0F9D58', label:'Google Sheet' },
+  slides: { icon:'📑', color:'#F4B400', label:'Google Slides' },
+  form:   { icon:'📋', color:'#AB47BC', label:'Google Form' },
+  drive:  { icon:'📁', color:'#1E88E5', label:'Drive folder' },
+};
+
+function addGoogleDoc() {
+  const title = (document.getElementById('doc-title').value || '').trim();
+  const url   = (document.getElementById('doc-url').value   || '').trim();
+  const type  = document.getElementById('doc-type').value;
+
+  if (!title) { showToast('Enter a name for this doc', 'error'); return; }
+  if (!url)   { showToast('Paste the Google Doc link', 'error'); return; }
+  if (!url.includes('google.com') && !url.includes('docs.') && !url.startsWith('http')) {
+    showToast('Paste a valid Google link', 'error'); return;
+  }
+
+  if (!state.attachedDocs) state.attachedDocs = [];
+  state.attachedDocs.push({
+    id: genId(), title, url, type,
+    date: new Date().toISOString().split('T')[0],
+    addedBy: currentUser ? currentUser.name : 'You',
+  });
+  saveState();
+
+  // Clear form
+  document.getElementById('doc-title').value = '';
+  document.getElementById('doc-url').value   = '';
+
+  renderAttachedDocs();
+  showToast('📄 Doc attached!', 'success');
+}
+
+function renderAttachedDocs() {
+  const el = document.getElementById('attachedDocsList');
+  if (!el) return;
+  const docs = state.attachedDocs || [];
+
+  if (!docs.length) {
+    el.innerHTML = `<div style="text-align:center;padding:20px;color:var(--text3)">
+      <div style="font-size:28px;margin-bottom:8px">📄</div>
+      <div style="font-size:12px;font-weight:600">No docs attached yet</div>
+      <div style="font-size:11px;margin-top:3px">Paste any Google Doc, Sheet or Slides link above</div>
+    </div>`;
+    return;
+  }
+
+  el.innerHTML = docs.map(doc => {
+    const cfg = DOC_ICONS[doc.type] || DOC_ICONS.doc;
+    return `<div class="attached-doc-card">
+      <div class="adc-icon" style="background:${cfg.color}22;color:${cfg.color}">${cfg.icon}</div>
+      <div class="adc-body">
+        <div class="adc-title">${doc.title}</div>
+        <div class="adc-meta">${cfg.label} · Added by ${doc.addedBy}</div>
+      </div>
+      <div class="adc-actions">
+        <button class="adc-open" onclick="window.open('${doc.url}','_blank')" title="Open">↗</button>
+        <button class="adc-del" onclick="removeDoc(${doc.id})" title="Remove">✕</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function removeDoc(id) {
+  state.attachedDocs = (state.attachedDocs || []).filter(d => d.id !== id);
+  saveState();
+  renderAttachedDocs();
+  showToast('Doc removed');
+}
+
+// Extend switchCalSidebarTab to handle docs panel
+const _origSwitchTab = switchCalSidebarTab;
+function switchCalSidebarTab(tab, el) {
+  document.querySelectorAll('.cst-tab').forEach(b => b.classList.remove('active'));
+  if (el) el.classList.add('active');
+  document.querySelectorAll('.cal-sidebar-panel').forEach(p => p.classList.remove('active'));
+  const panel = document.getElementById('csp-' + tab);
+  if (panel) panel.classList.add('active');
+  if (tab === 'ideas') renderSidebarIdeas && renderSidebarIdeas();
+  if (tab === 'festivals') renderChannelFestivalSidebar && renderChannelFestivalSidebar();
+  if (tab === 'docs') renderAttachedDocs();
+}

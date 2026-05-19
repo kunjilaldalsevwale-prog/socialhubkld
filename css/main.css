@@ -1785,3 +1785,52 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);line-height:
 @keyframes pulse {
   0%,100% { opacity:1; } 50% { opacity:.4; }
 }
+
+/* ══════════════════════════════════════════
+   ATTACHED DOCS PANEL
+══════════════════════════════════════════ */
+.attached-doc-card {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 12px;
+  background: var(--white);
+  border: 1.5px solid var(--border);
+  border-radius: var(--r-lg);
+  margin-bottom: 8px;
+  transition: all .15s;
+  box-shadow: var(--sh-sm);
+}
+.attached-doc-card:hover { border-color: var(--brand-mid); box-shadow: var(--sh-md); }
+.attached-doc-card:last-child { margin-bottom: 0; }
+
+.adc-icon {
+  width: 34px; height: 34px; border-radius: var(--r-md);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px; flex-shrink: 0;
+}
+.adc-body { flex: 1; min-width: 0; }
+.adc-title {
+  font-size: 12px; font-weight: 700; color: var(--text);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.adc-meta { font-size: 10px; color: var(--text3); margin-top: 2px; font-weight: 500; }
+.adc-actions { display: flex; gap: 4px; flex-shrink: 0; }
+.adc-open {
+  width: 26px; height: 26px; border-radius: var(--r-sm);
+  background: var(--brand); color: #fff; border: none;
+  cursor: pointer; font-size: 12px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  transition: background .13s;
+}
+.adc-open:hover { background: var(--brand-dark); }
+.adc-del {
+  width: 26px; height: 26px; border-radius: var(--r-sm);
+  background: var(--surface2); color: var(--text3); border: 1px solid var(--border);
+  cursor: pointer; font-size: 11px;
+  display: flex; align-items: center; justify-content: center;
+  transition: all .13s;
+}
+.adc-del:hover { background: var(--coral-light); color: var(--coral); border-color: var(--coral); }
+
+/* Docs button in toolbar */
+.docs-attach-btn { border-color: #4285F420; }
+.docs-attach-btn:hover { background: #EBF5FB; border-color: #4285F4; color: #4285F4; }
