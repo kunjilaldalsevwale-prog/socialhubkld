@@ -5,7 +5,7 @@
    ============================================================ */
 
 const CLOUDINARY_CLOUD = 'dtegieseu';
-const CLOUDINARY_PRESET = 'PASTE_PRESET_NAME_HERE'; // unsigned upload preset
+const CLOUDINARY_PRESET = 'Media Library'; // unsigned upload preset
 
 /* ── Upload a file to Cloudinary ────────────────────────────── */
 async function uploadToCloudinary(file, onProgress) {
