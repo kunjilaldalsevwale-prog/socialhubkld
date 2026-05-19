@@ -5,7 +5,7 @@
    ============================================================ */
 
 const CLOUDINARY_CLOUD = 'dtegieseu';
-const CLOUDINARY_PRESET = 'Media Library'; // unsigned upload preset
+const CLOUDINARY_PRESET = 'PASTE_PRESET_NAME_HERE'; // unsigned upload preset
 
 /* ── Upload a file to Cloudinary ────────────────────────────── */
 async function uploadToCloudinary(file, onProgress) {
@@ -40,6 +40,65 @@ async function uploadToCloudinary(file, onProgress) {
 /* ══════════════════════════════════════════════════════════
    RENDER
 ══════════════════════════════════════════════════════════ */
+
+/* ══════════════════════════════════════════════════════════
+   LIGHTBOX — click image to view full size
+══════════════════════════════════════════════════════════ */
+function openMediaLightbox(id) {
+  const m = (state.mediaLibrary||[]).find(x=>x.id===id);
+  if (!m || !m.url) return;
+
+  // Remove existing lightbox
+  const existing = document.getElementById('mediaLightbox');
+  if (existing) existing.remove();
+
+  const lb = document.createElement('div');
+  lb.id = 'mediaLightbox';
+  lb.style.cssText = `position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;animation:fadeIn .2s ease`;
+  lb.onclick = e => { if(e.target===lb) lb.remove(); };
+
+  lb.innerHTML = `
+    <div style="position:relative;max-width:90vw;max-height:85vh;display:flex;flex-direction:column;align-items:center">
+      <!-- Close -->
+      <button onclick="document.getElementById('mediaLightbox').remove()"
+        style="position:fixed;top:20px;right:24px;width:38px;height:38px;border-radius:50%;background:rgba(255,255,255,.15);border:1.5px solid rgba(255,255,255,.3);color:#fff;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .15s;font-family:var(--font)"
+        onmouseover="this.style.background='rgba(255,255,255,.3)'" onmouseout="this.style.background='rgba(255,255,255,.15)'">
+        ✕
+      </button>
+
+      <!-- Image -->
+      ${m.type === 'video'
+        ? `<video src="${m.url}" controls style="max-width:90vw;max-height:75vh;border-radius:var(--r-lg);box-shadow:0 20px 60px rgba(0,0,0,.5)"></video>`
+        : `<img src="${m.url}" style="max-width:90vw;max-height:75vh;object-fit:contain;border-radius:var(--r-lg);box-shadow:0 20px 60px rgba(0,0,0,.5);display:block">`
+      }
+
+      <!-- Info bar -->
+      <div style="margin-top:16px;display:flex;align-items:center;gap:16px;background:rgba(255,255,255,.1);backdrop-filter:blur(10px);padding:10px 20px;border-radius:30px;border:1px solid rgba(255,255,255,.15)">
+        <div style="color:#fff;font-size:13px;font-weight:700">${m.name}</div>
+        <div style="color:rgba(255,255,255,.5);font-size:12px">${m.size||''}</div>
+        <div style="color:rgba(255,255,255,.5);font-size:12px">${m.source==='cloudinary'?'☁️ Cloudinary':m.source==='drive'?'☁️ Drive':'📱 Device'}</div>
+        <a href="${m.url}" target="_blank"
+          style="color:#60A5FA;font-size:12px;font-weight:700;text-decoration:none;padding:5px 12px;background:rgba(96,165,250,.15);border-radius:20px;border:1px solid rgba(96,165,250,.3)">
+          ↗ Open full size
+        </a>
+        <button onclick="copyMediaUrl(${m.id})"
+          style="color:#34D399;font-size:12px;font-weight:700;background:rgba(52,211,153,.15);border:1px solid rgba(52,211,153,.3);border-radius:20px;padding:5px 12px;cursor:pointer;font-family:var(--font)">
+          📋 Copy URL
+        </button>
+      </div>
+    </div>`;
+
+  document.body.appendChild(lb);
+}
+
+function copyMediaUrl(id) {
+  const m = (state.mediaLibrary||[]).find(x=>x.id===id);
+  if (!m || !m.url) return;
+  navigator.clipboard.writeText(m.url)
+    .then(() => showToast('📋 URL copied!', 'success'))
+    .catch(() => showToast('Copy manually from address bar', ''));
+}
+
 function renderMediaLibrary() {
   _renderMediaStats();
   _renderMediaGrid();
@@ -81,7 +140,7 @@ function _renderMediaGrid() {
           ? m.url.replace('/upload/', '/upload/w_400,h_280,c_fill/')
           : m.url.replace('/upload/', '/upload/so_0,w_400,h_280,c_fill/'))
       : null;
-    return `<div class="media-card" id="mc-${m.id}" onclick="selectMediaCard(${m.id})">
+    return `<div class="media-card" id="mc-${m.id}" onclick="openMediaLightbox(${m.id})">
       <div class="media-thumb" style="height:140px;overflow:hidden;position:relative;background:var(--surface3)">
         ${thumb
           ? `<img src="${thumb}" style="width:100%;height:140px;object-fit:cover;display:block"
