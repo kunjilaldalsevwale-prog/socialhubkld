@@ -1393,44 +1393,44 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);line-height:
 .channel-calendar-main { position: relative; }
 
 .cal-float-arrow {
-  position: absolute;
+  position: fixed;
   top: 50%;
   transform: translateY(-50%);
-  width: 36px;
-  height: 72px;
+  width: 48px;
+  height: 96px;
   display: flex;
   align-items: center;
   justify-content: center;
   background: var(--white);
-  border: 1.5px solid var(--border2);
+  border: 2px solid var(--border2);
   cursor: pointer;
-  z-index: 10;
+  z-index: 50;
   transition: all .18s;
-  box-shadow: var(--sh-md);
-  font-size: 20px;
-  font-weight: 800;
+  box-shadow: var(--sh-lg);
+  font-size: 28px;
+  font-weight: 900;
   color: var(--brand);
   padding: 0;
 }
 .cal-float-prev {
-  left: -18px;
-  border-radius: 0 var(--r-lg) var(--r-lg) 0;
+  left: 270px;
+  border-radius: 0 var(--r-xl) var(--r-xl) 0;
   border-left: none;
 }
 .cal-float-next {
-  right: -18px;
-  border-radius: var(--r-lg) 0 0 var(--r-lg);
+  right: 0px;
+  border-radius: var(--r-xl) 0 0 var(--r-xl);
   border-right: none;
 }
 .cal-float-arrow:hover {
   background: var(--brand);
   color: #fff;
-  width: 44px;
-  box-shadow: var(--sh-lg);
+  width: 60px;
+  box-shadow: 0 8px 32px rgba(37,99,235,.4);
 }
-.cal-float-prev:hover { left: -22px; }
-.cal-float-next:hover { right: -22px; }
-.cal-float-arrow span { pointer-events: none; line-height: 1; }
+.cal-float-prev:hover { left: 265px; }
+.cal-float-next:hover { right: 0px; }
+.cal-float-arrow span { pointer-events: none; line-height: 1; font-size: 32px; }
 
 /* ══════════════════════════════════════════
    BOTTOM MONTH NAV BAR
@@ -1884,3 +1884,69 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);line-height:
 @keyframes fadeIn {
   from { opacity:0; } to { opacity:1; }
 }
+
+/* ══════════════════════════════════════════════════════════
+   PHOTOS — folder chips
+══════════════════════════════════════════════════════════ */
+.media-folder-chip {
+  padding: 6px 14px;
+  border-radius: 20px;
+  border: 1.5px solid var(--border2);
+  background: var(--white);
+  color: var(--text2);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: var(--font);
+  transition: all .15s;
+}
+.media-folder-chip:hover { background: var(--brand-pale); color: var(--brand); border-color: var(--brand-mid); }
+.media-folder-chip.active { background: var(--brand); color: #fff; border-color: transparent; box-shadow: var(--sh-brand); }
+
+/* ══════════════════════════════════════════════════════════
+   PLANNER REFERENCE IMAGES
+══════════════════════════════════════════════════════════ */
+.planner-ref-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 12px;
+  margin-top: 10px;
+}
+.planner-ref-card {
+  position: relative;
+  border: 1.5px solid var(--border);
+  border-radius: var(--r-lg);
+  overflow: hidden;
+  background: var(--white);
+  box-shadow: var(--sh-sm);
+}
+.planner-ref-note {
+  width: 100%;
+  border: none;
+  border-top: 1px solid var(--border);
+  padding: 6px 8px;
+  font-size: 11px;
+  font-family: var(--font);
+  color: var(--text2);
+  outline: none;
+  background: var(--surface2);
+}
+.planner-ref-del {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: rgba(0,0,0,.5);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  font-size: 11px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity .15s;
+}
+.planner-ref-card:hover .planner-ref-del { opacity: 1; }
