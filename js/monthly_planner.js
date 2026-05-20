@@ -180,7 +180,14 @@ function addStickyNote() {
   saveState();
   _renderStickyNotes();
   _refreshCalStickyBanner();
-  showToast('📌 Sticky note added!', 'success');
+  // Auto-focus the new sticky note textarea immediately
+  setTimeout(() => {
+    const newNote = document.querySelector('.sticky-note:last-child .sticky-textarea');
+    if (newNote) {
+      newNote.focus();
+      newNote.select();
+    }
+  }, 50);
 }
 
 function deleteStickyNote(id) {
@@ -320,3 +327,85 @@ function autoResizeTA(ta) {
   ta.style.height = 'auto';
   ta.style.height = ta.scrollHeight + 'px';
 }
+
+
+/* ══════════════════════════════════════════════════════════
+   PLANNER REFERENCE IMAGES
+══════════════════════════════════════════════════════════ */
+const _plannerRefBlobs = {};
+
+function addPlannerRefImages(input) {
+  const files = Array.from(input.files || []);
+  if (!files.length) return;
+  const plan = _ensureMonth(plannerYear, plannerMonth);
+  if (!plan.refImages) plan.refImages = [];
+
+  files.forEach(file => {
+    const id  = genId();
+    const url = URL.createObjectURL(file);
+    _plannerRefBlobs[id] = url;
+    plan.refImages.push({ id, name: file.name, note: '' });
+  });
+
+  saveState();
+  _renderPlannerRefImages();
+  showToast(`✅ ${files.length} reference image${files.length>1?'s':''} added!`, 'success');
+  input.value = '';
+}
+
+function _renderPlannerRefImages() {
+  const el   = document.getElementById('plannerRefGrid');
+  const plan = _ensureMonth(plannerYear, plannerMonth);
+  const refs = plan.refImages || [];
+
+  if (!el) return;
+
+  if (!refs.length) {
+    el.innerHTML = `<div style="color:var(--text3);font-size:12px;padding:12px 0">
+      No reference images yet — upload images to show your team the visual direction for this month.
+    </div>`;
+    return;
+  }
+
+  el.innerHTML = refs.map(r => {
+    const src = _plannerRefBlobs[r.id] || r.url || null;
+    return `<div class="planner-ref-card" id="prc-${r.id}">
+      ${src
+        ? `<img src="${src}" style="width:100%;height:120px;object-fit:cover;border-radius:var(--r-lg);display:block;cursor:zoom-in"
+            onclick="openPlannerRefLightbox('${r.id}')">`
+        : `<div style="height:120px;background:var(--surface3);border-radius:var(--r-lg);display:flex;align-items:center;justify-content:center;font-size:28px">🖼️</div>`}
+      <input class="planner-ref-note" value="${r.note||''}" placeholder="Add a note (e.g. warm tones, festive mood)"
+        onchange="updatePlannerRefNote(${r.id}, this.value)">
+      <button class="planner-ref-del" onclick="deletePlannerRefImage(${r.id})">✕</button>
+    </div>`;
+  }).join('');
+}
+
+function openPlannerRefLightbox(id) {
+  const plan = _ensureMonth(plannerYear, plannerMonth);
+  const ref  = (plan.refImages||[]).find(r=>r.id==id);
+  const src  = _plannerRefBlobs[id] || (ref&&ref.url);
+  if (!src) return;
+  const lb = document.createElement('div');
+  lb.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:9999;display:flex;align-items:center;justify-content:center;cursor:zoom-out';
+  lb.onclick = () => lb.remove();
+  lb.innerHTML = `<img src="${src}" style="max-width:90vw;max-height:90vh;object-fit:contain;border-radius:var(--r-lg)">`;
+  document.body.appendChild(lb);
+}
+
+function updatePlannerRefNote(id, note) {
+  const plan = _ensureMonth(plannerYear, plannerMonth);
+  const ref  = (plan.refImages||[]).find(r=>r.id==id);
+  if (ref) { ref.note = note; saveState(); }
+}
+
+function deletePlannerRefImage(id) {
+  const plan = _ensureMonth(plannerYear, plannerMonth);
+  plan.refImages = (plan.refImages||[]).filter(r=>r.id!=id);
+  delete _plannerRefBlobs[id];
+  saveState();
+  _renderPlannerRefImages();
+}
+
+// Call this when planner renders
+const _origRenderPlanner = typeof renderMonthlyPlanner === 'function' ? renderMonthlyPlanner : null;
