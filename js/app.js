@@ -149,14 +149,71 @@ function addStickyNoteFromCalendar() {
   // Sync planner month to current calendar month
   if (typeof plannerYear  !== 'undefined') plannerYear  = channelCalYear;
   if (typeof plannerMonth !== 'undefined') plannerMonth = channelCalMonth;
-  // Add a sticky note
+
+  // Show inline quick-type popup right on the calendar
+  const existing = document.getElementById('calStickyQuickAdd');
+  if (existing) { existing.remove(); return; }
+
+  const banner = document.getElementById('calStickyBanner') || document.querySelector('.cal-sticky-banner-row');
+  if (!banner) return;
+
+  const popup = document.createElement('div');
+  popup.id = 'calStickyQuickAdd';
+  popup.style.cssText = `
+    background:#FEF9C3;border:2px solid #F59E0B;border-radius:12px;
+    padding:10px 12px;margin-top:8px;display:flex;align-items:center;gap:8px;
+    box-shadow:0 4px 20px rgba(245,158,11,.25);animation:fadeUp .2s ease;
+  `;
+  popup.innerHTML = `
+    <span style="font-size:18px;flex-shrink:0">📌</span>
+    <textarea id="calStickyQuickText" rows="1"
+      placeholder="Type your sticky note and press Enter…"
+      style="flex:1;border:none;background:transparent;font-family:var(--font);font-size:13px;
+             font-weight:600;color:#78350F;outline:none;resize:none;min-height:28px;line-height:1.4"
+      onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();saveCalStickyQuick();}
+                 if(event.key==='Escape'){document.getElementById('calStickyQuickAdd').remove();}"
+      oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'"></textarea>
+    <button onclick="saveCalStickyQuick()"
+      style="background:#F59E0B;color:#fff;border:none;border-radius:8px;padding:6px 14px;
+             font-size:12px;font-weight:700;cursor:pointer;font-family:var(--font);white-space:nowrap">
+      Add ✓
+    </button>
+    <button onclick="document.getElementById('calStickyQuickAdd').remove()"
+      style="background:none;border:none;cursor:pointer;font-size:16px;color:#92400E;padding:2px 4px">✕</button>`;
+
+  banner.parentNode.insertBefore(popup, banner.nextSibling);
+
+  // Auto-focus
+  setTimeout(() => {
+    const ta = document.getElementById('calStickyQuickText');
+    if (ta) ta.focus();
+  }, 30);
+}
+
+function saveCalStickyQuick() {
+  const ta   = document.getElementById('calStickyQuickText');
+  const text = ta ? ta.value.trim() : '';
+  if (!text) { document.getElementById('calStickyQuickAdd')?.remove(); return; }
+
+  // Sync month and add note with text
+  if (typeof plannerYear  !== 'undefined') plannerYear  = channelCalYear;
+  if (typeof plannerMonth !== 'undefined') plannerMonth = channelCalMonth;
+
   if (typeof addStickyNote === 'function') {
-    addStickyNote();
-    // Show a toast pointing them to the planner
-    showToast('📌 Note added! Open Monthly Planner to edit it.', 'success');
-    // Refresh banner
-    if (typeof _refreshCalStickyBanner === 'function') _refreshCalStickyBanner();
+    addStickyNote(); // creates the note
+    // Find the just-created note and set its text
+    const plan = typeof _ensureMonth === 'function'
+      ? _ensureMonth(plannerYear, plannerMonth)
+      : null;
+    if (plan && plan.stickyNotes && plan.stickyNotes.length) {
+      plan.stickyNotes[plan.stickyNotes.length - 1].text = text;
+      if (typeof saveState === 'function') saveState();
+      if (typeof _refreshCalStickyBanner === 'function') _refreshCalStickyBanner();
+    }
   }
+
+  document.getElementById('calStickyQuickAdd')?.remove();
+  showToast('📌 Sticky note saved!', 'success');
 }
 
 function _syncInteraktNavBadge() {
