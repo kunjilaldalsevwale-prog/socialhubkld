@@ -465,3 +465,67 @@ function _fmtSize(b) {
   if (b < 1024*1024)  return (b/1024).toFixed(1) + ' KB';
   return (b/(1024*1024)).toFixed(1) + ' MB';
 }
+
+/* ══════════════════════════════════════════════════════════
+   FOLDERS
+══════════════════════════════════════════════════════════ */
+let _activeFolder = 'all';
+
+function renderMediaFolders() {
+  const el = document.getElementById('userFolderChips');
+  if (!el) return;
+  const folders = state.mediaFolders || [];
+  el.innerHTML = folders.map(f => `
+    <button class="media-folder-chip ${_activeFolder===f.id?'active':''}"
+      onclick="selectMediaFolder('${f.id}',this)"
+      ondblclick="renameMediaFolder('${f.id}')">
+      📁 ${f.name}
+    </button>`).join('');
+}
+
+function selectMediaFolder(id, el) {
+  _activeFolder = id;
+  document.querySelectorAll('.media-folder-chip').forEach(b => b.classList.remove('active'));
+  if (el) el.classList.add('active');
+  renderMediaLibrary();
+}
+
+function createMediaFolder() {
+  const name = prompt('Folder name:');
+  if (!name || !name.trim()) return;
+  if (!state.mediaFolders) state.mediaFolders = [];
+  const id = 'folder_' + genId();
+  state.mediaFolders.push({ id, name: name.trim() });
+  saveState();
+  renderMediaFolders();
+  showToast(`📁 Folder "${name.trim()}" created!`, 'success');
+}
+
+function renameMediaFolder(id) {
+  const folder = (state.mediaFolders||[]).find(f=>f.id===id);
+  if (!folder) return;
+  const name = prompt('Rename folder:', folder.name);
+  if (!name || !name.trim()) return;
+  folder.name = name.trim();
+  saveState();
+  renderMediaFolders();
+}
+
+function moveToFolder(mediaId, folderId) {
+  const m = (state.mediaLibrary||[]).find(x=>x.id===mediaId);
+  if (m) { m.folderId = folderId; saveState(); renderMediaLibrary(); }
+}
+
+// Override renderMediaLibrary to handle folder filtering
+const _origRenderMediaLibrary = renderMediaLibrary;
+function renderMediaLibrary() {
+  _renderMediaStats();
+  renderMediaFolders();
+  // Filter by active folder
+  const orig = state.mediaLibrary;
+  if (_activeFolder !== 'all') {
+    state.mediaLibrary = (orig||[]).filter(m => m.folderId === _activeFolder);
+  }
+  _renderMediaGrid();
+  state.mediaLibrary = orig;
+}
