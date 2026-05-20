@@ -764,6 +764,35 @@
             </div>
 
             <div id="stab-data" class="stab">
+              <div class="settings-section-title">💾 Backup & Restore</div>
+
+              <div style="background:var(--brand-pale);border:1.5px solid var(--brand-mid);border-radius:var(--r-xl);padding:20px;margin-bottom:16px">
+                <div style="font-size:14px;font-weight:800;color:var(--text);margin-bottom:6px">📤 Export all data</div>
+                <div style="font-size:12px;color:var(--text2);margin-bottom:14px;line-height:1.6">
+                  Downloads all your posts, ideas, calendar entries, settings and team data as a JSON file.
+                  Use this to backup your data or move it to another device/browser.
+                </div>
+                <button class="btn btn-primary" onclick="exportAllData()">⬇ Download backup</button>
+              </div>
+
+              <div style="background:var(--surface2);border:1.5px solid var(--border);border-radius:var(--r-xl);padding:20px;margin-bottom:16px">
+                <div style="font-size:14px;font-weight:800;color:var(--text);margin-bottom:6px">📥 Import / Restore data</div>
+                <div style="font-size:12px;color:var(--text2);margin-bottom:14px;line-height:1.6">
+                  Restore from a previously exported backup file. This will <strong>replace all current data</strong> with the backup.
+                  <br><br>
+                  <strong>Use this to migrate your local data to Vercel:</strong><br>
+                  1. Open your local <code>index.html</code> file → Settings → Export<br>
+                  2. Open your Vercel URL → Settings → Import → pick the file
+                </div>
+                <button class="btn btn-ghost" onclick="importAllData()">📂 Import backup file</button>
+              </div>
+
+              <div style="background:var(--amber-light);border:1.5px solid var(--amber);border-radius:var(--r-lg);padding:14px;font-size:12px;color:#92400E;line-height:1.7">
+                ⚠️ <strong>Why is my data missing on Vercel?</strong><br>
+                Your local file and Vercel are separate — data added locally doesn't automatically appear online.
+                Use Export → Import to move your data to Vercel once, then set up JSONBin sync so all future changes
+                are shared automatically across all devices and team members.
+              </div>
               <div class="settings-section-title">Data & export</div>
               <div class="export-options">
                 <div class="export-card" onclick="exportPosts('json')"><div class="export-icon">📄</div><div class="export-label">Export posts (JSON)</div><div class="export-sub">All posts, captions, metadata</div></div>
