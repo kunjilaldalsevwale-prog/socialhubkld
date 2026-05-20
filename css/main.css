@@ -382,7 +382,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);line-height:
 .ch-tab.active{background:var(--brand);color:#fff;border-color:transparent;box-shadow:var(--sh-brand)}
 
 .channel-layout{display:grid;grid-template-columns:1fr 300px;gap:20px}
-.channel-calendar-main{border-radius:var(--r-xl);overflow:hidden;padding-top:0}
+.channel-calendar-main{border-radius:var(--r-xl);padding-top:0;position:relative}
 
 .cell-add-btn{font-size:18px;color:var(--text4);text-align:center;cursor:pointer;padding:6px;transition:all .15s;border-radius:var(--r-sm)}
 .cell-add-btn:hover{color:var(--brand);background:var(--brand-pale)}
@@ -1390,7 +1390,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);line-height:
    Always visible on sides — fixed to the
    channel-calendar-main container
 ══════════════════════════════════════════ */
-.channel-calendar-main { position: relative; }
+/* channel-calendar-main position set above */
 
 .cal-float-arrow {
   position: absolute;
@@ -1413,14 +1413,14 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);line-height:
   padding: 0;
 }
 .cal-float-prev {
-  left: -44px;
-  border-radius: var(--r-xl) 0 0 var(--r-xl);
-  border-right: none;
-}
-.cal-float-next {
-  right: -44px;
+  left: 0px;
   border-radius: 0 var(--r-xl) var(--r-xl) 0;
   border-left: none;
+}
+.cal-float-next {
+  right: 0px;
+  border-radius: var(--r-xl) 0 0 var(--r-xl);
+  border-right: none;
 }
 .cal-float-arrow:hover {
   background: var(--brand);
