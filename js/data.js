@@ -144,3 +144,46 @@ function fmtDate(dateStr) {
 }
 
 function genId() { return Date.now() + Math.floor(Math.random() * 9999); }
+
+/* ══════════════════════════════════════════════════════════
+   DATA EXPORT / IMPORT
+   Use this to backup and restore all your data,
+   or to migrate from local file to Vercel/online version.
+══════════════════════════════════════════════════════════ */
+function exportAllData() {
+  const data = JSON.stringify(state, null, 2);
+  const blob = new Blob([data], { type: 'application/json' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = `socialhub-backup-${new Date().toISOString().split('T')[0]}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('✅ Data exported! Save this file safely.', 'success');
+}
+
+function importAllData() {
+  const input = document.createElement('input');
+  input.type  = 'file';
+  input.accept = '.json';
+  input.onchange = e => {
+    const file   = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      try {
+        const imported = JSON.parse(ev.target.result);
+        // Merge imported data into state
+        Object.keys(imported).forEach(k => { state[k] = imported[k]; });
+        saveState();
+        // Re-render current view
+        showToast('✅ Data imported successfully! Reloading…', 'success');
+        setTimeout(() => location.reload(), 1500);
+      } catch(err) {
+        showToast('❌ Invalid backup file', 'error');
+      }
+    };
+    reader.readAsText(file);
+  };
+  input.click();
+}
