@@ -1393,44 +1393,42 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);line-height:
 .channel-calendar-main { position: relative; }
 
 .cal-float-arrow {
-  position: fixed;
+  position: absolute;
   top: 50%;
   transform: translateY(-50%);
-  width: 48px;
-  height: 96px;
+  width: 44px;
+  height: 88px;
   display: flex;
   align-items: center;
   justify-content: center;
   background: var(--white);
-  border: 2px solid var(--border2);
+  border: 2px solid var(--brand-light);
   cursor: pointer;
-  z-index: 50;
+  z-index: 10;
   transition: all .18s;
-  box-shadow: var(--sh-lg);
-  font-size: 28px;
+  box-shadow: 0 4px 20px rgba(37,99,235,.18);
+  font-size: 26px;
   font-weight: 900;
   color: var(--brand);
   padding: 0;
 }
 .cal-float-prev {
-  left: 270px;
-  border-radius: 0 var(--r-xl) var(--r-xl) 0;
-  border-left: none;
-}
-.cal-float-next {
-  right: 0px;
+  left: -44px;
   border-radius: var(--r-xl) 0 0 var(--r-xl);
   border-right: none;
+}
+.cal-float-next {
+  right: -44px;
+  border-radius: 0 var(--r-xl) var(--r-xl) 0;
+  border-left: none;
 }
 .cal-float-arrow:hover {
   background: var(--brand);
   color: #fff;
-  width: 60px;
-  box-shadow: 0 8px 32px rgba(37,99,235,.4);
+  box-shadow: 0 6px 28px rgba(37,99,235,.35);
+  transform: translateY(-50%) scale(1.08);
 }
-.cal-float-prev:hover { left: 265px; }
-.cal-float-next:hover { right: 0px; }
-.cal-float-arrow span { pointer-events: none; line-height: 1; font-size: 32px; }
+.cal-float-arrow span { pointer-events: none; line-height: 1; }
 
 /* ══════════════════════════════════════════
    BOTTOM MONTH NAV BAR
