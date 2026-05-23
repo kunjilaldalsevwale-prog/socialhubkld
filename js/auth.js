@@ -9,10 +9,10 @@ const TEAM_USERS = {
   anusha:   { id:'anusha',   name:'Anusha',   email:`anusha@${DOMAIN}`,   role:'admin',  avatar:'AN', color:'#DBEAFE', textColor:'#1D4ED8', password:'anusha123',   permissions:['all'] },
   anjani:   { id:'anjani',   name:'Anjani',   email:`anjani@${DOMAIN}`,   role:'admin',  avatar:'AJ', color:'#EDE9FE', textColor:'#5B21B6', password:'anjani123',   permissions:['all'] },
   tejasv:   { id:'tejasv',   name:'Tejasv',   email:`tejasv@${DOMAIN}`,   role:'admin',  avatar:'TJ', color:'#DCFCE7', textColor:'#065F46', password:'tejasv123',   permissions:['all'] },
-  ashish:   { id:'ashish',   name:'Ashish',   email:`ashish@${DOMAIN}`,   role:'member', avatar:'AS', color:'#FEF9C3', textColor:'#92400E', password:'ashish123',   permissions:[] },
-  mukul:    { id:'mukul',    name:'Mukul',    email:`mukul@${DOMAIN}`,    role:'member', avatar:'MK', color:'#FCE7F3', textColor:'#9D174D', password:'mukul123',    permissions:[] },
-  varshang: { id:'varshang', name:'Varshang', email:`varshang@${DOMAIN}`, role:'member', avatar:'VR', color:'#FEE2E2', textColor:'#991B1B', password:'varshang123', permissions:[] },
-  vidhi:    { id:'vidhi',    name:'Vidhi',    email:`vidhi@${DOMAIN}`,    role:'member', avatar:'VD', color:'#F0FDFA', textColor:'#0D9488', password:'vidhi123',    permissions:[] },
+  ashish:   { id:'ashish',   name:'Ashish',   email:`ashish@${DOMAIN}`,   role:'member', avatar:'AS', color:'#FEF9C3', textColor:'#92400E', password:'ashish123',   permissions:['calendar','ideas','media','planner','reminders','team'] },
+  mukul:    { id:'mukul',    name:'Mukul',    email:`mukul@${DOMAIN}`,    role:'member', avatar:'MK', color:'#FCE7F3', textColor:'#9D174D', password:'mukul123',    permissions:['calendar','ideas','media','planner','reminders','team'] },
+  varshang: { id:'varshang', name:'Varshang', email:`varshang@${DOMAIN}`, role:'member', avatar:'VR', color:'#FEE2E2', textColor:'#991B1B', password:'varshang123', permissions:['calendar','ideas','media','planner','reminders','team'] },
+  vidhi:    { id:'vidhi',    name:'Vidhi',    email:`vidhi@${DOMAIN}`,    role:'member', avatar:'VD', color:'#F0FDFA', textColor:'#0D9488', password:'vidhi123',    permissions:['calendar','ideas','media','planner','reminders','team'] },
 };
 
 const ALL_PERMISSIONS = [
@@ -169,12 +169,6 @@ function doLogin() {
   const savedPw = (state.teamPasswords && state.teamPasswords[user.id]) || user.password;
   if (pw !== savedPw) {
     _loginError('Incorrect password. Try your default or contact an admin.');
-    return;
-  }
-
-  // Check permissions
-  if (user.role !== 'admin' && (!user.permissions || user.permissions.length === 0)) {
-    _loginError('Your account has no permissions yet. Ask Anusha, Anjani or Tejasv to grant you access.');
     return;
   }
 
