@@ -95,6 +95,8 @@ function _renderIdeaCards() {
   el.innerHTML = unscheduled.map(idea => {
     const cat = IDEA_CATEGORIES[idea.category] || IDEA_CATEGORIES.idea;
     const pf  = PLATFORM_COLORS[idea.platform] || {};
+    const hasScheme = idea.colorScheme && idea.colorScheme.length > 0;
+    const hasRef    = !!idea.refImageUrl;
     return `<div class="idea-card" id="idea-${idea.id}"
       draggable="true"
       ondragstart="ideaDragStart(event,${idea.id})"
@@ -109,6 +111,18 @@ function _renderIdeaCards() {
       </div>
       <div class="idea-title">${idea.title}</div>
       ${idea.body ? `<div class="idea-body">${idea.body}</div>` : ''}
+
+      ${hasRef ? `
+      <div style="margin:8px 0;border-radius:var(--r-md);overflow:hidden;max-height:100px;cursor:zoom-in" onclick="event.stopPropagation();_openIdeaRefLightbox('${idea.refImageUrl}')">
+        <img src="${idea.refImageUrl}" style="width:100%;object-fit:cover;display:block;max-height:100px"
+          onerror="this.parentElement.style.display='none'">
+      </div>` : ''}
+
+      ${hasScheme ? `
+      <div style="display:flex;gap:4px;margin:6px 0;flex-wrap:wrap">
+        ${idea.colorScheme.map(c=>`<div title="${c}" style="width:18px;height:18px;border-radius:4px;background:${c};border:1.5px solid rgba(0,0,0,.1);box-shadow:var(--sh-sm)"></div>`).join('')}
+      </div>` : ''}
+
       <div class="idea-footer">
         <span class="idea-platform" style="font-size:11px;color:var(--text2);font-weight:600">${(IDEA_CHANNELS[idea.platform]||{}).label||idea.platform}</span>
         <button class="idea-schedule-btn" onclick="scheduleIdeaModal(${idea.id})">📅 Schedule</button>
@@ -289,13 +303,21 @@ function convertIdeaToPost(ideaId) {
 ══════════════════════════════════════════════════════════ */
 function showIdeaModal(existing) {
   const isEdit = !!existing;
-  const idea   = existing || { title:'', body:'', category:'idea', platform:'Instagram', color:'', date:null };
+  const idea   = existing || { title:'', body:'', category:'idea', platform:'social', color:'', date:null };
+
+  // Reset ref image
+  window._ideaRefImageUrl  = idea.refImageUrl  || null;
+  window._ideaRefImageName = idea.refImageName || null;
+  window._ideaColorScheme  = idea.colorScheme  || [];
+
   document.getElementById('modalTitle').textContent = isEdit ? '✏️ Edit idea' : '💡 New idea';
   document.getElementById('modalBody').innerHTML = `
     <div class="form-group"><label class="form-label">Title *</label>
-      <input class="form-input" id="ni-title" value="${(idea.title||'').replace(/"/g,'&quot;')}" placeholder="e.g. Diwali sale countdown reel"></div>
+      <input class="form-input" id="ni-title" value="${(idea.title||'').replace(/"/g,'&quot;')}" placeholder="e.g. Diwali sale countdown reel" autofocus></div>
+
     <div class="form-group"><label class="form-label">Notes / details</label>
-      <textarea class="form-input form-textarea" id="ni-body" rows="3" placeholder="Concept, tone, visual idea…" style="min-height:70px">${idea.body||''}</textarea></div>
+      <textarea class="form-input form-textarea" id="ni-body" rows="3" placeholder="Concept, tone, visual direction…" style="min-height:70px">${idea.body||''}</textarea></div>
+
     <div class="form-row">
       <div class="form-group"><label class="form-label">Category</label>
         <select class="form-select" id="ni-cat">
@@ -306,17 +328,199 @@ function showIdeaModal(existing) {
           ${Object.entries(IDEA_CHANNELS).map(([k,v])=>`<option value="${k}" ${idea.platform===k?'selected':''}>${v.label}</option>`).join('')}
         </select></div>
     </div>
+
+    <!-- ── CARD COLOUR ── -->
     <div class="form-group"><label class="form-label">Card colour</label>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
-        ${['#DBEAFE','#EFF6FF','#ECFDF5','#EDE9FE','#FFFBEB','#FEE2E2','#F0FDFA','#FEF3C7'].map(c=>`
+        ${['#DBEAFE','#EFF6FF','#ECFDF5','#EDE9FE','#FFFBEB','#FEE2E2','#F0FDFA','#FEF3C7','#F5F3FF','#FDF2F8'].map(c=>`
           <div onclick="selectIdeaColor('${c}',this)" class="color-swatch ${(idea.color||'#DBEAFE')===c?'selected':''}"
             style="width:28px;height:28px;border-radius:50%;background:${c};cursor:pointer;border:2.5px solid ${(idea.color||'#DBEAFE')===c?'var(--brand)':'var(--border)'}"></div>`).join('')}
-      </div></div>`;
+      </div>
+    </div>
+
+    <!-- ── COLOUR SCHEME ── -->
+    <div class="form-group">
+      <label class="form-label">🎨 Colour scheme <span style="font-size:10px;font-weight:400;opacity:.6;text-transform:none">— pick brand/mood colours for this idea</span></label>
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap" id="colorSchemeRow">
+        ${(idea.colorScheme||[]).map((c,i)=>`
+          <div style="position:relative">
+            <div style="width:36px;height:36px;border-radius:8px;background:${c};border:2px solid var(--border);cursor:pointer;box-shadow:var(--sh-sm)"
+              title="${c}" onclick="removeIdeaSchemeColor(${i})">
+              <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .15s;background:rgba(0,0,0,.3);border-radius:6px;color:#fff;font-size:12px"
+                onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0">✕</div>
+            </div>
+          </div>`).join('')}
+        <label style="width:36px;height:36px;border-radius:8px;border:2px dashed var(--border2);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:18px;color:var(--text3);transition:all .15s"
+          title="Add colour" onmouseover="this.style.borderColor='var(--brand)'" onmouseout="this.style.borderColor='var(--border2)'">
+          <input type="color" style="opacity:0;position:absolute;width:36px;height:36px;cursor:pointer" onchange="addIdeaSchemeColor(this.value)">
+          +
+        </label>
+        ${(idea.colorScheme||[]).length ? `<div style="font-size:11px;color:var(--text3)">Click a colour to remove it</div>` : ''}
+      </div>
+      <!-- Preset palettes -->
+      <div style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap">
+        ${[
+          { name:'Festive',  colors:['#FF6B35','#F7C59F','#EFEFD0','#004E89','#1A936F'] },
+          { name:'Minimal',  colors:['#1A1A1A','#F5F5F5','#D4AF37','#2C3E50','#E8E8E8'] },
+          { name:'Pastel',   colors:['#FFB3BA','#FFDFBA','#FFFFBA','#BAFFC9','#BAE1FF'] },
+          { name:'Bold',     colors:['#E63946','#F4A261','#2A9D8F','#264653','#E9C46A'] },
+          { name:'Earth',    colors:['#8B4513','#D2691E','#F4A460','#DEB887','#FFDEAD'] },
+          { name:'Diwali',   colors:['#FF9933','#FFCC00','#FF3333','#8B0000','#FFD700'] },
+        ].map(p=>`
+          <button onclick="applyIdeaPalette(${JSON.stringify(p.colors)})"
+            style="display:flex;align-items:center;gap:4px;padding:4px 10px 4px 6px;border-radius:20px;border:1.5px solid var(--border2);background:var(--white);cursor:pointer;font-size:11px;font-weight:600;color:var(--text2);font-family:var(--font);transition:all .13s"
+            onmouseover="this.style.borderColor='var(--brand)'" onmouseout="this.style.borderColor='var(--border2)'">
+            <div style="display:flex;gap:2px">${p.colors.map(c=>`<div style="width:10px;height:10px;border-radius:2px;background:${c}"></div>`).join('')}</div>
+            ${p.name}
+          </button>`).join('')}
+      </div>
+    </div>
+
+    <!-- ── REFERENCE IMAGE ── -->
+    <div class="form-group">
+      <label class="form-label">🖼 Reference image <span style="font-size:10px;font-weight:400;opacity:.6;text-transform:none">— visual direction for your team</span></label>
+      <div style="border:1.5px solid var(--border);border-radius:var(--r-lg);overflow:hidden">
+        <div style="display:flex;border-bottom:1px solid var(--border)">
+          <button class="ik-img-tab active" onclick="switchIdeaImgTab('upload',this)">📱 Upload</button>
+          <button class="ik-img-tab" onclick="switchIdeaImgTab('drive',this)">☁️ Drive link</button>
+          <button class="ik-img-tab" onclick="switchIdeaImgTab('url',this)">🔗 Paste URL</button>
+        </div>
+        <!-- Upload -->
+        <div id="idea-img-upload" style="padding:10px">
+          <label style="display:flex;align-items:center;gap:10px;padding:10px;background:var(--brand-pale);border:2px dashed var(--brand-mid);border-radius:var(--r-lg);cursor:pointer">
+            <input type="file" id="ideaImgFileInput" accept="image/*" style="display:none" onchange="handleIdeaImageFile(this)">
+            <span style="font-size:20px">🖼️</span>
+            <div style="flex:1">
+              <div style="font-size:13px;font-weight:700;color:var(--brand-dark)">Click to upload reference image</div>
+              <div style="font-size:11px;color:var(--text3)">Any image format</div>
+            </div>
+            <div style="background:var(--brand);color:#fff;padding:5px 14px;border-radius:20px;font-size:12px;font-weight:700;flex-shrink:0">Browse</div>
+          </label>
+        </div>
+        <!-- Drive -->
+        <div id="idea-img-drive" style="padding:10px;display:none">
+          <input class="form-input" id="ideaDriveUrl" placeholder="Paste Google Drive link"
+            oninput="previewIdeaDriveImg(this.value)"
+            onpaste="setTimeout(()=>previewIdeaDriveImg(document.getElementById('ideaDriveUrl').value),60)">
+        </div>
+        <!-- URL -->
+        <div id="idea-img-url" style="padding:10px;display:none">
+          <input class="form-input" id="ideaDirectUrl" placeholder="Paste any image URL (https://...)"
+            onpaste="setTimeout(()=>previewIdeaDirectUrl(document.getElementById('ideaDirectUrl').value),60)"
+            oninput="previewIdeaDirectUrl(this.value)">
+        </div>
+      </div>
+      <!-- Preview -->
+      <div id="ideaImgPreview" style="margin-top:8px">
+        ${window._ideaRefImageUrl ? `
+          <div style="position:relative;display:inline-block">
+            <img src="${window._ideaRefImageUrl}" style="max-height:140px;max-width:100%;object-fit:contain;border-radius:var(--r-lg);border:1.5px solid var(--border);display:block">
+            <button onclick="clearIdeaRefImage()"
+              style="position:absolute;top:5px;right:5px;background:rgba(0,0,0,.6);color:#fff;border:none;border-radius:50%;width:22px;height:22px;cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center">✕</button>
+          </div>
+          <div style="font-size:11px;color:var(--green);font-weight:600;margin-top:4px">✅ ${window._ideaRefImageName||'Reference image attached'}</div>` : ''}
+      </div>
+    </div>`;
+
   document.getElementById('modalFooter').innerHTML = `
     <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
     <button class="btn btn-primary" onclick="saveIdea(${isEdit?idea.id:'null'})">${isEdit?'💾 Update':'💡 Add idea'}</button>`;
   window._ideaColor = idea.color || '#DBEAFE';
   document.getElementById('modalOverlay').classList.add('open');
+}
+
+/* ── Colour scheme helpers ── */
+function addIdeaSchemeColor(hex) {
+  if (!window._ideaColorScheme) window._ideaColorScheme = [];
+  if (window._ideaColorScheme.length >= 8) { showToast('Max 8 colours', 'error'); return; }
+  window._ideaColorScheme.push(hex);
+  _refreshColorSchemeRow();
+}
+
+function removeIdeaSchemeColor(idx) {
+  if (!window._ideaColorScheme) return;
+  window._ideaColorScheme.splice(idx, 1);
+  _refreshColorSchemeRow();
+}
+
+function applyIdeaPalette(colors) {
+  window._ideaColorScheme = [...colors];
+  _refreshColorSchemeRow();
+  showToast('🎨 Palette applied!', 'success');
+}
+
+function _refreshColorSchemeRow() {
+  const row = document.getElementById('colorSchemeRow');
+  if (!row) return;
+  const colors = window._ideaColorScheme || [];
+  row.innerHTML = colors.map((c,i)=>`
+    <div style="position:relative">
+      <div style="width:36px;height:36px;border-radius:8px;background:${c};border:2px solid var(--border);cursor:pointer;box-shadow:var(--sh-sm);position:relative;overflow:hidden"
+        title="${c}" onclick="removeIdeaSchemeColor(${i})">
+        <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.3);border-radius:6px;color:#fff;font-size:12px;opacity:0;transition:opacity .15s"
+          onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0">✕</div>
+      </div>
+    </div>`).join('') + `
+    <label style="width:36px;height:36px;border-radius:8px;border:2px dashed var(--border2);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:18px;color:var(--text3)">
+      <input type="color" style="opacity:0;position:absolute;width:36px;height:36px;cursor:pointer" onchange="addIdeaSchemeColor(this.value)">+
+    </label>
+    ${colors.length ? `<div style="font-size:11px;color:var(--text3)">Click colour to remove</div>` : ''}`;
+}
+
+/* ── Reference image helpers ── */
+function switchIdeaImgTab(tab, el) {
+  el.parentElement.querySelectorAll('.ik-img-tab').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  ['upload','drive','url'].forEach(t => {
+    const p = document.getElementById('idea-img-'+t);
+    if (p) p.style.display = t===tab ? '' : 'none';
+  });
+}
+
+function handleIdeaImageFile(input) {
+  const file = input.files[0]; if (!file) return;
+  const url  = URL.createObjectURL(file);
+  window._ideaRefImageUrl  = url;
+  window._ideaRefImageName = file.name;
+  _showIdeaImgPreview(url, file.name);
+  input.value = '';
+}
+
+function previewIdeaDriveImg(url) {
+  const m = url && url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+  if (!m) return;
+  const direct = `https://drive.google.com/uc?export=view&id=${m[1]}`;
+  const thumb  = `https://drive.google.com/thumbnail?id=${m[1]}&sz=w400`;
+  window._ideaRefImageUrl  = direct;
+  window._ideaRefImageName = 'Drive image';
+  _showIdeaImgPreview(thumb, 'Drive image');
+}
+
+function previewIdeaDirectUrl(url) {
+  if (!url || !url.startsWith('http')) return;
+  window._ideaRefImageUrl  = url;
+  window._ideaRefImageName = 'Reference image';
+  _showIdeaImgPreview(url, 'Reference image');
+}
+
+function _showIdeaImgPreview(src, name) {
+  const el = document.getElementById('ideaImgPreview');
+  if (!el) return;
+  el.innerHTML = `
+    <div style="position:relative;display:inline-block">
+      <img src="${src}" style="max-height:140px;max-width:100%;object-fit:contain;border-radius:var(--r-lg);border:1.5px solid var(--border);display:block"
+        onerror="this.style.display='none'">
+      <button onclick="clearIdeaRefImage()"
+        style="position:absolute;top:5px;right:5px;background:rgba(0,0,0,.6);color:#fff;border:none;border-radius:50%;width:22px;height:22px;cursor:pointer;font-size:12px">✕</button>
+    </div>
+    <div style="font-size:11px;color:var(--green);font-weight:600;margin-top:4px">✅ ${name}</div>`;
+}
+
+function clearIdeaRefImage() {
+  window._ideaRefImageUrl  = null;
+  window._ideaRefImageName = null;
+  const el = document.getElementById('ideaImgPreview');
+  if (el) el.innerHTML = '';
 }
 
 function selectIdeaColor(color, el) {
@@ -333,6 +537,9 @@ function saveIdea(existingId) {
     category: document.getElementById('ni-cat').value,
     platform: document.getElementById('ni-platform').value,
     color: window._ideaColor || '#DBEAFE',
+    colorScheme:  window._ideaColorScheme  || [],
+    refImageUrl:  window._ideaRefImageUrl  || null,
+    refImageName: window._ideaRefImageName || null,
   };
   if (!state.ideas) state.ideas = [];
   if (existingId) {
@@ -343,13 +550,24 @@ function saveIdea(existingId) {
     state.ideas.push({ id: genId(), date: null, ...data });
     showToast('💡 Idea added!', 'success');
   }
+  // Reset globals
+  window._ideaColorScheme  = [];
+  window._ideaRefImageUrl  = null;
+  window._ideaRefImageName = null;
   saveState(); closeModal(); renderIdeasBoard(); renderSidebarIdeas();
+}
+
+function _openIdeaRefLightbox(url) {
+  const lb = document.createElement('div');
+  lb.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:9999;display:flex;align-items:center;justify-content:center;cursor:zoom-out;animation:fadeIn .2s ease';
+  lb.onclick = () => lb.remove();
+  lb.innerHTML = `<img src="${url}" style="max-width:90vw;max-height:90vh;object-fit:contain;border-radius:var(--r-lg);box-shadow:0 20px 60px rgba(0,0,0,.5)">`;
+  document.body.appendChild(lb);
 }
 
 function editIdea(id) { const idea = (state.ideas||[]).find(i=>i.id===id); if (idea) showIdeaModal(idea); }
 
 function deleteIdea(id) {
-  if (!confirm('Delete this idea?')) return;
   state.ideas = (state.ideas || []).filter(i => i.id !== id);
   saveState(); renderIdeasBoard(); renderSidebarIdeas();
   if (typeof renderChannelGrid === 'function') renderChannelGrid();
