@@ -24,6 +24,12 @@ let _lastPush    = 0;
    INIT
 ══════════════════════════════════════════════════════════ */
 function initSync() {
+  // Wait for Firebase SDK to be available
+  if (typeof firebase === 'undefined') {
+    console.warn('Firebase SDK not loaded yet — retrying in 500ms');
+    setTimeout(initSync, 500);
+    return;
+  }
   try {
     if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
     _db       = firebase.database();
