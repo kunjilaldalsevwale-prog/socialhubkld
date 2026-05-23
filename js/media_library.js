@@ -182,11 +182,7 @@ async function handleDeviceUpload(input) {
   if (!files.length) return;
   input.value = '';
 
-  if (CLOUDINARY_PRESET === 'PASTE_PRESET_NAME_HERE') {
-    showToast('⚠️ Set up Cloudinary preset first — see Media Library settings', 'error');
-    _showCloudinarySetup();
-    return;
-  }
+  // Cloudinary preset is hardcoded — no setup needed
 
   // Show progress UI
   const grid = document.getElementById('mediaGrid');
@@ -261,16 +257,7 @@ async function handleCaddFile(input, source) {
   const previewId = source === 'drive' ? 'cadd-drive-file-preview' : 'cadd-file-preview';
   const preview   = document.getElementById(previewId);
 
-  if (CLOUDINARY_PRESET === 'PASTE_PRESET_NAME_HERE') {
-    // Fallback: use object URL for this session only
-    const url = URL.createObjectURL(file);
-    window._caddAttachment = { url, name: file.name };
-    if (preview && file.type.startsWith('image/')) {
-      preview.innerHTML = `<img src="${url}" style="width:100%;max-height:130px;object-fit:cover;border-radius:var(--r-lg);border:1.5px solid var(--border)">
-        <div style="font-size:11px;color:var(--amber);font-weight:600;margin-top:4px">⚠️ Temporary — set up Cloudinary for permanent storage</div>`;
-    }
-    return;
-  }
+  // Always upload to Cloudinary
 
   if (preview) preview.innerHTML = `<div style="padding:10px;font-size:12px;color:var(--brand);font-weight:600">☁️ Uploading to Cloudinary…</div>`;
 
