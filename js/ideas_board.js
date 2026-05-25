@@ -655,3 +655,72 @@ function quickAddSidebarIdea() {
   if (currentView === 'ideas') renderIdeasBoard();
   showToast('💡 Idea added!', 'success');
 }
+
+/* ══════════════════════════════════════════════════════════
+   BOARD-LEVEL REFERENCE IMAGES PANEL
+══════════════════════════════════════════════════════════ */
+const _boardRefBlobs = {};
+
+function toggleIdeaRefPanel() {
+  const panel = document.getElementById('ideaBoardRefPanel');
+  if (!panel) return;
+  const isOpen = panel.style.display !== 'none';
+  panel.style.display = isOpen ? 'none' : '';
+  if (!isOpen) _renderBoardRefImages();
+}
+
+function addBoardRefImages(input) {
+  const files = Array.from(input.files || []);
+  if (!files.length) return;
+  if (!state.boardRefImages) state.boardRefImages = [];
+  files.forEach(file => {
+    const id  = genId();
+    const url = URL.createObjectURL(file);
+    _boardRefBlobs[id] = url;
+    state.boardRefImages.push({ id, name: file.name, note: '', date: new Date().toISOString().split('T')[0] });
+  });
+  saveState();
+  _renderBoardRefImages();
+  showToast(`✅ ${files.length} image${files.length>1?'s':''} added!`, 'success');
+  input.value = '';
+}
+
+function _renderBoardRefImages() {
+  const el   = document.getElementById('boardRefGrid');
+  const refs = state.boardRefImages || [];
+  if (!el) return;
+
+  if (!refs.length) {
+    el.innerHTML = `<div style="color:var(--text3);font-size:12px;padding:8px 0;grid-column:1/-1">
+      No reference images yet — click "+ Add images" to upload mood board or brand references
+    </div>`;
+    return;
+  }
+
+  el.innerHTML = refs.map(r => {
+    const src = _boardRefBlobs[r.id] || r.url || null;
+    return `<div class="planner-ref-card" id="brc-${r.id}">
+      ${src
+        ? `<img src="${src}" style="width:100%;height:120px;object-fit:cover;border-radius:var(--r-lg) var(--r-lg) 0 0;display:block;cursor:zoom-in"
+            onclick="_openIdeaRefLightbox('${src}')"
+            onerror="this.style.display='none'">`
+        : `<div style="height:120px;background:var(--surface3);border-radius:var(--r-lg) var(--r-lg) 0 0;display:flex;align-items:center;justify-content:center;font-size:28px">🖼️</div>`}
+      <input class="planner-ref-note" value="${r.note||''}"
+        placeholder="Add a note (e.g. warm tones, festive mood)"
+        onchange="updateBoardRefNote(${r.id}, this.value)">
+      <button class="planner-ref-del" onclick="deleteBoardRefImage(${r.id})">✕</button>
+    </div>`;
+  }).join('');
+}
+
+function updateBoardRefNote(id, note) {
+  const ref = (state.boardRefImages||[]).find(r=>r.id==id);
+  if (ref) { ref.note = note; saveState(); }
+}
+
+function deleteBoardRefImage(id) {
+  delete _boardRefBlobs[id];
+  state.boardRefImages = (state.boardRefImages||[]).filter(r=>r.id!=id);
+  saveState();
+  _renderBoardRefImages();
+}
