@@ -938,11 +938,11 @@ function _showEditPostModal(p) {
         </select></div>
       <div class="form-group"><label class="form-label">Move to channel</label>
         <select class="form-select" id="ep-channel" title="Move this post to a different channel calendar">
-          <option value="social"    ${(!p.platform||p.platform==='Instagram'||p.platform==='Facebook'||p.platform==='Twitter/X'||p.platform==='LinkedIn')?'selected':''}>📸 Social Media</option>
-          <option value="whatsapp"  ${p.platform==='WhatsApp'?'selected':''}>💬 WhatsApp</option>
-          <option value="email"     ${p.platform==='Email'?'selected':''}>📧 Email</option>
-          <option value="meta"      ${(p.platform==='Meta Ad'||p.platform==='Facebook')?'selected':''}>📊 Meta Ads</option>
-          <option value="google"    ${p.platform==='Google Ad'?'selected':''}>🔍 Google Ads</option>
+          <option value="social"   ${_platformToChannel(p.platform)==='social'   ?'selected':''}>📸 Social Media</option>
+          <option value="whatsapp" ${_platformToChannel(p.platform)==='whatsapp' ?'selected':''}>💬 WhatsApp</option>
+          <option value="email"    ${_platformToChannel(p.platform)==='email'    ?'selected':''}>📧 Email</option>
+          <option value="meta"     ${_platformToChannel(p.platform)==='meta'     ?'selected':''}>📊 Meta Ads</option>
+          <option value="google"   ${_platformToChannel(p.platform)==='google'   ?'selected':''}>🔍 Google Ads</option>
         </select></div>
     </div>
 
@@ -994,20 +994,48 @@ const CHANNEL_PLATFORM_MAP = {
   meta:'Meta Ad', google:'Google Ad'
 };
 
+// Which channel key a platform belongs to
+function _platformToChannel(platform) {
+  if (!platform) return 'social';
+  const p = platform.toLowerCase();
+  if (p==='whatsapp') return 'whatsapp';
+  if (p==='email') return 'email';
+  if (p==='meta ad'||p==='facebook') return 'meta';
+  if (p==='google ad') return 'google';
+  return 'social'; // Instagram, Twitter/X, LinkedIn etc
+}
+
 function updateChannelPost(id) {
   const p=(state.posts||[]).find(x=>x.id===id); if(!p) return;
+  const oldChannel = _platformToChannel(p.platform);
+
   p.title    = document.getElementById('ep-title').value;
   p.caption  = document.getElementById('ep-caption').value;
   p.date     = document.getElementById('ep-date').value;
   p.time     = document.getElementById('ep-time').value;
   p.status   = document.getElementById('ep-status').value;
   p.assignee = document.getElementById('ep-assign')?.value || p.assignee;
-  p.mediaUrl = window._editPostMedia;
+  p.mediaUrl = window._editPostMedia !== undefined ? window._editPostMedia : p.mediaUrl;
+
   // Move to different channel
   const newCh = document.getElementById('ep-channel')?.value;
-  if (newCh && CHANNEL_PLATFORM_MAP[newCh]) p.platform = CHANNEL_PLATFORM_MAP[newCh];
-  saveState(); closeModal(); updateBadge(); renderChannelCalendars();
-  showToast('✅ Post updated!','success');
+  if (newCh && newCh !== oldChannel && CHANNEL_PLATFORM_MAP[newCh]) {
+    p.platform  = CHANNEL_PLATFORM_MAP[newCh];
+    p.platforms = [CHANNEL_PLATFORM_MAP[newCh]];
+    showToast(`✅ Post moved to ${newCh} calendar!`, 'success');
+  } else {
+    showToast('✅ Post updated!', 'success');
+  }
+
+  saveState();
+  closeModal();
+  updateBadge();
+  // Switch to the new channel so user can see the moved post
+  if (newCh && newCh !== oldChannel) {
+    setChannel(newCh, document.querySelector(`.ch-subtab[data-ch="${newCh}"]`));
+  } else {
+    renderChannelCalendars();
+  }
 }
 
 /* ══════════════════════════════════════════════════════════
