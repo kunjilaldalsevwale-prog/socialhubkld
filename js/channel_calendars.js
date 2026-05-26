@@ -768,17 +768,18 @@ function _showIdeaViewModal(ideaId) {
   };
   const cat = IDEA_CATS[idea.category] || IDEA_CATS.idea;
 
+  window._ideaViewRefUrl = idea.refImageUrl || null;
+
   document.getElementById('modalTitle').textContent = '💡 Idea details';
   document.getElementById('modalBody').innerHTML = `
 
-    <!-- Idea card header -->
-    <div style="background:${idea.color||cat.bg};border-left:4px solid ${cat.color};border-radius:var(--r-lg);padding:14px 16px;margin-bottom:16px">
+    <!-- Header -->
+    <div style="background:${idea.color||cat.bg};border-left:4px solid ${cat.color};border-radius:var(--r-lg);padding:14px 16px;margin-bottom:14px">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
         <span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:10px;background:${cat.color}22;color:${cat.color}">${cat.label}</span>
         <span style="font-size:11px;color:var(--text3);font-weight:600">${CHAN_LABELS[idea.platform]||idea.platform}</span>
       </div>
-      <div style="font-size:16px;font-weight:800;color:var(--text);margin-bottom:${idea.body?'8px':'0'}">${idea.title}</div>
-      ${idea.body ? `<div style="font-size:13px;color:var(--text2);line-height:1.6">${idea.body}</div>` : ''}
+      <div style="font-size:16px;font-weight:800;color:var(--text)">${idea.title}</div>
     </div>
 
     <!-- Scheduled date -->
@@ -787,32 +788,85 @@ function _showIdeaViewModal(ideaId) {
       <span style="font-size:18px">📅</span>
       <div>
         <div style="font-size:13px;font-weight:700;color:var(--brand-dark)">Scheduled for ${fmtDate(idea.date)}</div>
-        <div style="font-size:11px;color:var(--brand);margin-top:1px">Click "→ Convert to post" to make it a real scheduled post</div>
+        <div style="font-size:11px;color:var(--brand);margin-top:1px">Convert to post to make it appear on the calendar as a real post</div>
       </div>
     </div>` : `
     <div style="padding:10px 14px;background:var(--amber-light);border-radius:var(--r-lg);margin-bottom:14px;font-size:12px;color:var(--amber);font-weight:600">
-      ⚡ Not yet scheduled — pick a date below to schedule it
+      ⚡ Pick a date below, then click → Convert to post
     </div>`}
 
-    <!-- Quick reschedule -->
+    <!-- Date + Notes -->
     <div class="form-group">
-      <label class="form-label">Schedule / change date</label>
+      <label class="form-label">📅 Schedule date</label>
       <input class="form-input" type="date" id="iv-date" value="${idea.date||new Date().toISOString().split('T')[0]}">
     </div>
-
     <div class="form-group">
-      <label class="form-label">Notes (editable)</label>
+      <label class="form-label">📝 Notes</label>
       <textarea class="form-input form-textarea" id="iv-body" rows="3" style="min-height:60px">${idea.body||''}</textarea>
+    </div>
+
+    <!-- Reference image -->
+    <div class="form-group">
+      <label class="form-label">🖼 Reference image</label>
+      <div id="iv-img-preview" style="margin-bottom:8px">
+        ${window._ideaViewRefUrl ? `
+          <div style="position:relative;display:inline-block;width:100%">
+            <img src="${window._ideaViewRefUrl}" style="width:100%;max-height:160px;object-fit:cover;border-radius:var(--r-lg);border:1.5px solid var(--border);display:block;cursor:zoom-in"
+              onclick="_openIdeaRefLightbox('${window._ideaViewRefUrl}')">
+            <div style="display:flex;gap:6px;margin-top:6px">
+              <a href="${window._ideaViewRefUrl}" download="${idea.title||'image'}" target="_blank"
+                style="padding:4px 12px;background:var(--brand);color:#fff;border-radius:14px;font-size:11px;font-weight:700;text-decoration:none">⬇ Download</a>
+              <button onclick="_clearIdeaViewRef(${ideaId})"
+                style="padding:4px 12px;background:var(--coral-light);color:var(--coral);border:1px solid var(--coral);border-radius:14px;font-size:11px;font-weight:700;cursor:pointer;font-family:var(--font)">🗑 Remove</button>
+            </div>
+          </div>` : `<div style="color:var(--text3);font-size:12px">No reference image attached</div>`}
+      </div>
+      <label style="display:flex;align-items:center;gap:8px;padding:8px 14px;background:var(--brand-pale);border:1.5px dashed var(--brand-mid);border-radius:var(--r-lg);cursor:pointer;transition:all .15s"
+        onmouseover="this.style.background='var(--brand-light)'" onmouseout="this.style.background='var(--brand-pale)'">
+        <input type="file" accept="image/*" style="display:none" onchange="handleIdeaViewImageUpload(this,${ideaId})">
+        <span style="font-size:16px">🖼️</span>
+        <span style="font-size:12px;font-weight:700;color:var(--brand)">${window._ideaViewRefUrl ? '🔄 Change image' : '📎 Add reference image'}</span>
+      </label>
     </div>`;
 
   document.getElementById('modalFooter').innerHTML = `
     <button class="btn btn-ghost btn-sm btn-danger" onclick="deleteIdeaFromModal(${ideaId})">🗑 Delete</button>
     <button class="btn btn-ghost btn-sm" onclick="unscheduleIdeaFromModal(${ideaId})" ${!idea.date?'style="display:none"':''}>📤 Unschedule</button>
     <button class="btn btn-ghost" onclick="closeModal()">Close</button>
-    <button class="btn btn-primary btn-sm" onclick="saveIdeaFromModal(${ideaId})" style="margin-right:4px">💾 Save</button>
+    <button class="btn btn-primary btn-sm" onclick="saveIdeaFromModal(${ideaId})">💾 Save</button>
     <button class="btn btn-primary" onclick="convertIdeaToPostFromModal(${ideaId})" style="background:linear-gradient(135deg,#10B981,#065F46)">→ Convert to post</button>`;
 
   document.getElementById('modalOverlay').classList.add('open');
+}
+
+async function handleIdeaViewImageUpload(input, ideaId) {
+  const file = input.files[0]; if (!file) return;
+  const preview = document.getElementById('iv-img-preview');
+  if (preview) preview.innerHTML = `<div style="padding:10px;background:var(--brand-pale);border-radius:var(--r-lg);font-size:12px;color:var(--brand);font-weight:600">☁️ Uploading…</div>`;
+  try {
+    const result = await uploadToCloudinary(file, pct => {
+      if (preview) preview.innerHTML = `<div style="padding:10px;background:var(--brand-pale);border-radius:var(--r-lg);font-size:12px;color:var(--brand);font-weight:600">☁️ ${pct}%…</div>`;
+    });
+    window._ideaViewRefUrl = result.url;
+    const idea = (state.ideas||[]).find(i=>i.id===ideaId);
+    if (idea) { idea.refImageUrl = result.url; idea.refImageName = file.name; }
+    if (preview) preview.innerHTML = `
+      <img src="${result.url}" style="width:100%;max-height:160px;object-fit:cover;border-radius:var(--r-lg);border:1.5px solid var(--border);display:block;cursor:zoom-in" onclick="_openIdeaRefLightbox('${result.url}')">
+      <div style="font-size:11px;color:var(--green);font-weight:600;margin-top:4px">✅ Image saved — will carry over when you convert to post</div>`;
+    saveState();
+    if (typeof autoSaveToMediaLibrary === 'function') autoSaveToMediaLibrary(result.url, file.name, 'cloudinary');
+  } catch(e) {
+    if (preview) preview.innerHTML = `<div style="color:var(--coral);font-size:12px;padding:8px">❌ Upload failed</div>`;
+  }
+  input.value = '';
+}
+
+function _clearIdeaViewRef(ideaId) {
+  window._ideaViewRefUrl = null;
+  const idea = (state.ideas||[]).find(i=>i.id===ideaId);
+  if (idea) { idea.refImageUrl = null; idea.refImageName = null; saveState(); }
+  const el = document.getElementById('iv-img-preview');
+  if (el) el.innerHTML = `<div style="color:var(--text3);font-size:12px">No reference image attached</div>`;
 }
 
 function saveIdeaFromModal(ideaId) {
@@ -820,6 +874,7 @@ function saveIdeaFromModal(ideaId) {
   if (!idea) return;
   idea.date = document.getElementById('iv-date').value;
   idea.body = document.getElementById('iv-body').value;
+  if (window._ideaViewRefUrl !== undefined) idea.refImageUrl = window._ideaViewRefUrl;
   saveState();
   closeModal();
   renderChannelGrid();
@@ -828,7 +883,6 @@ function saveIdeaFromModal(ideaId) {
 }
 
 function deleteIdeaFromModal(ideaId) {
-  if (!confirm('Delete this idea?')) return;
   state.ideas = (state.ideas||[]).filter(i=>i.id!==ideaId);
   saveState(); closeModal(); renderChannelGrid();
   renderSidebarIdeas && renderSidebarIdeas();
