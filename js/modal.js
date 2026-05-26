@@ -12,8 +12,25 @@ function showModal(type) {
     post: {
       title: 'New Post',
       body: `
-        <div class="form-group"><label class="form-label">Title <span class="required">*</span></label><input class="form-input" id="m-title" placeholder="Post title"></div>
+        <div class="form-group"><label class="form-label">Title <span class="required">*</span></label><input class="form-input" id="m-title" placeholder="Post title" autofocus></div>
         <div class="form-group"><label class="form-label">Caption</label><textarea class="form-input" id="m-caption" rows="3" placeholder="Write your caption…"></textarea></div>
+
+        <!-- Image attachment -->
+        <div class="form-group">
+          <label class="form-label">📎 Attach image / video <span style="font-size:10px;font-weight:400;opacity:.6;text-transform:none">(optional)</span></label>
+          <label style="display:flex;align-items:center;gap:10px;padding:11px 14px;background:var(--brand-pale);border:2px dashed var(--brand-mid);border-radius:var(--r-lg);cursor:pointer;transition:all .15s"
+            onmouseover="this.style.background='var(--brand-light)'" onmouseout="this.style.background='var(--brand-pale)'">
+            <input type="file" id="m-image-input" accept="image/*,video/*" style="display:none" onchange="handleModalImageUpload(this)">
+            <span style="font-size:20px">🖼️</span>
+            <div style="flex:1">
+              <div style="font-size:13px;font-weight:700;color:var(--brand-dark)">Click to pick from your device</div>
+              <div style="font-size:11px;color:var(--text3);margin-top:1px">JPG · PNG · MP4 · any format</div>
+            </div>
+            <div style="background:var(--brand);color:#fff;padding:5px 14px;border-radius:20px;font-size:12px;font-weight:700;white-space:nowrap;flex-shrink:0">Browse</div>
+          </label>
+          <div id="m-image-preview" style="margin-top:8px"></div>
+        </div>
+
         <div class="form-group"><label class="form-label">Platform</label>
           <select class="form-select" id="m-platform">
             <option>Instagram</option><option>Facebook</option><option>WhatsApp</option><option>Twitter/X</option><option>LinkedIn</option><option>Meta Ad</option>
@@ -35,7 +52,7 @@ function showModal(type) {
           </div>
         </div>`,
       footer: `<button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
-               <button class="btn btn-primary" onclick="saveModalPost()">Save post</button>`,
+               <button class="btn btn-primary" onclick="saveModalPost()">💾 Save post</button>`,
     },
     ad: {
       title: 'New Ad Campaign',
@@ -144,6 +161,53 @@ function closeModalOverlay(e) {
 }
 
 // Save functions
+function handleModalImageUpload(input) {
+  const file = input.files[0];
+  if (!file) return;
+
+  const preview = document.getElementById('m-image-preview');
+
+  // Try Cloudinary upload if configured
+  if (typeof uploadToCloudinary === 'function' &&
+      typeof CLOUDINARY_PRESET !== 'undefined' &&
+      CLOUDINARY_PRESET !== 'PASTE_PRESET_NAME_HERE') {
+
+    if (preview) preview.innerHTML = `<div style="background:var(--brand-pale);border-radius:var(--r-lg);padding:10px;font-size:12px;color:var(--brand);font-weight:600">☁️ Uploading…</div>`;
+
+    uploadToCloudinary(file, pct => {
+      if (preview) preview.innerHTML = `<div style="background:var(--brand-pale);border-radius:var(--r-lg);padding:10px;font-size:12px;color:var(--brand);font-weight:600">☁️ Uploading… ${pct}%</div>`;
+    }).then(result => {
+      window._modalImageUrl = result.url;
+      // Auto-save to media library
+      if (typeof autoSaveToMediaLibrary === 'function') autoSaveToMediaLibrary(result.url, file.name, 'cloudinary');
+      if (preview) preview.innerHTML = `
+        <img src="${result.url}" style="width:100%;max-height:120px;object-fit:cover;border-radius:var(--r-lg);border:1.5px solid var(--border)">
+        <div style="font-size:11px;color:var(--green);font-weight:600;margin-top:4px">✅ ${file.name} uploaded — also saved to Photos library</div>`;
+    }).catch(() => {
+      // Fallback to object URL
+      const url = URL.createObjectURL(file);
+      window._modalImageUrl = url;
+      if (preview && file.type.startsWith('image/')) {
+        preview.innerHTML = `<img src="${url}" style="width:100%;max-height:120px;object-fit:cover;border-radius:var(--r-lg);border:1.5px solid var(--border)">
+          <div style="font-size:11px;color:var(--green);font-weight:600;margin-top:4px">✅ ${file.name} ready</div>`;
+      }
+    });
+  } else {
+    // Object URL fallback (session only)
+    const url = URL.createObjectURL(file);
+    window._modalImageUrl = url;
+    if (preview) {
+      if (file.type.startsWith('image/')) {
+        preview.innerHTML = `<img src="${url}" style="width:100%;max-height:120px;object-fit:cover;border-radius:var(--r-lg);border:1.5px solid var(--border)">
+          <div style="font-size:11px;color:var(--green);font-weight:600;margin-top:4px">✅ ${file.name} attached</div>`;
+      } else {
+        preview.innerHTML = `<div style="background:var(--surface2);border-radius:var(--r-lg);padding:10px;font-size:12px;color:var(--green);font-weight:600">🎬 ${file.name} attached</div>`;
+      }
+    }
+  }
+  input.value = '';
+}
+
 function saveModalPost() {
   const t = document.getElementById('m-title').value.trim();
   if (!t) { showToast('Enter a title', 'error'); return; }
@@ -158,12 +222,15 @@ function saveModalPost() {
     assignee: document.getElementById('m-assign').value,
     priority: 'normal', type: 'Image post',
     hashtags: '', brief: '', notes: '',
+    mediaUrl: window._modalImageUrl || null,
     created: new Date().toISOString().split('T')[0],
   };
+  window._modalImageUrl = null; // reset
   state.posts.push(post); saveState(); updateBadge();
   if (currentView === 'calendar') buildCalendar();
   if (currentView === 'posts') renderPosts();
-  closeModal(); showToast('Post created!', 'success');
+  if (typeof renderChannelCalendars === 'function') renderChannelCalendars();
+  closeModal(); showToast('✅ Post created!', 'success');
 }
 
 function saveModalAd() {
