@@ -23,6 +23,62 @@ const STATUS_COLORS = {
 /* ══════════════════════════════════════════════════════════
    RENDER
 ══════════════════════════════════════════════════════════ */
+
+/* ══════════════════════════════════════════════════════════
+   DAY VIEW MODAL — click date to see all posts for that day
+══════════════════════════════════════════════════════════ */
+function openDayView(dateStr) {
+  const items = _getChannelItems(dateStr);
+  const occasions = typeof getOccasions === 'function' ? getOccasions(dateStr) : [];
+  const cfg = CHANNEL_CONFIG[activeChannel] || CHANNEL_CONFIG.social;
+  const d = new Date(dateStr + 'T00:00:00');
+  const dayLabel = d.toLocaleDateString('en-IN', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
+
+  document.getElementById('modalTitle').textContent = '📅 ' + dayLabel;
+  document.getElementById('modalBody').innerHTML = `
+
+    ${occasions.length ? `
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">
+      ${occasions.map(o=>`<span style="padding:4px 12px;border-radius:20px;background:${o.color}18;color:${o.color};font-size:12px;font-weight:700;border:1.5px solid ${o.color}40">${o.emoji} ${o.name}</span>`).join('')}
+    </div>` : ''}
+
+    ${!items.length ? `
+    <div style="text-align:center;padding:30px;color:var(--text3)">
+      <div style="font-size:36px;margin-bottom:10px">📭</div>
+      <div style="font-size:14px;font-weight:700">No posts scheduled</div>
+      <div style="font-size:12px;margin-top:6px">Click + on the calendar to add one</div>
+    </div>` : `
+    <div style="display:flex;flex-direction:column;gap:10px">
+      ${items.map(item => {
+        const st = STATUS_MAP[item.status] || {};
+        const hasImg = item.mediaUrl;
+        return `<div style="background:var(--white);border:1.5px solid var(--border);border-radius:var(--r-xl);overflow:hidden;box-shadow:var(--sh-sm);cursor:pointer"
+          onclick="closeModal();setTimeout(()=>openChannelItemDrawer('${dateStr}',${JSON.stringify(item).replace(/'/g,"\'")}),100)">
+          ${hasImg ? `<img src="${item.mediaUrl}" style="width:100%;max-height:140px;object-fit:cover;display:block">` : ''}
+          <div style="padding:12px 14px">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+              <span style="font-size:15px">${cfg.emoji}</span>
+              <div style="font-size:14px;font-weight:800;color:var(--text);flex:1">${item.title}</div>
+              <span class="badge ${st.cls||''}" style="flex-shrink:0">${st.label||item.status||''}</span>
+            </div>
+            ${item.caption ? `<div style="font-size:12px;color:var(--text2);line-height:1.5;margin-bottom:6px">${item.caption.slice(0,100)}${item.caption.length>100?'…':''}</div>` : ''}
+            <div style="display:flex;align-items:center;gap:10px">
+              ${item.time ? `<span style="font-size:11px;color:var(--text3)">🕐 ${item.time}</span>` : ''}
+              ${item.assignee ? `<span style="font-size:11px;color:var(--text3)">👤 ${item.assignee}</span>` : ''}
+              ${hasImg ? `<a href="${item.mediaUrl}" download="${item.title||'image'}" target="_blank" onclick="event.stopPropagation()"
+                style="margin-left:auto;font-size:11px;font-weight:700;color:var(--brand);text-decoration:none;padding:3px 10px;background:var(--brand-pale);border-radius:12px">⬇ Download</a>` : ''}
+            </div>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>`}`;
+
+  document.getElementById('modalFooter').innerHTML = `
+    <button class="btn btn-ghost" onclick="closeModal()">Close</button>
+    <button class="btn btn-primary" onclick="closeModal();openChannelAddModal('${dateStr}')">+ Add post on this day</button>`;
+  document.getElementById('modalOverlay').classList.add('open');
+}
+
 function renderChannelCalendars() {
   document.querySelectorAll('.ch-tab,.ch-subtab').forEach(b => b.classList.remove('active'));
   const tab = document.querySelector(`.ch-tab[data-ch="${activeChannel}"], .ch-subtab[data-ch="${activeChannel}"]`);
@@ -151,27 +207,40 @@ function renderChannelGrid() {
       cell.appendChild(strip);
     }
 
-    /* pills */
+    /* clicking date number opens day view */
+    numEl.style.cursor = 'pointer';
+    numEl.title = 'Click to see all posts for this day';
+    numEl.onclick = e => { e.stopPropagation(); openDayView(dateStr); };
+
+    /* pills - title first, time small */
     const postsWrap = document.createElement('div');
     postsWrap.className = 'cell-posts';
     items.slice(0,3).forEach(item => {
       const pill = document.createElement('div');
       pill.className = 'cal-post-pill';
-      // Ideas get a special purple style
       if (item.type === 'idea') {
-        pill.style.cssText = 'background:#EDE9FE;color:#5B21B6;border-left:2.5px solid #7C3AED;font-style:italic';
+        pill.style.cssText = 'background:#EDE9FE;color:#5B21B6;border-left:2.5px solid #7C3AED';
       } else {
         pill.style.cssText = `background:${cfg.bg};color:${cfg.color};border-left:2.5px solid ${STATUS_COLORS[item.status]||'#ccc'}`;
       }
-      pill.innerHTML = `<span>${item.type==='idea'?'':cfg.emoji}</span><span class="pill-text">${item.time&&item.type!=='idea'?item.time.slice(0,5)+' · ':''}${item.title}</span>`;
-      pill.title = item.title;
+      const timeHtml = item.time && item.type !== 'idea'
+        ? `<span style="font-size:9px;opacity:.65;display:block;margin-top:1px">${item.time.slice(0,5)}</span>` : '';
+      pill.innerHTML = `<span style="flex-shrink:0;font-size:11px">${item.type==='idea'?'💡':cfg.emoji}</span>
+        <span style="flex:1;min-width:0">
+          <span style="display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:700;font-size:11px">${item.title}</span>
+          ${timeHtml}
+        </span>`;
+      pill.title = item.title + (item.time ? ' at ' + item.time : '');
       pill.onclick = e => { e.stopPropagation(); openChannelItemDrawer(dateStr, item); };
       postsWrap.appendChild(pill);
     });
     if (items.length > 3) {
       const m = document.createElement('div');
       m.className = 'pill-more';
+      m.style.cursor = 'pointer';
+      m.title = 'Click to see all posts';
       m.textContent = `+${items.length-3} more`;
+      m.onclick = e => { e.stopPropagation(); openDayView(dateStr); };
       postsWrap.appendChild(m);
     }
     if (!items.length) {
