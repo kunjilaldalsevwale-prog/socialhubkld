@@ -574,3 +574,144 @@ function saveProfilePassword() {
   showMsg('✅ Password updated successfully!', true);
   showToast('✅ Password changed!', 'success');
 }
+
+/* ══════════════════════════════════════════════════════════
+   SETTINGS → TEAM & PERMISSIONS TABLE
+══════════════════════════════════════════════════════════ */
+function renderTeamSettings() {
+  const el = document.getElementById('rolesTable');
+  if (!el) return;
+  const isAdmin = currentUser && currentUser.role === 'admin';
+
+  const PERM_COLS = [
+    { key:'calendar',     label:'📅 Calendar' },
+    { key:'email',        label:'📧 Email' },
+    { key:'whatsapp',     label:'💬 WhatsApp' },
+    { key:'meta',         label:'📊 Meta Ads' },
+    { key:'media',        label:'🖼 Photos' },
+    { key:'ideas',        label:'💡 Ideas' },
+    { key:'planner',      label:'🗒 Planner' },
+    { key:'analytics',    label:'📈 Analytics' },
+    { key:'integrations', label:'🔗 Integrations' },
+    { key:'settings',     label:'⚙ Settings' },
+  ];
+
+  el.innerHTML = `
+    <div style="overflow-x:auto;margin-top:8px">
+      <table style="width:100%;border-collapse:collapse;font-size:12px;min-width:700px">
+        <thead>
+          <tr style="background:var(--surface2)">
+            <th style="padding:12px 14px;text-align:left;font-weight:700;color:var(--text2);border-bottom:2px solid var(--border);white-space:nowrap;position:sticky;left:0;background:var(--surface2);z-index:2">
+              👤 Member
+            </th>
+            <th style="padding:10px 8px;text-align:center;font-weight:700;color:var(--text2);border-bottom:2px solid var(--border)">Role</th>
+            ${PERM_COLS.map(p=>`
+              <th style="padding:10px 6px;text-align:center;font-size:10px;font-weight:700;color:var(--text3);border-bottom:2px solid var(--border);white-space:nowrap">
+                ${p.label}
+              </th>`).join('')}
+            ${isAdmin ? `<th style="padding:10px 8px;border-bottom:2px solid var(--border)"></th>` : ''}
+          </tr>
+        </thead>
+        <tbody>
+          ${Object.values(TEAM_USERS).map(u => {
+            const perms = (state.teamPermissions&&state.teamPermissions[u.id]) || u.permissions || [];
+            const hasAll = u.role==='admin' || perms.includes('all');
+            return `<tr style="border-bottom:1px solid var(--border);transition:background .12s" onmouseover="this.style.background='var(--brand-pale)'" onmouseout="this.style.background=''">
+              <!-- Member info -->
+              <td style="padding:12px 14px;position:sticky;left:0;background:inherit;z-index:1">
+                <div style="display:flex;align-items:center;gap:10px">
+                  <div style="width:32px;height:32px;border-radius:50%;background:${u.color};color:${u.textColor};display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;flex-shrink:0">${u.avatar}</div>
+                  <div>
+                    <div style="font-weight:700;color:var(--text);font-size:13px">${u.name}</div>
+                    <div style="font-size:10px;color:var(--text3)">${u.email}</div>
+                  </div>
+                </div>
+              </td>
+              <!-- Role badge -->
+              <td style="padding:10px 8px;text-align:center">
+                <span style="padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;background:${u.role==='admin'?'#FEF9C3':'var(--brand-light)'};color:${u.role==='admin'?'#92400E':'var(--brand-dark)'}">
+                  ${u.role==='admin'?'⭐ Admin':'👤 Member'}
+                </span>
+              </td>
+              <!-- Permission checkboxes -->
+              ${PERM_COLS.map(p => {
+                const checked = hasAll || perms.includes(p.key);
+                if (u.role === 'admin') {
+                  return `<td style="padding:10px 6px;text-align:center"><span style="color:var(--green);font-size:16px">✓</span></td>`;
+                }
+                if (!isAdmin) {
+                  return `<td style="padding:10px 6px;text-align:center">${checked?'<span style="color:var(--green);font-size:16px">✓</span>':'<span style="color:var(--border3);font-size:14px">—</span>'}</td>`;
+                }
+                return `<td style="padding:10px 6px;text-align:center">
+                  <label style="cursor:pointer;display:inline-flex;align-items:center;justify-content:center">
+                    <input type="checkbox" ${checked?'checked':''} ${hasAll?'disabled':''}
+                      style="width:16px;height:16px;accent-color:var(--brand);cursor:pointer"
+                      onchange="toggleMemberPerm('${u.id}','${p.key}',this.checked)">
+                  </label>
+                </td>`;
+              }).join('')}
+              <!-- Actions -->
+              ${isAdmin ? `
+              <td style="padding:10px 8px;text-align:center;white-space:nowrap">
+                ${u.role !== 'admin' ? `
+                <div style="display:flex;gap:4px;justify-content:center">
+                  <button class="btn btn-ghost btn-sm" onclick="quickGrantAll('${u.id}')" title="Grant full access" style="font-size:10px;padding:3px 8px">All ✓</button>
+                  <button class="btn btn-ghost btn-sm" onclick="quickRevokeAll('${u.id}')" title="Revoke all access" style="font-size:10px;padding:3px 8px;color:var(--coral)">None ✗</button>
+                  <button class="btn btn-ghost btn-sm" onclick="openAdminResetPasswordModal('${u.id}')" title="Reset password" style="font-size:10px;padding:3px 8px">🔑</button>
+                </div>` : ''}
+              </td>` : ''}
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>
+    </div>
+
+    ${isAdmin ? `
+    <div style="margin-top:16px;padding:12px 14px;background:var(--brand-pale);border-radius:var(--r-lg);font-size:12px;color:var(--brand);line-height:1.7">
+      💡 <strong>Tip:</strong> Check/uncheck any box to grant or revoke access instantly.
+      Changes take effect the next time that member logs in or refreshes the page.
+      Click <strong>All ✓</strong> to give full access · <strong>None ✗</strong> to revoke everything.
+    </div>` : `
+    <div style="margin-top:16px;padding:12px 14px;background:var(--surface2);border-radius:var(--r-lg);font-size:12px;color:var(--text3)">
+      Contact Anusha, Anjani or Tejasv to change your permissions.
+    </div>`}`;
+}
+
+function toggleMemberPerm(userId, permKey, checked) {
+  if (!state.teamPermissions) state.teamPermissions = {};
+  if (!state.teamPermissions[userId]) {
+    state.teamPermissions[userId] = [...(TEAM_USERS[userId]?.permissions || [])];
+  }
+  const perms = state.teamPermissions[userId];
+  // Remove 'all' if individual perm is being toggled
+  const allIdx = perms.indexOf('all');
+  if (allIdx > -1) perms.splice(allIdx, 1);
+
+  if (checked && !perms.includes(permKey)) {
+    perms.push(permKey);
+  } else if (!checked) {
+    const idx = perms.indexOf(permKey);
+    if (idx > -1) perms.splice(idx, 1);
+  }
+  TEAM_USERS[userId].permissions = perms;
+  saveState();
+  showToast(`✅ ${TEAM_USERS[userId].name}'s permissions updated`, 'success');
+}
+
+function quickGrantAll(userId) {
+  if (!state.teamPermissions) state.teamPermissions = {};
+  state.teamPermissions[userId]   = ['all'];
+  TEAM_USERS[userId].permissions  = ['all'];
+  saveState();
+  renderTeamSettings();
+  showToast(`✅ Full access granted to ${TEAM_USERS[userId].name}`, 'success');
+}
+
+function quickRevokeAll(userId) {
+  if (!state.teamPermissions) state.teamPermissions = {};
+  state.teamPermissions[userId]   = [];
+  TEAM_USERS[userId].permissions  = [];
+  saveState();
+  renderTeamSettings();
+  showToast(`${TEAM_USERS[userId].name}'s access revoked`, 'success');
+}
