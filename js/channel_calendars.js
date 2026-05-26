@@ -787,7 +787,25 @@ function _showEditPostModal(p) {
       <div><div style="font-size:13px;font-weight:700">${p.platform}</div><div style="font-size:11px;color:var(--text3)">${fmtDate(p.date)} at ${p.time||'09:00'}</div></div>
       <span class="badge ${st.cls}" style="margin-left:auto">${st.label}</span>
     </div>
-    ${p.mediaUrl?`<div style="margin-bottom:12px"><img src="${p.mediaUrl}" style="width:100%;max-height:100px;object-fit:cover;border-radius:var(--r-lg);border:1.5px solid var(--border)"></div>`:''}
+    ${p.mediaUrl ? `
+    <div style="margin-bottom:12px;position:relative">
+      <img src="${p.mediaUrl}" style="width:100%;max-height:200px;object-fit:cover;border-radius:var(--r-lg);border:1.5px solid var(--border);display:block">
+      <div style="display:flex;gap:6px;margin-top:8px">
+        <a href="${p.mediaUrl}" download="${p.title||'image'}" target="_blank"
+          style="display:inline-flex;align-items:center;gap:5px;padding:6px 14px;background:var(--brand);color:#fff;border-radius:20px;font-size:12px;font-weight:700;text-decoration:none;transition:all .15s"
+          onmouseover="this.style.background='var(--brand-dark)'" onmouseout="this.style.background='var(--brand)'">
+          ⬇ Download image
+        </a>
+        <button onclick="navigator.clipboard.writeText('${p.mediaUrl}').then(()=>showToast('📋 Image URL copied!','success'))"
+          style="display:inline-flex;align-items:center;gap:5px;padding:6px 14px;background:var(--surface2);color:var(--text2);border:1.5px solid var(--border);border-radius:20px;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--font)">
+          📋 Copy URL
+        </button>
+        <a href="${p.mediaUrl}" target="_blank"
+          style="display:inline-flex;align-items:center;gap:5px;padding:6px 14px;background:var(--surface2);color:var(--text2);border:1.5px solid var(--border);border-radius:20px;font-size:12px;font-weight:700;text-decoration:none">
+          ↗ Full size
+        </a>
+      </div>
+    </div>` : ''}
     <div class="form-group"><label class="form-label">Title</label><input class="form-input" id="ep-title" value="${(p.title||'').replace(/"/g,'&quot;')}"></div>
     <div class="form-group"><label class="form-label">Caption</label><textarea class="form-input form-textarea" id="ep-caption" rows="3">${p.caption||''}</textarea></div>
     <div class="form-row">
