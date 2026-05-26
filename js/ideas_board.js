@@ -277,17 +277,41 @@ function unscheduleIdea(id) {
 }
 
 /* Convert idea → real post */
+// Map idea channel key → proper post platform name
+const _IDEA_CHANNEL_TO_PLATFORM = {
+  social:    'Instagram',
+  whatsapp:  'WhatsApp',
+  email:     'Email',
+  meta:      'Meta Ad',
+  google:    'Google Ad',
+  Instagram: 'Instagram',
+  WhatsApp:  'WhatsApp',
+};
+
 function convertIdeaToPost(ideaId) {
   const idea = (state.ideas || []).find(i => i.id === ideaId);
-  if (!idea || !idea.date) return;
+  if (!idea || !idea.date) { showToast('Set a date on the idea first', 'error'); return; }
+
+  // Map channel key to proper platform name
+  const platform = _IDEA_CHANNEL_TO_PLATFORM[idea.platform] || 'Instagram';
+
   if (!state.posts) state.posts = [];
-  state.posts.push({
-    id: genId(), title: idea.title, caption: idea.body || '',
-    platform: idea.platform || 'Instagram', platforms: [idea.platform || 'Instagram'],
-    date: idea.date, time: '09:00', status: 'draft', type: 'Image post',
-    hashtags: '', brief: idea.body || '', assignee: '', priority: 'normal',
-    notes: '', mediaUrl: null, created: new Date().toISOString().split('T')[0],
-  });
+  const newPost = {
+    id: genId(),
+    title:    idea.title,
+    caption:  idea.body || '',
+    platform, platforms: [platform],
+    date:     idea.date,
+    time:     idea.time || '09:00',
+    status:   'draft',
+    type:     'Image post',
+    hashtags: '', brief: idea.body || '', assignee: '',
+    priority: 'normal', notes: '',
+    mediaUrl: idea.refImageUrl || null,  // carry over reference image
+    created:  new Date().toISOString().split('T')[0],
+  };
+  state.posts.push(newPost);
+
   // Remove from ideas
   state.ideas = (state.ideas || []).filter(i => i.id !== ideaId);
   saveState();
@@ -295,7 +319,15 @@ function convertIdeaToPost(ideaId) {
   if (currentView === 'ideas') renderIdeasBoard();
   if (typeof renderChannelGrid === 'function') renderChannelGrid();
   updateBadge();
-  showToast('✨ Idea converted to post!', 'success');
+
+  // Switch calendar to the right channel so user sees it
+  if (typeof setChannel === 'function') {
+    const chMap = { Instagram:'social', WhatsApp:'whatsapp', Email:'email', 'Meta Ad':'meta', 'Google Ad':'google' };
+    const ch = chMap[platform] || 'social';
+    setChannel(ch, document.querySelector(`.ch-subtab[data-ch="${ch}"]`));
+  }
+
+  showToast(`✨ Idea converted to post on ${platform} calendar!`, 'success');
 }
 
 /* ══════════════════════════════════════════════════════════
