@@ -81,6 +81,10 @@ function openMediaLightbox(id) {
           style="color:#60A5FA;font-size:12px;font-weight:700;text-decoration:none;padding:5px 12px;background:rgba(96,165,250,.15);border-radius:20px;border:1px solid rgba(96,165,250,.3)">
           ↗ Open full size
         </a>
+        <button onclick="downloadMedia(${m.id})"
+          style="color:#FBBF24;font-size:12px;font-weight:700;background:rgba(251,191,36,.15);border:1px solid rgba(251,191,36,.3);border-radius:20px;padding:5px 12px;cursor:pointer;font-family:var(--font)">
+          ⬇ Download
+        </button>
         <button onclick="copyMediaUrl(${m.id})"
           style="color:#34D399;font-size:12px;font-weight:700;background:rgba(52,211,153,.15);border:1px solid rgba(52,211,153,.3);border-radius:20px;padding:5px 12px;cursor:pointer;font-family:var(--font)">
           📋 Copy URL
@@ -97,6 +101,52 @@ function copyMediaUrl(id) {
   navigator.clipboard.writeText(m.url)
     .then(() => showToast('📋 URL copied!', 'success'))
     .catch(() => showToast('Copy manually from address bar', ''));
+}
+
+function downloadMedia(id) {
+  const m = (state.mediaLibrary||[]).find(x=>x.id===id);
+  if (!m || !m.url) { showToast('No URL available to download', 'error'); return; }
+  // Create a temporary anchor and trigger download
+  const a    = document.createElement('a');
+  a.href     = m.url;
+  a.download = m.name || 'image';
+  a.target   = '_blank'; // fallback for cross-origin
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  showToast(`⬇ Downloading ${m.name}…`, 'success');
+}
+
+function moveToBoardFolder(id) {
+  const folders = state.mediaFolders || [];
+  if (!folders.length) {
+    if (confirm('No folders yet. Create one now?')) createMediaFolder();
+    return;
+  }
+  const m = (state.mediaLibrary||[]).find(x=>x.id===id);
+  if (!m) return;
+  // Show folder picker
+  document.getElementById('modalTitle').textContent = '📁 Move to folder';
+  document.getElementById('modalBody').innerHTML = `
+    <div style="font-size:13px;color:var(--text2);margin-bottom:14px">
+      Moving: <strong>${m.name}</strong>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <button class="btn btn-ghost" style="text-align:left;justify-content:flex-start;gap:10px"
+        onclick="moveToFolder(${id},null);closeModal()">
+        📁 All photos (remove from folder)
+      </button>
+      ${folders.map(f=>`
+        <button class="btn ${m.folderId===f.id?'btn-primary':'btn-ghost'}" 
+          style="text-align:left;justify-content:flex-start;gap:10px"
+          onclick="moveToFolder(${id},'${f.id}');closeModal()">
+          📁 ${f.name} ${m.folderId===f.id?'✓':''}
+        </button>`).join('')}
+    </div>`;
+  document.getElementById('modalFooter').innerHTML = `
+    <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+    <button class="btn btn-ghost" onclick="createMediaFolder();closeModal()">+ New folder</button>`;
+  document.getElementById('modalOverlay').classList.add('open');
 }
 
 function renderMediaLibrary() {
@@ -155,6 +205,12 @@ function _renderMediaGrid() {
         <div class="media-name" title="${m.name}">${m.name}</div>
         <div class="media-meta">${m.size||''} · ${m.source==='cloudinary'?'☁️ Cloudinary':m.source==='drive'?'☁️ Drive':'📱 Device'}</div>
         <div class="media-tags">${(m.tags||[]).map(t=>`<span class="media-tag">${t}</span>`).join('')}</div>
+        <!-- Action row -->
+        <div style="display:flex;gap:5px;margin-top:7px;flex-wrap:wrap">
+          <button class="media-action-btn" onclick="event.stopPropagation();downloadMedia(${m.id})" title="Download">⬇ Download</button>
+          <button class="media-action-btn" onclick="event.stopPropagation();moveToBoardFolder(${m.id})" title="Move to folder">📁 Folder</button>
+          <button class="media-action-btn" onclick="event.stopPropagation();copyMediaUrl(${m.id})" title="Copy URL">📋 Copy</button>
+        </div>
       </div>
       <button class="media-delete" onclick="event.stopPropagation();deleteMedia(${m.id})" title="Remove">✕</button>
     </div>`;
@@ -275,14 +331,12 @@ async function handleCaddFile(input, source) {
     if (preview) {
       preview.innerHTML = file.type.startsWith('image/')
         ? `<img src="${result.url}" style="width:100%;max-height:130px;object-fit:cover;border-radius:var(--r-lg);border:1.5px solid var(--border)">
-           <div style="font-size:11px;color:var(--green);font-weight:600;margin-top:4px">✅ Uploaded to Cloudinary — permanent & shared</div>`
+           <div style="font-size:11px;color:var(--green);font-weight:600;margin-top:4px">✅ Uploaded to Cloudinary — also saved to Photos library</div>`
         : `<div style="background:var(--green-light);border-radius:var(--r-lg);padding:10px;font-size:12px;color:var(--green);font-weight:600">✅ ${file.name} uploaded to Cloudinary</div>`;
     }
 
-    // Also add to media library
-    if (!state.mediaLibrary) state.mediaLibrary = [];
-    state.mediaLibrary.push({ id:genId(), name:file.name, type:file.type.startsWith('video/')?'video':'image', size:_fmtSize(file.size), url:result.url, thumb:result.url, tags:[], date:new Date().toISOString().split('T')[0], source:'cloudinary', publicId:result.publicId });
-    saveState();
+    // Auto-save to media library
+    if (typeof autoSaveToMediaLibrary === 'function') autoSaveToMediaLibrary(result.url, file.name, 'cloudinary');
   } catch(err) {
     if (preview) preview.innerHTML = `<div style="color:var(--coral);font-size:12px;padding:8px">❌ Upload failed. Check your internet connection.</div>`;
   }
@@ -515,4 +569,24 @@ function renderMediaLibrary() {
   }
   _renderMediaGrid();
   state.mediaLibrary = orig;
+}
+
+/* ══════════════════════════════════════════════════════════
+   AUTO-SAVE TO MEDIA LIBRARY
+   Called whenever an image is attached anywhere in the app
+══════════════════════════════════════════════════════════ */
+function autoSaveToMediaLibrary(url, name, source) {
+  if (!url) return;
+  if (!state.mediaLibrary) state.mediaLibrary = [];
+  // Don't duplicate
+  if (state.mediaLibrary.find(m => m.url === url)) return;
+  const id = genId();
+  state.mediaLibrary.push({
+    id, name: name || 'image',
+    type: 'image', size: '',
+    url, thumb: url, tags: [],
+    date: new Date().toISOString().split('T')[0],
+    source: source || 'cloudinary',
+  });
+  saveState();
 }
