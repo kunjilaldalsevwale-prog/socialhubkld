@@ -856,47 +856,103 @@ function convertIdeaToPostFromModal(ideaId) {
 }
 
 function _showEditPostModal(p) {
-  const pf=PLATFORM_COLORS[p.platform]||{};
-  const st=STATUS_MAP[p.status]||{};
+  const pf = PLATFORM_COLORS[p.platform]||{};
+  const st = STATUS_MAP[p.status]||{};
+  window._editPostMedia = p.mediaUrl || null;
+
+  const CHANNELS = {
+    'Instagram':'📸 Social Media','Facebook':'📸 Social Media',
+    'WhatsApp':'💬 WhatsApp','Email':'📧 Email',
+    'Meta Ad':'📊 Meta Ads','Google Ad':'🔍 Google Ads',
+    'Twitter/X':'📸 Social Media','LinkedIn':'📸 Social Media'
+  };
+
   document.getElementById('modalTitle').textContent='✏️ Edit Post';
   document.getElementById('modalBody').innerHTML=`
-    <div style="display:flex;align-items:center;gap:10px;padding:10px;background:var(--surface2);border-radius:var(--r-lg);margin-bottom:14px">
+
+    <!-- Header: platform + status -->
+    <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--surface2);border-radius:var(--r-lg);margin-bottom:14px">
       <div class="platform-icon" style="background:${pf.bg||'var(--pink-light)'};width:34px;height:34px;font-size:15px">${pf.icon||'📝'}</div>
-      <div><div style="font-size:13px;font-weight:700">${p.platform}</div><div style="font-size:11px;color:var(--text3)">${fmtDate(p.date)} at ${p.time||'09:00'}</div></div>
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:700">${p.platform}</div>
+        <div style="font-size:11px;color:var(--text3)">${fmtDate(p.date)} at ${p.time||'09:00'}</div>
+      </div>
       <span class="badge ${st.cls}" style="margin-left:auto">${st.label}</span>
     </div>
-    ${p.mediaUrl ? `
-    <div style="margin-bottom:12px;position:relative">
-      <img src="${p.mediaUrl}" style="width:100%;max-height:200px;object-fit:cover;border-radius:var(--r-lg);border:1.5px solid var(--border);display:block">
-      <div style="display:flex;gap:6px;margin-top:8px">
-        <a href="${p.mediaUrl}" download="${p.title||'image'}" target="_blank"
-          style="display:inline-flex;align-items:center;gap:5px;padding:6px 14px;background:var(--brand);color:#fff;border-radius:20px;font-size:12px;font-weight:700;text-decoration:none;transition:all .15s"
-          onmouseover="this.style.background='var(--brand-dark)'" onmouseout="this.style.background='var(--brand)'">
-          ⬇ Download image
-        </a>
-        <button onclick="navigator.clipboard.writeText('${p.mediaUrl}').then(()=>showToast('📋 Image URL copied!','success'))"
-          style="display:inline-flex;align-items:center;gap:5px;padding:6px 14px;background:var(--surface2);color:var(--text2);border:1.5px solid var(--border);border-radius:20px;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--font)">
-          📋 Copy URL
-        </button>
-        <a href="${p.mediaUrl}" target="_blank"
-          style="display:inline-flex;align-items:center;gap:5px;padding:6px 14px;background:var(--surface2);color:var(--text2);border:1.5px solid var(--border);border-radius:20px;font-size:12px;font-weight:700;text-decoration:none">
-          ↗ Full size
-        </a>
+
+    <!-- Media section -->
+    <div style="margin-bottom:14px">
+      <div id="ep-media-preview">
+        ${window._editPostMedia ? `
+        <div style="position:relative;border-radius:var(--r-lg);overflow:hidden;border:1.5px solid var(--border)">
+          <img src="${window._editPostMedia}" style="width:100%;max-height:200px;object-fit:cover;display:block">
+          <div style="display:flex;gap:6px;padding:8px 10px;background:var(--surface2);flex-wrap:wrap">
+            <a href="${window._editPostMedia}" download="${p.title||'image'}" target="_blank"
+              style="display:inline-flex;align-items:center;gap:4px;padding:5px 12px;background:var(--brand);color:#fff;border-radius:16px;font-size:11px;font-weight:700;text-decoration:none">
+              ⬇ Download
+            </a>
+            <button onclick="navigator.clipboard.writeText('${window._editPostMedia}').then(()=>showToast('📋 Copied!','success'))"
+              style="padding:5px 12px;background:var(--surface3);color:var(--text2);border:1px solid var(--border);border-radius:16px;font-size:11px;font-weight:700;cursor:pointer;font-family:var(--font)">
+              📋 Copy URL
+            </button>
+            <a href="${window._editPostMedia}" target="_blank"
+              style="padding:5px 12px;background:var(--surface3);color:var(--text2);border:1px solid var(--border);border-radius:16px;font-size:11px;font-weight:700;text-decoration:none">
+              ↗ Full size
+            </a>
+            <button onclick="clearEditPostMedia(${p.id})"
+              style="padding:5px 12px;background:var(--coral-light);color:var(--coral);border:1px solid var(--coral);border-radius:16px;font-size:11px;font-weight:700;cursor:pointer;font-family:var(--font)">
+              🗑 Remove
+            </button>
+          </div>
+        </div>` : `<div style="background:var(--surface2);border:2px dashed var(--border2);border-radius:var(--r-lg);padding:16px;text-align:center;color:var(--text3);font-size:13px">No image attached</div>`}
       </div>
-    </div>` : ''}
-    <div class="form-group"><label class="form-label">Title</label><input class="form-input" id="ep-title" value="${(p.title||'').replace(/"/g,'&quot;')}"></div>
-    <div class="form-group"><label class="form-label">Caption</label><textarea class="form-input form-textarea" id="ep-caption" rows="3">${p.caption||''}</textarea></div>
-    <div class="form-row">
-      <div class="form-group"><label class="form-label">Date</label><input class="form-input" type="date" id="ep-date" value="${p.date}"></div>
-      <div class="form-group"><label class="form-label">Time</label><input class="form-input" type="time" id="ep-time" value="${p.time||'09:00'}"></div>
+      <!-- Change / Add media button -->
+      <label style="display:flex;align-items:center;gap:8px;margin-top:8px;padding:8px 14px;background:var(--brand-pale);border:1.5px dashed var(--brand-mid);border-radius:var(--r-lg);cursor:pointer;transition:all .15s"
+        onmouseover="this.style.background='var(--brand-light)'" onmouseout="this.style.background='var(--brand-pale)'">
+        <input type="file" accept="image/*,video/*" style="display:none" onchange="handleEditPostMedia(this,${p.id})">
+        <span style="font-size:16px">🖼️</span>
+        <span style="font-size:12px;font-weight:700;color:var(--brand)">${window._editPostMedia ? '🔄 Change image / video' : '📎 Attach image / video'}</span>
+      </label>
     </div>
-    <div class="form-group"><label class="form-label">Status</label>
-      <select class="form-select" id="ep-status">
-        <option value="draft" ${p.status==='draft'?'selected':''}>Draft</option>
-        <option value="scheduled" ${p.status==='scheduled'?'selected':''}>Scheduled</option>
-        <option value="review" ${p.status==='review'?'selected':''}>In review</option>
-        <option value="published" ${p.status==='published'?'selected':''}>Published</option>
+
+    <!-- Fields -->
+    <div class="form-group"><label class="form-label">Title</label>
+      <input class="form-input" id="ep-title" value="${(p.title||'').replace(/"/g,'&quot;')}"></div>
+    <div class="form-group"><label class="form-label">Caption</label>
+      <textarea class="form-input form-textarea" id="ep-caption" rows="3">${p.caption||''}</textarea></div>
+
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Date</label>
+        <input class="form-input" type="date" id="ep-date" value="${p.date}"></div>
+      <div class="form-group"><label class="form-label">Time</label>
+        <input class="form-input" type="time" id="ep-time" value="${p.time||'09:00'}"></div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Status</label>
+        <select class="form-select" id="ep-status">
+          <option value="draft" ${p.status==='draft'?'selected':''}>Draft</option>
+          <option value="scheduled" ${p.status==='scheduled'?'selected':''}>Scheduled</option>
+          <option value="review" ${p.status==='review'?'selected':''}>In review</option>
+          <option value="published" ${p.status==='published'?'selected':''}>Published</option>
+        </select></div>
+      <div class="form-group"><label class="form-label">Move to channel</label>
+        <select class="form-select" id="ep-channel" title="Move this post to a different channel calendar">
+          <option value="social"    ${(!p.platform||p.platform==='Instagram'||p.platform==='Facebook'||p.platform==='Twitter/X'||p.platform==='LinkedIn')?'selected':''}>📸 Social Media</option>
+          <option value="whatsapp"  ${p.platform==='WhatsApp'?'selected':''}>💬 WhatsApp</option>
+          <option value="email"     ${p.platform==='Email'?'selected':''}>📧 Email</option>
+          <option value="meta"      ${(p.platform==='Meta Ad'||p.platform==='Facebook')?'selected':''}>📊 Meta Ads</option>
+          <option value="google"    ${p.platform==='Google Ad'?'selected':''}>🔍 Google Ads</option>
+        </select></div>
+    </div>
+
+    <div class="form-group"><label class="form-label">Assign to</label>
+      <select class="form-select" id="ep-assign">
+        <option value="">— unassigned —</option>
+        ${Object.values(typeof TEAM_USERS!=='undefined'?TEAM_USERS:{})
+          .map(m=>`<option value="${m.name}" ${p.assignee===m.name?'selected':''}>${m.name} ${m.role==='admin'?'⭐':''}</option>`).join('')}
       </select></div>`;
+
   document.getElementById('modalFooter').innerHTML=`
     <button class="btn btn-ghost btn-sm btn-danger" onclick="deletePost(${p.id});closeModal();renderChannelCalendars()">🗑 Delete</button>
     <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
@@ -904,15 +960,54 @@ function _showEditPostModal(p) {
   document.getElementById('modalOverlay').classList.add('open');
 }
 
+/* Change media in edit modal */
+async function handleEditPostMedia(input, postId) {
+  const file = input.files[0]; if (!file) return;
+  const preview = document.getElementById('ep-media-preview');
+  if (preview) preview.innerHTML = `<div style="padding:12px;background:var(--brand-pale);border-radius:var(--r-lg);font-size:12px;color:var(--brand);font-weight:600">☁️ Uploading new image…</div>`;
+  try {
+    const result = await uploadToCloudinary(file, pct => {
+      if (preview) preview.innerHTML = `<div style="padding:12px;background:var(--brand-pale);border-radius:var(--r-lg);font-size:12px;color:var(--brand);font-weight:600">☁️ Uploading… ${pct}%</div>`;
+    });
+    window._editPostMedia = result.url;
+    if (typeof autoSaveToMediaLibrary === 'function') autoSaveToMediaLibrary(result.url, file.name, 'cloudinary');
+    if (preview) preview.innerHTML = `
+      <div style="position:relative;border-radius:var(--r-lg);overflow:hidden;border:1.5px solid var(--border)">
+        <img src="${result.url}" style="width:100%;max-height:200px;object-fit:cover;display:block">
+        <div style="padding:8px 10px;background:var(--green-light);font-size:11px;color:var(--green);font-weight:700">✅ New image uploaded — click Update to save</div>
+      </div>`;
+  } catch(e) {
+    if (preview) preview.innerHTML = `<div style="color:var(--coral);font-size:12px;padding:10px">❌ Upload failed. Try again.</div>`;
+  }
+  input.value = '';
+}
+
+function clearEditPostMedia(postId) {
+  window._editPostMedia = null;
+  const preview = document.getElementById('ep-media-preview');
+  if (preview) preview.innerHTML = `<div style="background:var(--surface2);border:2px dashed var(--border2);border-radius:var(--r-lg);padding:16px;text-align:center;color:var(--text3);font-size:13px">No image attached</div>`;
+  showToast('Image removed — click Update to save', '');
+}
+
+const CHANNEL_PLATFORM_MAP = {
+  social:'Instagram', whatsapp:'WhatsApp', email:'Email',
+  meta:'Meta Ad', google:'Google Ad'
+};
+
 function updateChannelPost(id) {
   const p=(state.posts||[]).find(x=>x.id===id); if(!p) return;
-  p.title=document.getElementById('ep-title').value;
-  p.caption=document.getElementById('ep-caption').value;
-  p.date=document.getElementById('ep-date').value;
-  p.time=document.getElementById('ep-time').value;
-  p.status=document.getElementById('ep-status').value;
+  p.title    = document.getElementById('ep-title').value;
+  p.caption  = document.getElementById('ep-caption').value;
+  p.date     = document.getElementById('ep-date').value;
+  p.time     = document.getElementById('ep-time').value;
+  p.status   = document.getElementById('ep-status').value;
+  p.assignee = document.getElementById('ep-assign')?.value || p.assignee;
+  p.mediaUrl = window._editPostMedia;
+  // Move to different channel
+  const newCh = document.getElementById('ep-channel')?.value;
+  if (newCh && CHANNEL_PLATFORM_MAP[newCh]) p.platform = CHANNEL_PLATFORM_MAP[newCh];
   saveState(); closeModal(); updateBadge(); renderChannelCalendars();
-  showToast('Post updated!','success');
+  showToast('✅ Post updated!','success');
 }
 
 /* ══════════════════════════════════════════════════════════
