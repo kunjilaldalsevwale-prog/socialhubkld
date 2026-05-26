@@ -899,14 +899,38 @@ function unscheduleIdeaFromModal(ideaId) {
 }
 
 function convertIdeaToPostFromModal(ideaId) {
-  // Save any edits first
   const idea = (state.ideas||[]).find(i=>i.id===ideaId);
   if (!idea) return;
+
+  // Save any edits from the modal
   const newDate = document.getElementById('iv-date').value;
   if (newDate) idea.date = newDate;
   idea.body = document.getElementById('iv-body').value;
+  if (window._ideaViewRefUrl !== undefined) idea.refImageUrl = window._ideaViewRefUrl;
+
+  if (!idea.date) {
+    showToast('⚠️ Pick a date first before converting', 'error');
+    return;
+  }
+
   closeModal();
+
+  // Convert
   convertIdeaToPost(ideaId);
+
+  // Navigate to calendar view so user sees the new post
+  setTimeout(() => {
+    navigate('channels', document.querySelector('.nav-item[data-view="channels"]'));
+    // Navigate calendar to the post's month
+    if (idea.date) {
+      const d = new Date(idea.date);
+      if (typeof channelCalYear !== 'undefined') {
+        channelCalYear  = d.getFullYear();
+        channelCalMonth = d.getMonth();
+        renderChannelCalendars();
+      }
+    }
+  }, 100);
 }
 
 function _showEditPostModal(p) {
