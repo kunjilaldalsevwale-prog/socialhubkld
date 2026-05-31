@@ -902,18 +902,18 @@
 
               <!-- Tab row -->
               <div class="cal-sidebar-tabs">
-                <button class="cst-tab active" onclick="switchCalSidebarTab('festivals',this)">🎉 Occasions</button>
-                <button class="cst-tab" onclick="switchCalSidebarTab('ideas',this)">💡 Ideas</button>
+                <button class="cst-tab active" onclick="switchCalSidebarTab('ideas',this)">💡 Ideas</button>
                 <button class="cst-tab" data-tab="docs" onclick="switchCalSidebarTab('docs',this)">📄 Docs</button>
+                <button class="cst-tab" onclick="switchCalSidebarTab('festivals',this)">🎉 Occasions</button>
               </div>
 
               <!-- FESTIVALS panel -->
-              <div id="csp-festivals" class="cal-sidebar-panel active" style="flex:1;overflow-y:auto">
+              <div id="csp-festivals" class="cal-sidebar-panel" style="flex:1;overflow-y:auto">
                 <div id="channelSidebarContent" class="upcoming-list"></div>
               </div>
 
               <!-- IDEAS panel -->
-              <div id="csp-ideas" class="cal-sidebar-panel" style="flex:1;overflow-y:auto">
+              <div id="csp-ideas" class="cal-sidebar-panel active" style="flex:1;overflow-y:auto">
 
                 <!-- Quick add idea form -->
                 <div class="sidebar-idea-form">
