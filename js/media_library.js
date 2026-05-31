@@ -190,7 +190,8 @@ function _renderMediaGrid() {
           ? m.url.replace('/upload/', '/upload/w_400,h_280,c_fill/')
           : m.url.replace('/upload/', '/upload/so_0,w_400,h_280,c_fill/'))
       : null;
-    return `<div class="media-card" id="mc-${m.id}">
+    const isSelected = _selectedMedia && _selectedMedia.has(m.id);
+    return `<div class="media-card ${isSelected?'selected':''}" id="mc-${m.id}">
       <div class="media-thumb" style="height:140px;overflow:hidden;position:relative;background:var(--surface3);cursor:zoom-in" onclick="openMediaLightbox(${m.id})">
         ${thumb
           ? `<img src="${thumb}" style="width:100%;height:140px;object-fit:cover;display:block;pointer-events:none"
@@ -301,6 +302,7 @@ async function handleDeviceUpload(input) {
 
   saveState();
   setTimeout(() => { renderMediaLibrary(); }, 1200);
+  if (typeof logActivity === 'function') logActivity('Media uploaded', `${uploaded} file${uploaded>1?'s':''} to Cloudinary`, 'media');
   showToast(`✅ ${uploaded} file${uploaded>1?'s':''} uploaded to Cloudinary!`, 'success');
 }
 
@@ -439,6 +441,7 @@ function useMedia(id) {
 
 function deleteMedia(id) {
   state.mediaLibrary = (state.mediaLibrary||[]).filter(m=>m.id!==id);
+  if (typeof logActivity === 'function') logActivity('Media deleted', `ID ${id}`, 'media');
   saveState(); renderMediaLibrary(); showToast('File removed');
 }
 
@@ -589,4 +592,138 @@ function autoSaveToMediaLibrary(url, name, source) {
     source: source || 'cloudinary',
   });
   saveState();
+}
+
+/* ══════════════════════════════════════════════════════════
+   PHOTOS PAGE — extra functions
+══════════════════════════════════════════════════════════ */
+
+/* ── Search ─────────────────────────────────────────────── */
+let _mediaSearchTerm = '';
+function filterMediaBySearch(term) {
+  _mediaSearchTerm = term.toLowerCase().trim();
+  renderMediaLibrary();
+}
+
+/* ── View toggle (grid / list) ──────────────────────────── */
+let _mediaView = 'grid';
+function setMediaView(mode, el) {
+  _mediaView = mode;
+  document.querySelectorAll('#viewGrid,#viewList').forEach(b => b.classList.remove('active'));
+  if (el) el.classList.add('active');
+  const grid = document.getElementById('mediaGrid');
+  if (grid) {
+    grid.className = mode === 'list' ? 'media-list' : 'media-grid';
+  }
+  renderMediaLibrary();
+}
+
+/* ── URL import ─────────────────────────────────────────── */
+function openUrlImportModal() {
+  document.getElementById('modalTitle').textContent = '🔗 Import from URL';
+  document.getElementById('modalBody').innerHTML = `
+    <div style="font-size:13px;color:var(--text2);margin-bottom:14px;line-height:1.6">
+      Paste any direct image URL from the web — product images, stock photos, brand assets, etc.
+    </div>
+    <div class="form-group">
+      <label class="form-label">Image URL *</label>
+      <input class="form-input" id="url-import-src" placeholder="https://example.com/image.jpg"
+        oninput="previewUrlImport(this.value)">
+    </div>
+    <div id="url-import-preview" style="margin-bottom:12px"></div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Name</label>
+        <input class="form-input" id="url-import-name" placeholder="e.g. product-banner.jpg">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Folder (optional)</label>
+        <select class="form-select" id="url-import-folder">
+          <option value="">No folder</option>
+          ${(state.mediaFolders||[]).map(f=>`<option value="${f.id}">${f.name}</option>`).join('')}
+        </select>
+      </div>
+    </div>`;
+  document.getElementById('modalFooter').innerHTML = `
+    <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+    <button class="btn btn-primary" onclick="saveUrlImport()">Import</button>`;
+  document.getElementById('modalOverlay').classList.add('open');
+}
+
+function previewUrlImport(url) {
+  const el = document.getElementById('url-import-preview');
+  if (!el || !url.startsWith('http')) return;
+  el.innerHTML = `<img src="${url}" style="max-height:120px;max-width:100%;object-fit:contain;border-radius:var(--r-lg);border:1.5px solid var(--border);display:block"
+    onload="document.getElementById('url-import-name').value=document.getElementById('url-import-name').value||'${url.split('/').pop().split('?')[0]}'"
+    onerror="this.style.display='none'">`;
+}
+
+function saveUrlImport() {
+  const url      = (document.getElementById('url-import-src').value||'').trim();
+  const name     = (document.getElementById('url-import-name').value||url.split('/').pop()||'image').trim();
+  const folderId = document.getElementById('url-import-folder').value;
+  if (!url || !url.startsWith('http')) { showToast('Paste a valid image URL', 'error'); return; }
+  const id = genId();
+  if (!state.mediaLibrary) state.mediaLibrary = [];
+  state.mediaLibrary.push({ id, name, type:'image', size:'URL', url, thumb:url, tags:[], date:new Date().toISOString().split('T')[0], source:'url', folderId:folderId||null });
+  saveState(); closeModal(); renderMediaLibrary();
+  showToast('✅ Image imported!', 'success');
+}
+
+/* ── Bulk select + actions ──────────────────────────────── */
+let _selectedMedia = new Set();
+
+function toggleSelectMedia(id) {
+  if (_selectedMedia.has(id)) _selectedMedia.delete(id);
+  else _selectedMedia.add(id);
+  const card = document.getElementById('mc-' + id);
+  if (card) card.classList.toggle('selected', _selectedMedia.has(id));
+  _updateBulkBar();
+}
+
+function _updateBulkBar() {
+  let bar = document.getElementById('mediaBulkBar');
+  if (_selectedMedia.size === 0) { if (bar) bar.remove(); return; }
+  if (!bar) {
+    bar = document.createElement('div');
+    bar.id = 'mediaBulkBar';
+    bar.style.cssText = 'position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#1E293B;color:#fff;padding:12px 20px;border-radius:30px;display:flex;align-items:center;gap:12px;box-shadow:0 8px 32px rgba(0,0,0,.3);z-index:100;animation:fadeUp .2s ease';
+    document.body.appendChild(bar);
+  }
+  bar.innerHTML = `
+    <span style="font-size:13px;font-weight:700">${_selectedMedia.size} selected</span>
+    <button onclick="bulkMoveToFolder()" style="background:#3B82F6;color:#fff;border:none;border-radius:16px;padding:5px 14px;font-size:12px;font-weight:700;cursor:pointer">📁 Move to folder</button>
+    <button onclick="bulkDelete()" style="background:#EF4444;color:#fff;border:none;border-radius:16px;padding:5px 14px;font-size:12px;font-weight:700;cursor:pointer">🗑 Delete</button>
+    <button onclick="_selectedMedia.clear();document.getElementById('mediaBulkBar')?.remove();renderMediaLibrary()" style="background:rgba(255,255,255,.15);color:#fff;border:none;border-radius:16px;padding:5px 14px;font-size:12px;cursor:pointer">✕ Cancel</button>`;
+}
+
+function bulkDelete() {
+  if (!confirm(`Delete ${_selectedMedia.size} file(s)?`)) return;
+  _selectedMedia.forEach(id => {
+    state.mediaLibrary = (state.mediaLibrary||[]).filter(m=>m.id!==id);
+  });
+  _selectedMedia.clear();
+  document.getElementById('mediaBulkBar')?.remove();
+  saveState(); renderMediaLibrary();
+  showToast('Files deleted');
+}
+
+function bulkMoveToFolder() {
+  const folders = state.mediaFolders || [];
+  if (!folders.length) { createMediaFolder(); return; }
+  document.getElementById('modalTitle').textContent = `📁 Move ${_selectedMedia.size} files to folder`;
+  document.getElementById('modalBody').innerHTML = `
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <button class="btn btn-ghost" style="text-align:left" onclick="[..._selectedMedia].forEach(id=>{const m=(state.mediaLibrary||[]).find(x=>x.id===id);if(m)m.folderId=null});saveState();_selectedMedia.clear();document.getElementById('mediaBulkBar')?.remove();closeModal();renderMediaLibrary()">
+        📁 All photos (no folder)
+      </button>
+      ${folders.map(f=>`
+        <button class="btn btn-ghost" style="text-align:left" onclick="[..._selectedMedia].forEach(id=>{const m=(state.mediaLibrary||[]).find(x=>x.id===id);if(m)m.folderId='${f.id}'});saveState();_selectedMedia.clear();document.getElementById('mediaBulkBar')?.remove();closeModal();renderMediaLibrary();showToast('Moved to ${f.name}','success')">
+          📁 ${f.name}
+        </button>`).join('')}
+    </div>`;
+  document.getElementById('modalFooter').innerHTML = `
+    <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+    <button class="btn btn-ghost" onclick="createMediaFolder();closeModal()">+ New folder</button>`;
+  document.getElementById('modalOverlay').classList.add('open');
 }
