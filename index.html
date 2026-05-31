@@ -1063,78 +1063,52 @@
       <div id="view-media" class="view">
 
         <!-- ── PAGE HEADER ── -->
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:22px;flex-wrap:wrap;gap:12px">
           <div>
             <h2 style="font-size:22px;font-weight:800;color:var(--text);letter-spacing:-.4px;margin-bottom:3px">📸 Photos</h2>
-            <div style="font-size:12px;color:var(--text3)">All your images and videos in one place · stored on Cloudinary</div>
+            <div style="font-size:12px;color:var(--text3)" id="mediaSubtitle">Stored on Cloudinary · shared with your team</div>
           </div>
-          <!-- Upload actions -->
           <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-            <button class="btn btn-ghost" onclick="importFromDrive()" style="display:flex;align-items:center;gap:5px">
-              ☁️ From Drive
-            </button>
-            <label class="btn btn-ghost" style="cursor:pointer;display:flex;align-items:center;gap:5px">
-              🔗 From URL
-              <input type="hidden" onclick="openUrlImportModal()">
-            </label>
-            <button class="btn btn-ghost" onclick="openUrlImportModal()" style="display:flex;align-items:center;gap:5px">
-              🔗 From URL
-            </button>
-            <label class="btn btn-primary" style="cursor:pointer;display:flex;align-items:center;gap:6px">
+            <button class="btn btn-ghost" onclick="importFromDrive()">☁️ Drive</button>
+            <button class="btn btn-ghost" onclick="openUrlImportModal()">🔗 URL</button>
+            <label class="btn btn-primary" style="cursor:pointer">
               <input type="file" multiple accept="image/*,video/*" style="display:none" onchange="handleDeviceUpload(this)">
-              📁 Upload files
+              ＋ Upload
             </label>
           </div>
         </div>
 
         <!-- ── STATS ── -->
-        <div class="meta-stats-row" id="mediaStats" style="margin-bottom:18px"></div>
+        <div class="meta-stats-row" id="mediaStats" style="margin-bottom:22px"></div>
 
-        <!-- ── DRAG & DROP UPLOAD ZONE ── -->
-        <div id="mediaDropZone" class="media-drop-zone"
-          ondragover="event.preventDefault();this.classList.add('dragover')"
-          ondragleave="this.classList.remove('dragover')"
-          ondrop="event.preventDefault();this.classList.remove('dragover');handleDeviceUpload({files:event.dataTransfer.files})">
-          <div style="font-size:36px;margin-bottom:8px">📁</div>
-          <div style="font-size:14px;font-weight:700;color:var(--text2)">Drag & drop images or videos here</div>
-          <div style="font-size:12px;color:var(--text3);margin-top:4px">or use the Upload files button above</div>
-          <label class="btn btn-primary btn-sm" style="cursor:pointer;margin-top:12px">
-            <input type="file" multiple accept="image/*,video/*" style="display:none" onchange="handleDeviceUpload(this)">
-            Browse files
-          </label>
-        </div>
-
-        <!-- ── TOOLBAR: search + filter + sort + folders ── -->
-        <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap">
-          <!-- Search -->
-          <div style="position:relative;flex:1;min-width:180px">
-            <span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:14px">🔍</span>
-            <input class="form-input" id="mediaSearchInput" placeholder="Search photos by name or tag…"
-              style="padding-left:32px;font-size:12px"
-              oninput="filterMediaBySearch(this.value)">
+        <!-- ── SEARCH + FILTER TOOLBAR ── -->
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px;flex-wrap:wrap">
+          <div style="position:relative;flex:1;min-width:200px">
+            <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--text3)">🔍</span>
+            <input class="form-input" id="mediaSearchInput" placeholder="Search by name…"
+              style="padding-left:36px;font-size:12px" oninput="filterMediaBySearch(this.value)">
           </div>
-          <!-- Type filter -->
           <div class="filter-tabs">
-            <button class="ftab active" data-filter="all"   onclick="filterMedia('all',this)">All</button>
-            <button class="ftab" data-filter="image"        onclick="filterMedia('image',this)">Images</button>
-            <button class="ftab" data-filter="video"        onclick="filterMedia('video',this)">Videos</button>
+            <button class="ftab active" data-filter="all" onclick="filterMedia('all',this)">All</button>
+            <button class="ftab" data-filter="image" onclick="filterMedia('image',this)">Images</button>
+            <button class="ftab" data-filter="video" onclick="filterMedia('video',this)">Videos</button>
           </div>
-          <!-- View toggle -->
           <div style="display:flex;gap:4px">
-            <button id="viewGrid" class="btn btn-ghost btn-sm active" onclick="setMediaView('grid',this)" title="Grid view" style="padding:6px 10px">⊞</button>
-            <button id="viewList" class="btn btn-ghost btn-sm" onclick="setMediaView('list',this)" title="List view" style="padding:6px 10px">≡</button>
+            <button id="viewGrid" class="btn btn-ghost btn-sm active" onclick="setMediaView('grid',this)" title="Grid">⊞</button>
+            <button id="viewList" class="btn btn-ghost btn-sm" onclick="setMediaView('list',this)" title="List">≡</button>
           </div>
         </div>
 
-        <!-- ── FOLDER BAR ── -->
-        <div id="mediaFolderBar" style="display:flex;align-items:center;gap:8px;margin-bottom:14px;flex-wrap:wrap">
-          <button class="media-folder-chip active" id="folder-all" onclick="selectMediaFolder('all',this)">📁 All photos</button>
-          <div id="userFolderChips"></div>
-          <button class="btn btn-ghost btn-sm" onclick="createMediaFolder()" style="border-style:dashed;font-size:11px">+ New folder</button>
+        <!-- ── BREADCRUMB ── -->
+        <div id="mediaBreadcrumb" style="display:flex;align-items:center;gap:6px;margin-bottom:16px;font-size:13px;font-weight:600;color:var(--text2)">
+          <span onclick="selectMediaFolder('all',null)" style="cursor:pointer;color:var(--brand)">📸 All photos</span>
         </div>
 
-        <!-- ── MEDIA GRID ── -->
-        <div class="media-grid" id="mediaGrid"></div>
+        <!-- ── FOLDERS ROW (Google Drive style) ── -->
+        <div id="mediaFoldersRow" style="margin-bottom:24px"></div>
+
+        <!-- ── FILES GRID ── -->
+        <div id="mediaGrid" class="media-grid"></div>
 
       </div>
 
