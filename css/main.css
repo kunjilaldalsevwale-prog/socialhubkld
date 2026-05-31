@@ -1965,3 +1965,60 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);line-height:
   color: #fff;
   border-color: var(--brand);
 }
+
+/* ══════════════════════════════════════════
+   PHOTOS PAGE — redesigned
+══════════════════════════════════════════ */
+
+/* Drag & drop zone */
+.media-drop-zone {
+  border: 2.5px dashed var(--border2);
+  border-radius: var(--r-xl);
+  padding: 28px;
+  text-align: center;
+  background: var(--surface2);
+  margin-bottom: 18px;
+  transition: all .18s;
+  cursor: pointer;
+}
+.media-drop-zone:hover,
+.media-drop-zone.dragover {
+  border-color: var(--brand);
+  background: var(--brand-pale);
+}
+.media-drop-zone.dragover {
+  transform: scale(1.01);
+  box-shadow: 0 0 0 4px rgba(37,99,235,.1);
+}
+
+/* List view */
+.media-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.media-list .media-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  border-radius: var(--r-lg);
+  padding: 8px 12px;
+}
+.media-list .media-thumb {
+  width: 56px !important;
+  height: 56px !important;
+  border-radius: var(--r-md) !important;
+  flex-shrink: 0;
+}
+.media-list .media-thumb img {
+  height: 56px !important;
+}
+.media-list .media-info { flex: 1; }
+.media-list .media-action-btn { padding: 4px 10px; }
+
+/* Selected card */
+.media-card.selected {
+  outline: 2.5px solid var(--brand);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px rgba(37,99,235,.12);
+}
