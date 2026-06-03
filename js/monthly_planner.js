@@ -215,9 +215,12 @@ function _refreshCalStickyBanner() {
   const notes = getStickyNotesForMonth(plannerYear, plannerMonth);
   if (notes.length) {
     banner.innerHTML = notes.map(n => `
-      <div class="cal-sticky-banner-note" style="background:${n.color||'#FEF9C3'}">
+      <div class="cal-sticky-banner-note" style="background:${n.color||'#FEF9C3'};position:relative;padding-right:22px">
         <span class="sticky-pin-icon">📌</span>
         <span>${(n.text||'').trim() || '<em style="opacity:.5">empty note</em>'}</span>
+        <button onclick="deleteStickyNoteFromBanner(${n.id})"
+          style="position:absolute;top:3px;right:5px;background:none;border:none;cursor:pointer;font-size:12px;color:rgba(0,0,0,.35);line-height:1;padding:0;font-family:var(--font)"
+          title="Remove this note">✕</button>
       </div>`).join('');
     banner.style.display = 'flex';
   } else {
@@ -409,3 +412,10 @@ function deletePlannerRefImage(id) {
 
 // Call this when planner renders
 const _origRenderPlanner = typeof renderMonthlyPlanner === 'function' ? renderMonthlyPlanner : null;
+
+function deleteStickyNoteFromBanner(noteId) {
+  const plan = _ensureMonth(plannerYear, plannerMonth);
+  plan.stickyNotes = (plan.stickyNotes || []).filter(n => n.id !== noteId);
+  saveState();
+  _refreshCalStickyBanner();
+}
