@@ -67,12 +67,21 @@ function openDayView(dateStr) {
           <!-- Expanded body — hidden by default -->
           <div id="dvc-body-${item.id}" style="display:none;border-top:1px solid var(--border)">
             ${hasImg?`<img src="${item.mediaUrl}" style="width:100%;max-height:220px;object-fit:cover;display:block">`:'' }
-            <div style="padding:14px 16px">
-              ${item.caption?`<div style="font-size:13px;color:var(--text2);line-height:1.6;margin-bottom:12px;background:var(--surface2);padding:10px 12px;border-radius:12px">${item.caption}</div>`:''}
-              <div style="display:flex;gap:8px;flex-wrap:wrap">
-                <button class="btn btn-primary btn-sm" onclick="closeModal();setTimeout(()=>_showEditPostModal((state.posts||[]).find(x=>x.id===${item.id})),80)">✏️ Edit</button>
-                ${hasImg?`<a href="${item.mediaUrl}" download="${item.title}" target="_blank" class="btn btn-ghost btn-sm" style="text-decoration:none">⬇ Download</a>`:''}
-                <button class="btn btn-ghost btn-sm" onclick="deletePost(${item.id});closeModal();renderChannelCalendars()" style="color:var(--coral);border-color:var(--coral)">🗑 Delete</button>
+            <div style="padding:16px">
+              <!-- All details -->
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+                ${item.platform?`<div style="background:var(--surface2);border-radius:12px;padding:10px 12px"><div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px">Platform</div><div style="font-size:13px;font-weight:700;color:var(--text)">${item.platform}</div></div>`:''}
+                ${item.time?`<div style="background:var(--surface2);border-radius:12px;padding:10px 12px"><div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px">Time</div><div style="font-size:13px;font-weight:700;color:var(--text)">🕐 ${item.time}</div></div>`:''}
+                ${item.assignee?`<div style="background:var(--surface2);border-radius:12px;padding:10px 12px"><div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px">Assigned to</div><div style="font-size:13px;font-weight:700;color:var(--text)">👤 ${item.assignee}</div></div>`:''}
+                ${item.status?`<div style="background:var(--surface2);border-radius:12px;padding:10px 12px"><div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px">Status</div><div style="font-size:13px;font-weight:700;color:var(--text)">${item.status}</div></div>`:''}
+              </div>
+              ${item.caption?`<div style="margin-bottom:12px"><div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Caption</div><div style="font-size:13px;color:var(--text2);line-height:1.6;background:var(--surface2);padding:10px 12px;border-radius:12px">${item.caption}</div></div>`:''}
+              ${item.hashtags?`<div style="margin-bottom:12px"><div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Hashtags</div><div style="font-size:12px;color:var(--brand);line-height:1.6">${item.hashtags}</div></div>`:''}
+              <!-- Actions at bottom -->
+              <div style="display:flex;gap:8px;padding-top:12px;border-top:1px solid var(--border);flex-wrap:wrap">
+                <button class="btn btn-primary btn-sm" style="flex:1" onclick="closeModal();setTimeout(()=>_showEditPostModal((state.posts||[]).find(x=>x.id===${item.id})),80)">✏️ Edit post</button>
+                ${hasImg?`<a href="${item.mediaUrl}" download="${item.title}" target="_blank" class="btn btn-ghost btn-sm" style="text-decoration:none;flex:1;text-align:center">⬇ Download</a>`:''}
+                <button class="btn btn-ghost btn-sm" onclick="deletePost(${item.id});closeModal();renderChannelCalendars()" style="color:var(--coral);border-color:var(--coral)">🗑</button>
               </div>
             </div>
           </div>
