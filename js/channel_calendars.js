@@ -373,20 +373,9 @@ function openChannelAddModal(dateStr, occasionName, occasionEmoji) {
     <div class="form-row">
       <div class="form-group">
         <label class="form-label">🕐 Send time</label>
-        <div style="display:flex;gap:6px;align-items:center">
-          <input class="form-input" type="time" id="cadd-time" value="09:00"
-            style="flex:1;font-size:15px;font-weight:700;color:var(--brand);cursor:pointer"
-            title="Click to pick time">
-          <!-- Quick time presets -->
-        </div>
-        <div style="display:flex;gap:5px;margin-top:7px;flex-wrap:wrap">
-          ${['08:00','09:00','10:00','12:00','15:00','18:00','20:00'].map(t =>
-            `<button type="button" onclick="document.getElementById('cadd-time').value='${t}'"
-              style="padding:4px 10px;border-radius:14px;border:1.5px solid var(--border2);background:var(--white);font-size:11px;font-weight:700;cursor:pointer;color:var(--text2);font-family:var(--font);transition:all .13s"
-              onmouseover="this.style.background='var(--brand)';this.style.color='#fff';this.style.borderColor='var(--brand)'"
-              onmouseout="this.style.background='var(--white)';this.style.color='var(--text2)';this.style.borderColor='var(--border2)'">${t}</button>`
-          ).join('')}
-        </div>
+        <input class="form-input" type="time" id="cadd-time" value="09:00"
+          style="font-size:15px;font-weight:700;color:var(--brand);cursor:pointer;letter-spacing:.05em"
+          title="Click to pick time">
       </div>
       <div class="form-group"><label class="form-label">Status</label>
         <select class="form-select" id="cadd-status">
