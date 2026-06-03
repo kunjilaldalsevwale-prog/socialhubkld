@@ -28,45 +28,52 @@ const STATUS_COLORS = {
    DAY VIEW MODAL — click date to see all posts for that day
 ══════════════════════════════════════════════════════════ */
 function openDayView(dateStr) {
-  const items = _getChannelItems(dateStr);
-  const occasions = typeof getOccasions === 'function' ? getOccasions(dateStr) : [];
-  const cfg = CHANNEL_CONFIG[activeChannel] || CHANNEL_CONFIG.social;
-  const d = new Date(dateStr + 'T00:00:00');
-  const dayLabel = d.toLocaleDateString('en-IN', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
+  const items    = _getChannelItems(dateStr);
+  const occasions= typeof getOccasions==='function' ? getOccasions(dateStr) : [];
+  const cfg      = CHANNEL_CONFIG[activeChannel] || CHANNEL_CONFIG.social;
+  const d        = new Date(dateStr+'T00:00:00');
+  const dayLabel = d.toLocaleDateString('en-IN',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+  window._dvItems = items;
 
-  document.getElementById('modalTitle').textContent = '📅 ' + dayLabel;
+  document.getElementById('modalTitle').innerHTML =
+    `<span style="font-size:15px;margin-right:8px">📅</span>${dayLabel}`;
+
   document.getElementById('modalBody').innerHTML = `
-
-    ${occasions.length ? `
-    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">
-      ${occasions.map(o=>`<span style="padding:4px 12px;border-radius:20px;background:${o.color}18;color:${o.color};font-size:12px;font-weight:700;border:1.5px solid ${o.color}40">${o.emoji} ${o.name}</span>`).join('')}
+    ${occasions.length ? `<div style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:14px">
+      ${occasions.map(o=>`<span style="padding:3px 11px;border-radius:20px;background:${o.color}15;color:${o.color};font-size:11px;font-weight:700;border:1.5px solid ${o.color}35">${o.emoji} ${o.name}</span>`).join('')}
     </div>` : ''}
-
     ${!items.length ? `
-    <div style="text-align:center;padding:30px;color:var(--text3)">
-      <div style="font-size:36px;margin-bottom:10px">📭</div>
-      <div style="font-size:14px;font-weight:700">No posts scheduled</div>
-      <div style="font-size:12px;margin-top:6px">Click + on the calendar to add one</div>
+    <div style="text-align:center;padding:32px;color:var(--text3)">
+      <div style="font-size:40px;margin-bottom:10px">📭</div>
+      <div style="font-size:14px;font-weight:700;color:var(--text2)">No posts scheduled for this day</div>
+      <div style="font-size:12px;margin-top:5px">Use the button below to add one</div>
     </div>` : `
-    <div style="display:flex;flex-direction:column;gap:10px">
-      ${items.map(item => {
-        const st = STATUS_MAP[item.status] || {};
-        const hasImg = item.mediaUrl;
-        return `<div style="background:var(--white);border:1.5px solid var(--border);border-radius:var(--r-xl);overflow:hidden;box-shadow:var(--sh-sm);cursor:pointer"
-          onclick="closeModal();setTimeout(()=>openChannelItemDrawer('${dateStr}',${JSON.stringify(item).replace(/'/g,"\'")}),100)">
-          ${hasImg ? `<img src="${item.mediaUrl}" style="width:100%;max-height:140px;object-fit:cover;display:block">` : ''}
-          <div style="padding:12px 14px">
-            <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
-              <span style="font-size:15px">${cfg.emoji}</span>
-              <div style="font-size:14px;font-weight:800;color:var(--text);flex:1">${item.title}</div>
-              <span class="badge ${st.cls||''}" style="flex-shrink:0">${st.label||item.status||''}</span>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      ${items.map(item=>{
+        const st=STATUS_MAP[item.status]||{};
+        const hasImg=item.mediaUrl;
+        return `<div id="dvc-${item.id}" style="background:var(--white);border:1.5px solid var(--border);border-radius:18px;overflow:hidden;box-shadow:var(--sh-sm);transition:border-color .15s">
+          <!-- Header row — click to toggle -->
+          <div style="display:flex;align-items:center;gap:10px;padding:13px 15px;cursor:pointer;user-select:none" onclick="dvToggle(${item.id})">
+            ${hasImg?`<img src="${item.mediaUrl}" style="width:42px;height:42px;object-fit:cover;border-radius:10px;flex-shrink:0">`:
+              `<div style="width:42px;height:42px;border-radius:10px;background:${cfg.bg||'var(--brand-pale)'};display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">${cfg.emoji}</div>`}
+            <div style="flex:1;min-width:0">
+              <div style="font-size:14px;font-weight:800;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${item.title}</div>
+              <div style="font-size:11px;color:var(--text3);margin-top:2px">${item.time?'🕐 '+item.time:''}${item.assignee?' · 👤 '+item.assignee:''}</div>
             </div>
-            ${item.caption ? `<div style="font-size:12px;color:var(--text2);line-height:1.5;margin-bottom:6px">${item.caption.slice(0,100)}${item.caption.length>100?'…':''}</div>` : ''}
-            <div style="display:flex;align-items:center;gap:10px">
-              ${item.time ? `<span style="font-size:11px;color:var(--text3)">🕐 ${item.time}</span>` : ''}
-              ${item.assignee ? `<span style="font-size:11px;color:var(--text3)">👤 ${item.assignee}</span>` : ''}
-              ${hasImg ? `<a href="${item.mediaUrl}" download="${item.title||'image'}" target="_blank" onclick="event.stopPropagation()"
-                style="margin-left:auto;font-size:11px;font-weight:700;color:var(--brand);text-decoration:none;padding:3px 10px;background:var(--brand-pale);border-radius:12px">⬇ Download</a>` : ''}
+            <span class="badge ${st.cls||''}">${st.label||item.status||''}</span>
+            <span id="dvc-ch-${item.id}" style="font-size:18px;color:var(--text3);margin-left:6px;transition:transform .2s;display:inline-block">⌄</span>
+          </div>
+          <!-- Expanded body — hidden by default -->
+          <div id="dvc-body-${item.id}" style="display:none;border-top:1px solid var(--border)">
+            ${hasImg?`<img src="${item.mediaUrl}" style="width:100%;max-height:220px;object-fit:cover;display:block">`:'' }
+            <div style="padding:14px 16px">
+              ${item.caption?`<div style="font-size:13px;color:var(--text2);line-height:1.6;margin-bottom:12px;background:var(--surface2);padding:10px 12px;border-radius:12px">${item.caption}</div>`:''}
+              <div style="display:flex;gap:8px;flex-wrap:wrap">
+                <button class="btn btn-primary btn-sm" onclick="closeModal();setTimeout(()=>_showEditPostModal((state.posts||[]).find(x=>x.id===${item.id})),80)">✏️ Edit</button>
+                ${hasImg?`<a href="${item.mediaUrl}" download="${item.title}" target="_blank" class="btn btn-ghost btn-sm" style="text-decoration:none">⬇ Download</a>`:''}
+                <button class="btn btn-ghost btn-sm" onclick="deletePost(${item.id});closeModal();renderChannelCalendars()" style="color:var(--coral);border-color:var(--coral)">🗑 Delete</button>
+              </div>
             </div>
           </div>
         </div>`;
@@ -75,8 +82,30 @@ function openDayView(dateStr) {
 
   document.getElementById('modalFooter').innerHTML = `
     <button class="btn btn-ghost" onclick="closeModal()">Close</button>
-    <button class="btn btn-primary" onclick="closeModal();openChannelAddModal('${dateStr}')">+ Add post on this day</button>`;
+    <button class="btn btn-primary" onclick="closeModal();openChannelAddModal('${dateStr}')">＋ Add post on this day</button>`;
   document.getElementById('modalOverlay').classList.add('open');
+}
+
+function dvToggle(id) {
+  const body = document.getElementById('dvc-body-'+id);
+  const ch   = document.getElementById('dvc-ch-'+id);
+  const card = document.getElementById('dvc-'+id);
+  if (!body) return;
+  const open = body.style.display !== 'none';
+  // close all
+  (window._dvItems||[]).forEach(it=>{
+    const b=document.getElementById('dvc-body-'+it.id);
+    const c=document.getElementById('dvc-ch-'+it.id);
+    const k=document.getElementById('dvc-'+it.id);
+    if(b) b.style.display='none';
+    if(c) c.style.transform='';
+    if(k) k.style.borderColor='var(--border)';
+  });
+  if (!open) {
+    body.style.display='block';
+    if(ch)   ch.style.transform='rotate(180deg)';
+    if(card) card.style.borderColor='var(--brand)';
+  }
 }
 
 function renderChannelCalendars() {
@@ -245,15 +274,11 @@ function renderChannelGrid() {
     }
     if (!items.length) {
       const add = document.createElement('div');
-      add.className = 'cell-add-btn';
-      add.textContent = '+';
-      add.title = 'Add for this day';
-      add.onclick = e => { e.stopPropagation(); openChannelAddModal(dateStr); };
-      postsWrap.appendChild(add);
+
     }
     cell.appendChild(postsWrap);
     cell.dataset.date = dateStr;
-    cell.onclick = () => openChannelAddModal(dateStr);
+    cell.onclick = () => openDayView(dateStr);
 
     grid.appendChild(cell);
   }
