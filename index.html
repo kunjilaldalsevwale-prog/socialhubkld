@@ -67,15 +67,33 @@
         <span class="nav-icon">📸</span><span class="nav-label">Photos</span>
       </a>
 
-      
+      <div class="nav-section-label">Channels</div>
+      <a class="nav-item" data-view="email" onclick="navigate('email',this)">
+        <span class="nav-icon">📧</span><span class="nav-label">Email Marketing</span>
+      </a>
+      <a class="nav-item" data-view="whatsapp" onclick="navigate('whatsapp',this)">
+        <span class="nav-icon">💬</span><span class="nav-label">WhatsApp</span>
+      </a>
+      <a class="nav-item" data-view="meta" onclick="navigate('meta',this)">
+        <span class="nav-icon">📊</span><span class="nav-label">Meta Ads</span>
+      </a>
 
       <div class="nav-section-label">Planning</div>
       <a class="nav-item" data-view="agenda" onclick="navigate('agenda',this)">
         <span class="nav-icon">🗒</span><span class="nav-label">Monthly Planner</span>
       </a>
-      
+      <a class="nav-item" data-view="reminders" onclick="navigate('reminders',this)">
+        <span class="nav-icon">⏰</span><span class="nav-label">Reminders</span>
+        <span class="nav-badge" id="badge-reminders" style="display:none">0</span>
+      </a>
+      <a class="nav-item" data-view="analytics" onclick="navigate('analytics',this)">
+        <span class="nav-icon">📈</span><span class="nav-label">Analytics</span>
+      </a>
 
       <div class="nav-section-label">Account</div>
+      <a class="nav-item" data-view="integrations" onclick="navigate('integrations',this)">
+        <span class="nav-icon">🔗</span><span class="nav-label">Integrations</span>
+      </a>
       <a class="nav-item" data-view="team" onclick="navigate('team',this)">
         <span class="nav-icon">👥</span><span class="nav-label">Team</span>
       </a>
@@ -471,7 +489,31 @@
         </div>
       </div>
 
-      <!-- AGENDA VIEW -->
+      <!-- MONTHLY PLANNER VIEW -->
+      <div id="view-agenda" class="view">
+
+        <!-- Header -->
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px">
+          <div>
+            <h2 style="font-size:22px;font-weight:800;color:var(--text);letter-spacing:-.4px;margin-bottom:3px">🗒 Monthly Content Planner</h2>
+            <div style="font-size:12px;color:var(--text3)">Each campaign has its own page — strategist refs, designer uploads, admin feedback</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px">
+            <button class="btn btn-ghost btn-sm" onclick="changePlannerMonth(-1)">‹</button>
+            <h3 id="plannerMonthLabel" style="font-size:16px;font-weight:800;color:var(--text);min-width:140px;text-align:center"></h3>
+            <button class="btn btn-ghost btn-sm" onclick="changePlannerMonth(1)">›</button>
+          </div>
+          <button class="btn btn-primary" onclick="addNewCampaign()" style="display:flex;align-items:center;gap:7px">
+            ＋ New campaign
+          </button>
+        </div>
+
+        <!-- Campaigns list -->
+        <div id="plannerCampaignsList" style="display:flex;flex-direction:column;gap:14px"></div>
+
+      </div>
+
+
       <!-- ═══════════════════════════════════════════
            MONTHLY CONTENT PLANNER
       ═══════════════════════════════════════════ -->
