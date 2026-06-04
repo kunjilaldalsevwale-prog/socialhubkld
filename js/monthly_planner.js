@@ -1,226 +1,345 @@
 /* ============================================================
-   MONTHLY CONTENT PLANNER
-   - Month selector
-   - Content grid planning (what to post)
-   - Product targeting
-   - Channel themes (Social, WhatsApp, Email, Meta, Google)
-   - Random braindump notes
-   - Sticky notes that show on calendar
+   MONTHLY PLANNER — Campaign-based content planning
+   Each month has campaigns. Each campaign opens as a full popup.
+   Strategist uploads refs → Admin feedback → Designer uploads → Admin feedback
    ============================================================ */
 
-const PLANNER_MONTHS = [
-  'January','February','March','April','May','June',
-  'July','August','September','October','November','December'
-];
+let plannerYear  = new Date().getFullYear();
+let plannerMonth = new Date().getMonth();
 
-// Channel config for theme cards
-const PLANNER_CHANNELS = [
-  { key:'social',   label:'📸 Social Media',    color:'#2563EB', bg:'#DBEAFE', placeholder:'e.g. Summer sale launch, product reveals, BTS content, engagement posts…' },
-  { key:'whatsapp', label:'💬 WhatsApp',         color:'#10B981', bg:'#ECFDF5', placeholder:'e.g. Exclusive member offers, early access drops, festive greetings…' },
-  { key:'email',    label:'📧 Email Marketing',  color:'#6366F1', bg:'#EEF2FF', placeholder:'e.g. Monthly newsletter, abandoned cart recovery, re-engagement blast…' },
-  { key:'meta',     label:'📊 Meta Ads',         color:'#7C3AED', bg:'#EDE9FE', placeholder:'e.g. Retargeting campaign, awareness push, lookalike audience sale…' },
-  { key:'google',   label:'🔍 Google Ads',       color:'#EA4335', bg:'#FEE2E2', placeholder:'e.g. Search campaign for [product], YouTube pre-roll, Shopping ads…' },
-];
-
-// Initialise state for all 12 months
-if (!state.monthlyPlans) {
-  state.monthlyPlans = {};
-}
-function _ensureMonth(yr, mo) {
-  const key = `${yr}-${mo}`;
-  if (!state.monthlyPlans[key]) {
-    state.monthlyPlans[key] = {
-      products: '',        // target products this month
-      contentGrid: '',     // what goes in the grid
-      themes: {            // per-channel themes
-        social:'', whatsapp:'', email:'', meta:'', google:''
-      },
-      braindump: '',       // random ideas textarea
-      stickyNotes: [],     // sticky notes array [{id,text,color,x,y}]
-      goals: '',           // monthly goals text
-    };
-  }
-  return state.monthlyPlans[key];
-}
-
-// Current planner month
-let plannerYear  = 2026;
-let plannerMonth = 4; // May
-
-/* ══════════════════════════════════════════════════════════
-   RENDER
-══════════════════════════════════════════════════════════ */
 function renderMonthlyPlanner() {
   _renderPlannerHeader();
-  _renderPlannerContent();
+  _renderCampaignsList();
 }
 
+/* ── Header ─────────────────────────────────────────────── */
 function _renderPlannerHeader() {
   const el = document.getElementById('plannerMonthLabel');
-  if (el) el.textContent = PLANNER_MONTHS[plannerMonth] + ' ' + plannerYear;
+  if (el) el.textContent = new Date(plannerYear, plannerMonth, 1)
+    .toLocaleDateString('en-IN', { month:'long', year:'numeric' });
 }
 
-function _renderPlannerContent() {
-  const plan = _ensureMonth(plannerYear, plannerMonth);
-
-  // Products
-  const prod = document.getElementById('plannerProducts');
-  if (prod) prod.value = plan.products || '';
-
-  // Content grid
-  const grid = document.getElementById('plannerContentGrid');
-  if (grid) grid.value = plan.contentGrid || '';
-
-  // Goals
-  const goals = document.getElementById('plannerGoals');
-  if (goals) goals.value = plan.goals || '';
-
-  // Braindump
-  const bd = document.getElementById('plannerBraindump');
-  if (bd) bd.value = plan.braindump || '';
-
-  // Channel themes
-  PLANNER_CHANNELS.forEach(ch => {
-    const el = document.getElementById(`theme-${ch.key}`);
-    if (el) el.value = (plan.themes && plan.themes[ch.key]) || '';
-  });
-
-  // Sticky notes
-  _renderStickyNotes();
-}
-
-function savePlannerField(field, value, channelKey) {
-  const plan = _ensureMonth(plannerYear, plannerMonth);
-  if (channelKey) {
-    plan.themes[channelKey] = value;
-  } else {
-    plan[field] = value;
-  }
-  saveState();
-  // If sticky notes exist, refresh calendar pills
-  if (typeof renderChannelGrid === 'function') renderChannelGrid();
-}
-
-function changePlannerMonth(d) {
-  plannerMonth += d;
+function changePlannerMonth(dir) {
+  plannerMonth += dir;
   if (plannerMonth > 11) { plannerMonth = 0; plannerYear++; }
   if (plannerMonth < 0)  { plannerMonth = 11; plannerYear--; }
-  _renderPlannerHeader();
-  _renderPlannerContent();
+  renderMonthlyPlanner();
+}
+
+/* ── State helpers ───────────────────────────────────────── */
+function _getPlannerKey() { return `${plannerYear}-${plannerMonth}`; }
+
+function _getCampaigns() {
+  if (!state.monthlyPlans) state.monthlyPlans = {};
+  if (!state.monthlyPlans[_getPlannerKey()]) state.monthlyPlans[_getPlannerKey()] = { campaigns:[] };
+  if (!state.monthlyPlans[_getPlannerKey()].campaigns) state.monthlyPlans[_getPlannerKey()].campaigns = [];
+  return state.monthlyPlans[_getPlannerKey()].campaigns;
+}
+
+/* ── Campaigns List ─────────────────────────────────────── */
+function _renderCampaignsList() {
+  const el = document.getElementById('plannerCampaignsList');
+  if (!el) return;
+  const campaigns = _getCampaigns();
+
+  el.innerHTML = campaigns.length ? campaigns.map(c => `
+    <div class="campaign-card" onclick="openCampaignPopup('${c.id}')">
+      <div class="campaign-card-thumb">
+        ${c.stratImages&&c.stratImages[0]
+          ? `<img src="${c.stratImages[0].url}" style="width:100%;height:100%;object-fit:cover">`
+          : `<div style="font-size:28px;display:flex;align-items:center;justify-content:center;height:100%;background:var(--brand-pale)">📣</div>`}
+      </div>
+      <div class="campaign-card-body">
+        <div style="font-size:15px;font-weight:800;color:var(--text)">${c.name}</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:3px">${c.startDate||''}${c.endDate?' → '+c.endDate:''}</div>
+        <div style="font-size:12px;color:var(--text2);margin-top:6px;line-height:1.5">${(c.brief||'').slice(0,80)}${(c.brief||'').length>80?'…':''}</div>
+        <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
+          <span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;background:var(--brand-pale);color:var(--brand)">${(c.stratImages||[]).length} refs</span>
+          <span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;background:var(--green-light);color:var(--green)">${(c.designImages||[]).length} designs</span>
+          ${c.stratFeedback?`<span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;background:var(--amber-light);color:#92400E">💬 Feedback</span>`:''}
+        </div>
+      </div>
+      <div style="padding:14px;display:flex;flex-direction:column;gap:6px;justify-content:center">
+        <button class="btn btn-primary btn-sm" onclick="event.stopPropagation();openCampaignPopup('${c.id}')">Open →</button>
+        <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();deleteCampaign('${c.id}')" style="color:var(--coral);border-color:var(--coral)">Delete</button>
+      </div>
+    </div>`).join('')
+  : `<div style="text-align:center;padding:48px;color:var(--text3)">
+      <div style="font-size:48px;margin-bottom:12px">📋</div>
+      <div style="font-size:15px;font-weight:700;color:var(--text2);margin-bottom:6px">No campaigns yet</div>
+      <div style="font-size:13px;margin-bottom:20px">Add your first campaign for this month</div>
+    </div>`;
+}
+
+/* ── Add Campaign ────────────────────────────────────────── */
+function addNewCampaign() {
+  const campaigns = _getCampaigns();
+  const id = 'camp_' + Date.now();
+  campaigns.push({
+    id, name:'New Campaign', brief:'', startDate:'', endDate:'',
+    stratImages:[], stratNotes:'', stratFeedback:'',
+    designImages:[], designNotes:'', designFeedback:'',
+    created: new Date().toISOString()
+  });
+  saveState();
+  _renderCampaignsList();
+  openCampaignPopup(id);
+}
+
+function deleteCampaign(id) {
+  const key = _getPlannerKey();
+  if (!state.monthlyPlans[key]) return;
+  state.monthlyPlans[key].campaigns = state.monthlyPlans[key].campaigns.filter(c=>c.id!==id);
+  saveState();
+  _renderCampaignsList();
 }
 
 /* ══════════════════════════════════════════════════════════
-   STICKY NOTES
+   CAMPAIGN POPUP
 ══════════════════════════════════════════════════════════ */
-const STICKY_COLORS = [
-  '#FEF9C3','#DBEAFE','#DCFCE7','#FCE7F3','#EDE9FE',
-  '#FFEDD5','#F0FDFA','#FEE2E2','#F0F9FF','#FFFBEB'
-];
+function openCampaignPopup(id) {
+  const c = _getCampaigns().find(x=>x.id===id);
+  if (!c) return;
 
-function _renderStickyNotes() {
-  const board = document.getElementById('stickyBoard');
-  if (!board) return;
-  const plan  = _ensureMonth(plannerYear, plannerMonth);
-  const notes = plan.stickyNotes || [];
+  let popup = document.getElementById('campaignPopup');
+  if (!popup) {
+    popup = document.createElement('div');
+    popup.id = 'campaignPopup';
+    popup.style.cssText = 'position:fixed;inset:0;background:rgba(20,18,16,.55);z-index:2000;display:flex;align-items:flex-start;justify-content:center;padding:20px;overflow-y:auto;backdrop-filter:blur(6px);animation:fadeIn .2s ease';
+    document.body.appendChild(popup);
+  }
 
-  // Keep the add button, render note cards
-  const existingBtn = board.querySelector('.sticky-add-btn');
-  board.innerHTML = '';
+  popup.innerHTML = `
+    <div style="background:var(--white);border-radius:24px;width:100%;max-width:780px;box-shadow:0 32px 80px rgba(0,0,0,.2);overflow:hidden;margin:auto">
 
-  // Re-add "+" button
-  const addBtn = document.createElement('div');
-  addBtn.className = 'sticky-add-btn';
-  addBtn.innerHTML = `<span style="font-size:24px">+</span><div style="font-size:11px;font-weight:700;margin-top:4px">Add sticky note</div>`;
-  addBtn.onclick = () => addStickyNote();
-  board.appendChild(addBtn);
-
-  notes.forEach(note => {
-    const card = document.createElement('div');
-    card.className = 'sticky-note';
-    card.id = 'sticky-' + note.id;
-    card.style.background = note.color || '#FEF9C3';
-
-    // Drag position
-    if (note.x !== undefined) {
-      card.style.left  = note.x + 'px';
-      card.style.top   = note.y + 'px';
-    }
-
-    card.innerHTML = `
-      <div class="sticky-note-header">
-        <div class="sticky-color-dots">
-          ${STICKY_COLORS.map(c => `<div class="sticky-dot" style="background:${c}" onclick="changeStickyColor(${note.id},'${c}',event)"></div>`).join('')}
+      <!-- Header -->
+      <div style="background:linear-gradient(135deg,var(--brand),var(--brand-dark));padding:24px 28px;display:flex;align-items:center;gap:16px">
+        <div style="flex:1">
+          <input id="cp-name" value="${c.name}" placeholder="Campaign name…"
+            style="background:rgba(255,255,255,.15);border:none;border-radius:10px;padding:8px 14px;font-size:20px;font-weight:800;color:#fff;font-family:var(--font);width:100%;outline:none"
+            oninput="updateCampaignField('${id}','name',this.value)">
+          <div style="display:flex;gap:10px;margin-top:10px">
+            <input type="date" id="cp-start" value="${c.startDate||''}"
+              style="background:rgba(255,255,255,.15);border:none;border-radius:8px;padding:5px 10px;font-size:12px;color:#fff;font-family:var(--font);outline:none;color-scheme:dark"
+              oninput="updateCampaignField('${id}','startDate',this.value)">
+            <span style="color:rgba(255,255,255,.6);line-height:2">→</span>
+            <input type="date" id="cp-end" value="${c.endDate||''}"
+              style="background:rgba(255,255,255,.15);border:none;border-radius:8px;padding:5px 10px;font-size:12px;color:#fff;font-family:var(--font);outline:none;color-scheme:dark"
+              oninput="updateCampaignField('${id}','endDate',this.value)">
+          </div>
         </div>
-        <button class="sticky-del" onclick="deleteStickyNote(${note.id})">✕</button>
+        <button onclick="closeCampaignPopup()"
+          style="width:38px;height:38px;border-radius:50%;background:rgba(255,255,255,.2);border:none;color:#fff;font-size:18px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center">✕</button>
       </div>
-      <textarea class="sticky-textarea" placeholder="Write your note…"
-        onchange="updateStickyText(${note.id},this.value)"
-        oninput="autoResizeSticky(this)">${note.text || ''}</textarea>
-      <div class="sticky-footer">
-        <span style="font-size:10px;color:rgba(0,0,0,.35);font-weight:500">📌 shows on calendar</span>
-      </div>`;
 
-    // Make draggable inside board
-    _makeStickyDraggable(card, note.id);
-    board.appendChild(card);
-  });
+      <!-- Body -->
+      <div style="padding:28px;display:flex;flex-direction:column;gap:24px">
+
+        <!-- Campaign Brief -->
+        <div>
+          <div class="cp-section-label">📋 Campaign brief & reasoning</div>
+          <textarea class="form-input form-textarea" rows="3" placeholder="Describe the campaign goal, target audience, key message, reasoning…"
+            style="min-height:80px" oninput="updateCampaignField('${id}','brief',this.value)">${c.brief||''}</textarea>
+        </div>
+
+        <!-- STRATEGIST SECTION -->
+        <div style="background:var(--beige);border-radius:18px;padding:20px;border:1px solid var(--border)">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+            <div style="width:36px;height:36px;border-radius:50%;background:#DBEAFE;color:#1D4ED8;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:800">S</div>
+            <div>
+              <div style="font-size:14px;font-weight:800;color:var(--text)">Strategist</div>
+              <div style="font-size:11px;color:var(--text3)">Upload reference images & add strategy notes</div>
+            </div>
+          </div>
+
+          <!-- Strat images -->
+          <div style="margin-bottom:14px">
+            <div class="cp-field-label">Reference images</div>
+            <div id="cp-strat-images-${id}" class="cp-images-grid">
+              ${_renderCpImages(c.stratImages||[], id, 'strat')}
+            </div>
+            <label class="cp-upload-btn" style="margin-top:10px">
+              <input type="file" accept="image/*" multiple style="display:none" onchange="uploadCpImages(this,'${id}','strat')">
+              ＋ Add reference images
+            </label>
+          </div>
+
+          <!-- Strat notes -->
+          <div>
+            <div class="cp-field-label">Strategy notes</div>
+            <textarea class="form-input form-textarea" rows="3" placeholder="Content angles, hooks, tone of voice, platform notes…"
+              oninput="updateCampaignField('${id}','stratNotes',this.value)">${c.stratNotes||''}</textarea>
+          </div>
+
+          <!-- Admin feedback on strategy -->
+          <div style="margin-top:14px;background:var(--white);border-radius:14px;padding:14px;border:1.5px solid ${c.stratFeedback?'var(--amber)':'var(--border)'}">
+            <div style="font-size:11px;font-weight:700;color:var(--amber);margin-bottom:6px;text-transform:uppercase;letter-spacing:.06em">💬 Admin feedback on strategy</div>
+            <textarea class="form-input form-textarea" rows="2" placeholder="Leave feedback for the strategist…"
+              oninput="updateCampaignField('${id}','stratFeedback',this.value)">${c.stratFeedback||''}</textarea>
+          </div>
+        </div>
+
+        <!-- DESIGNER SECTION -->
+        <div style="background:var(--beige);border-radius:18px;padding:20px;border:1px solid var(--border)">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+            <div style="width:36px;height:36px;border-radius:50%;background:#DCFCE7;color:#065F46;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:800">D</div>
+            <div>
+              <div style="font-size:14px;font-weight:800;color:var(--text)">Designer</div>
+              <div style="font-size:11px;color:var(--text3)">Upload design files & add notes</div>
+            </div>
+          </div>
+
+          <!-- Design images -->
+          <div style="margin-bottom:14px">
+            <div class="cp-field-label">Design uploads</div>
+            <div id="cp-design-images-${id}" class="cp-images-grid">
+              ${_renderCpImages(c.designImages||[], id, 'design')}
+            </div>
+            <label class="cp-upload-btn" style="margin-top:10px">
+              <input type="file" accept="image/*,video/*,.pdf" multiple style="display:none" onchange="uploadCpImages(this,'${id}','design')">
+              ＋ Add designs
+            </label>
+          </div>
+
+          <!-- Design notes -->
+          <div>
+            <div class="cp-field-label">Designer notes</div>
+            <textarea class="form-input form-textarea" rows="3" placeholder="Design decisions, font choices, colour palette, revisions needed…"
+              oninput="updateCampaignField('${id}','designNotes',this.value)">${c.designNotes||''}</textarea>
+          </div>
+
+          <!-- Admin feedback on design -->
+          <div style="margin-top:14px;background:var(--white);border-radius:14px;padding:14px;border:1.5px solid ${c.designFeedback?'var(--amber)':'var(--border)'}">
+            <div style="font-size:11px;font-weight:700;color:var(--amber);margin-bottom:6px;text-transform:uppercase;letter-spacing:.06em">💬 Admin feedback on design</div>
+            <textarea class="form-input form-textarea" rows="2" placeholder="Leave feedback for the designer…"
+              oninput="updateCampaignField('${id}','designFeedback',this.value)">${c.designFeedback||''}</textarea>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Footer -->
+      <div style="padding:16px 28px;border-top:1px solid var(--border);background:var(--beige);display:flex;justify-content:space-between;align-items:center;border-radius:0 0 24px 24px">
+        <button class="btn btn-ghost btn-sm" onclick="deleteCampaign('${id}');closeCampaignPopup()" style="color:var(--coral);border-color:var(--coral)">🗑 Delete campaign</button>
+        <button class="btn btn-primary" onclick="saveCampaignAndClose('${id}')">💾 Save & close</button>
+      </div>
+    </div>`;
+
+  popup.style.display = 'flex';
 }
 
-function addStickyNote() {
-  const plan = _ensureMonth(plannerYear, plannerMonth);
-  if (!plan.stickyNotes) plan.stickyNotes = [];
-  const colors = STICKY_COLORS;
-  const color  = colors[plan.stickyNotes.length % colors.length];
-  // Place new notes slightly offset from each other
-  const offset = plan.stickyNotes.length * 20;
-  plan.stickyNotes.push({
-    id: genId(), text: '', color,
-    x: 20 + (offset % 180), y: 20 + (offset % 100)
-  });
+function closeCampaignPopup() {
+  const p = document.getElementById('campaignPopup');
+  if (p) p.style.display = 'none';
   saveState();
-  _renderStickyNotes();
+  _renderCampaignsList();
+}
+
+function saveCampaignAndClose(id) {
+  saveState();
+  closeCampaignPopup();
+  showToast('✅ Campaign saved!', 'success');
+}
+
+function updateCampaignField(id, field, value) {
+  const c = _getCampaigns().find(x=>x.id===id);
+  if (c) { c[field] = value; }
+  // Debounce save
+  clearTimeout(window._cpSaveTimer);
+  window._cpSaveTimer = setTimeout(() => saveState(), 800);
+}
+
+/* ── Image helpers ───────────────────────────────────────── */
+function _renderCpImages(images, campId, section) {
+  if (!images.length) return `<div style="color:var(--text3);font-size:12px;padding:8px 0">No images yet</div>`;
+  return images.map((img, i) => `
+    <div style="position:relative;border-radius:12px;overflow:hidden;aspect-ratio:1;background:var(--surface3)">
+      <img src="${img.url}" style="width:100%;height:100%;object-fit:cover;cursor:zoom-in"
+        onclick="_openCpLightbox('${img.url}')">
+      <button onclick="removeCpImage('${campId}','${section}',${i})"
+        style="position:absolute;top:4px;right:4px;width:22px;height:22px;border-radius:50%;background:rgba(0,0,0,.6);color:#fff;border:none;cursor:pointer;font-size:11px;display:flex;align-items:center;justify-content:center">✕</button>
+    </div>`).join('');
+}
+
+async function uploadCpImages(input, campId, section) {
+  const files = Array.from(input.files||[]);
+  if (!files.length) return;
+  input.value = '';
+  const c = _getCampaigns().find(x=>x.id===campId);
+  if (!c) return;
+  const key = section==='strat' ? 'stratImages' : 'designImages';
+  if (!c[key]) c[key] = [];
+
+  showToast(`☁️ Uploading ${files.length} file${files.length>1?'s':''}…`);
+
+  for (const file of files) {
+    try {
+      const result = await uploadToCloudinary(file);
+      c[key].push({ url: result.url, name: file.name });
+      if (typeof autoSaveToMediaLibrary==='function') autoSaveToMediaLibrary(result.url, file.name, 'cloudinary');
+    } catch(e) { showToast('Upload failed: '+file.name, 'error'); }
+  }
+
+  saveState();
+  const grid = document.getElementById(`cp-${section}-images-${campId}`);
+  if (grid) grid.innerHTML = _renderCpImages(c[key], campId, section);
+  showToast(`✅ ${files.length} image${files.length>1?'s':''} uploaded!`, 'success');
+}
+
+function removeCpImage(campId, section, idx) {
+  const c = _getCampaigns().find(x=>x.id===campId);
+  if (!c) return;
+  const key = section==='strat' ? 'stratImages' : 'designImages';
+  c[key].splice(idx, 1);
+  saveState();
+  const grid = document.getElementById(`cp-${section}-images-${campId}`);
+  if (grid) grid.innerHTML = _renderCpImages(c[key], campId, section);
+}
+
+function _openCpLightbox(url) {
+  const lb = document.createElement('div');
+  lb.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:3000;display:flex;align-items:center;justify-content:center;cursor:zoom-out';
+  lb.onclick = () => lb.remove();
+  lb.innerHTML = `<img src="${url}" style="max-width:90vw;max-height:90vh;object-fit:contain;border-radius:12px">`;
+  document.body.appendChild(lb);
+}
+
+/* ── Sticky notes (kept for calendar banner) ─────────────── */
+function addStickyNote() {
+  const key = _getPlannerKey();
+  if (!state.monthlyPlans) state.monthlyPlans = {};
+  if (!state.monthlyPlans[key]) state.monthlyPlans[key] = {};
+  if (!state.monthlyPlans[key].stickyNotes) state.monthlyPlans[key].stickyNotes = [];
+  const id = Date.now();
+  state.monthlyPlans[key].stickyNotes.push({ id, text:'', color:'#FEF9C3' });
+  saveState();
   _refreshCalStickyBanner();
-  // Auto-focus the new sticky note textarea immediately
   setTimeout(() => {
-    const newNote = document.querySelector('.sticky-note:last-child .sticky-textarea');
-    if (newNote) {
-      newNote.focus();
-      newNote.select();
-    }
+    const ta = document.querySelector('.sticky-note:last-child .sticky-textarea');
+    if (ta) ta.focus();
   }, 50);
 }
 
-function deleteStickyNote(id) {
-  const plan = _ensureMonth(plannerYear, plannerMonth);
-  plan.stickyNotes = (plan.stickyNotes || []).filter(n => n.id !== id);
-  saveState();
-  _renderStickyNotes();
-  _refreshCalStickyBanner();
-}
-
-function updateStickyText(id, text) {
-  const plan = _ensureMonth(plannerYear, plannerMonth);
-  const note = (plan.stickyNotes || []).find(n => n.id === id);
-  if (note) {
-    note.text = text;
-    saveState();
-    _refreshCalStickyBanner();
-  }
+function _ensureMonth(y, m) {
+  const key = `${y}-${m}`;
+  if (!state.monthlyPlans) state.monthlyPlans = {};
+  if (!state.monthlyPlans[key]) state.monthlyPlans[key] = {};
+  return state.monthlyPlans[key];
 }
 
 function _refreshCalStickyBanner() {
-  // Update the banner on the calendar view if it's visible
   const banner = document.getElementById('calStickyBanner');
   if (!banner) return;
-  const notes = getStickyNotesForMonth(plannerYear, plannerMonth);
+  const plan  = _ensureMonth(typeof channelCalYear!=='undefined'?channelCalYear:plannerYear,
+                              typeof channelCalMonth!=='undefined'?channelCalMonth:plannerMonth);
+  const notes = plan.stickyNotes || [];
   if (notes.length) {
     banner.innerHTML = notes.map(n => `
       <div class="cal-sticky-banner-note" style="background:${n.color||'#FEF9C3'};position:relative;padding-right:22px">
         <span class="sticky-pin-icon">📌</span>
         <span>${(n.text||'').trim() || '<em style="opacity:.5">empty note</em>'}</span>
         <button onclick="deleteStickyNoteFromBanner(${n.id})"
-          style="position:absolute;top:3px;right:5px;background:none;border:none;cursor:pointer;font-size:12px;color:rgba(0,0,0,.35);line-height:1;padding:0;font-family:var(--font)"
-          title="Remove this note">✕</button>
+          style="position:absolute;top:3px;right:5px;background:none;border:none;cursor:pointer;font-size:12px;color:rgba(0,0,0,.35)">✕</button>
       </div>`).join('');
     banner.style.display = 'flex';
   } else {
@@ -228,194 +347,10 @@ function _refreshCalStickyBanner() {
   }
 }
 
-function changeStickyColor(id, color, event) {
-  event.stopPropagation();
-  const plan = _ensureMonth(plannerYear, plannerMonth);
-  const note = (plan.stickyNotes || []).find(n => n.id === id);
-  if (note) {
-    note.color = color;
-    saveState();
-    const card = document.getElementById('sticky-' + id);
-    if (card) card.style.background = color;
-  }
-}
-
-function autoResizeSticky(ta) {
-  ta.style.height = 'auto';
-  ta.style.height = Math.max(80, ta.scrollHeight) + 'px';
-}
-
-function _makeStickyDraggable(card, noteId) {
-  let startX, startY, startLeft, startTop;
-
-  card.addEventListener('mousedown', e => {
-    // Don't drag when clicking textarea, buttons, dots
-    if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'BUTTON' || e.target.classList.contains('sticky-dot')) return;
-    e.preventDefault();
-    const board = document.getElementById('stickyBoard');
-    const br    = board.getBoundingClientRect();
-    startX    = e.clientX;
-    startY    = e.clientY;
-    startLeft = card.offsetLeft;
-    startTop  = card.offsetTop;
-    card.style.zIndex = 100;
-
-    function onMove(e) {
-      const dx = e.clientX - startX;
-      const dy = e.clientY - startY;
-      card.style.left = Math.max(0, startLeft + dx) + 'px';
-      card.style.top  = Math.max(0, startTop  + dy) + 'px';
-    }
-    function onUp() {
-      card.style.zIndex = '';
-      // Save position
-      const plan = _ensureMonth(plannerYear, plannerMonth);
-      const note = (plan.stickyNotes || []).find(n => n.id === noteId);
-      if (note) {
-        note.x = parseInt(card.style.left);
-        note.y = parseInt(card.style.top);
-        saveState();
-      }
-      document.removeEventListener('mousemove', onMove);
-      document.removeEventListener('mouseup', onUp);
-    }
-    document.addEventListener('mousemove', onMove);
-    document.addEventListener('mouseup', onUp);
-  });
-}
-
-/* ══════════════════════════════════════════════════════════
-   STICKY NOTES ON CALENDAR
-   Called from channel_calendars.js renderChannelGrid()
-   Shows a tiny sticky pin on days that have notes
-══════════════════════════════════════════════════════════ */
-function getStickyNotesForMonth(yr, mo) {
-  const key  = `${yr}-${mo}`;
-  const plan = state.monthlyPlans && state.monthlyPlans[key];
-  return (plan && plan.stickyNotes) ? plan.stickyNotes.filter(n => n.text && n.text.trim()) : [];
-}
-
-/* ══════════════════════════════════════════════════════════
-   CONTENT GRID QUICK FILL helpers
-══════════════════════════════════════════════════════════ */
-function fillContentGridTemplate() {
-  const el = document.getElementById('plannerContentGrid');
-  if (!el || el.value.trim()) return; // don't overwrite existing
-  const mo = PLANNER_MONTHS[plannerMonth];
-  el.value = `WEEK 1 (${mo} 1–7):
-- Post 1: [Topic / product]
-- Post 2: [Topic / product]
-- Story: [Engagement / poll]
-
-WEEK 2 (${mo} 8–14):
-- Post 1: [Topic / product]
-- Post 2: [Behind the scenes]
-- Reel: [Trending format]
-
-WEEK 3 (${mo} 15–21):
-- Post 1: [Topic / product]
-- Post 2: [Customer spotlight]
-- Story: [Q&A or poll]
-
-WEEK 4 (${mo} 22–end):
-- Post 1: [Month recap / offer]
-- Post 2: [Upcoming teaser]
-- Reel: [Review / UGC]`;
-  savePlannerField('contentGrid', el.value);
-  autoResizeTA(el);
-}
-
-function autoResizeTA(ta) {
-  if (!ta) return;
-  ta.style.height = 'auto';
-  ta.style.height = ta.scrollHeight + 'px';
-}
-
-
-/* ══════════════════════════════════════════════════════════
-   PLANNER REFERENCE IMAGES
-══════════════════════════════════════════════════════════ */
-const _plannerRefBlobs = {};
-
-function addPlannerRefImages(input) {
-  const files = Array.from(input.files || []);
-  if (!files.length) return;
-  const plan = _ensureMonth(plannerYear, plannerMonth);
-  if (!plan.refImages) plan.refImages = [];
-
-  files.forEach(file => {
-    const id  = genId();
-    const url = URL.createObjectURL(file);
-    _plannerRefBlobs[id] = url;
-    plan.refImages.push({ id, name: file.name, note: '' });
-  });
-
-  saveState();
-  _renderPlannerRefImages();
-  showToast(`✅ ${files.length} reference image${files.length>1?'s':''} added!`, 'success');
-  input.value = '';
-}
-
-function _renderPlannerRefImages() {
-  const el   = document.getElementById('plannerRefGrid');
-  const plan = _ensureMonth(plannerYear, plannerMonth);
-  const refs = plan.refImages || [];
-
-  if (!el) return;
-
-  if (!refs.length) {
-    el.innerHTML = `<div style="color:var(--text3);font-size:12px;padding:12px 0">
-      No reference images yet — upload images to show your team the visual direction for this month.
-    </div>`;
-    return;
-  }
-
-  el.innerHTML = refs.map(r => {
-    const src = _plannerRefBlobs[r.id] || r.url || null;
-    return `<div class="planner-ref-card" id="prc-${r.id}">
-      ${src
-        ? `<img src="${src}" style="width:100%;height:120px;object-fit:cover;border-radius:var(--r-lg);display:block;cursor:zoom-in"
-            onclick="openPlannerRefLightbox('${r.id}')">`
-        : `<div style="height:120px;background:var(--surface3);border-radius:var(--r-lg);display:flex;align-items:center;justify-content:center;font-size:28px">🖼️</div>`}
-      <input class="planner-ref-note" value="${r.note||''}" placeholder="Add a note (e.g. warm tones, festive mood)"
-        onchange="updatePlannerRefNote(${r.id}, this.value)">
-      <button class="planner-ref-del" onclick="deletePlannerRefImage(${r.id})">✕</button>
-    </div>`;
-  }).join('');
-}
-
-function openPlannerRefLightbox(id) {
-  const plan = _ensureMonth(plannerYear, plannerMonth);
-  const ref  = (plan.refImages||[]).find(r=>r.id==id);
-  const src  = _plannerRefBlobs[id] || (ref&&ref.url);
-  if (!src) return;
-  const lb = document.createElement('div');
-  lb.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:9999;display:flex;align-items:center;justify-content:center;cursor:zoom-out';
-  lb.onclick = () => lb.remove();
-  lb.innerHTML = `<img src="${src}" style="max-width:90vw;max-height:90vh;object-fit:contain;border-radius:var(--r-lg)">`;
-  document.body.appendChild(lb);
-}
-
-function updatePlannerRefNote(id, note) {
-  const plan = _ensureMonth(plannerYear, plannerMonth);
-  const ref  = (plan.refImages||[]).find(r=>r.id==id);
-  if (ref) { ref.note = note; saveState(); }
-}
-
-function deletePlannerRefImage(id) {
-  const plan = _ensureMonth(plannerYear, plannerMonth);
-  plan.refImages = (plan.refImages||[]).filter(r=>r.id!=id);
-  delete _plannerRefBlobs[id];
-  saveState();
-  _renderPlannerRefImages();
-}
-
-// Call this when planner renders
-const _origRenderPlanner = typeof renderMonthlyPlanner === 'function' ? renderMonthlyPlanner : null;
-
 function deleteStickyNoteFromBanner(noteId) {
-  const plan = _ensureMonth(plannerYear, plannerMonth);
-  plan.stickyNotes = (plan.stickyNotes || []).filter(n => n.id !== noteId);
+  const plan = _ensureMonth(typeof channelCalYear!=='undefined'?channelCalYear:plannerYear,
+                             typeof channelCalMonth!=='undefined'?channelCalMonth:plannerMonth);
+  plan.stickyNotes = (plan.stickyNotes||[]).filter(n=>n.id!==noteId);
   saveState();
   _refreshCalStickyBanner();
 }
