@@ -2550,3 +2550,36 @@ body, #app { background: #F5F3EF; }
   grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
   gap: 16px;
 }
+
+/* ══════════════════════════════════════════
+   MONTHLY PLANNER — Campaign cards
+══════════════════════════════════════════ */
+.campaign-card {
+  display:flex;background:var(--white);border:1px solid var(--border);
+  border-radius:18px;overflow:hidden;box-shadow:var(--sh-sm);
+  cursor:pointer;transition:all .18s;
+}
+.campaign-card:hover { box-shadow:var(--sh-md);transform:translateY(-2px); }
+.campaign-card-thumb { width:120px;flex-shrink:0;background:var(--surface3); }
+.campaign-card-body  { flex:1;padding:16px 18px; }
+
+.cp-section-label {
+  font-size:13px;font-weight:800;color:var(--text);
+  margin-bottom:10px;display:flex;align-items:center;gap:6px;
+}
+.cp-field-label {
+  font-size:10px;font-weight:700;color:var(--text3);
+  text-transform:uppercase;letter-spacing:.07em;margin-bottom:7px;
+}
+.cp-images-grid {
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(80px,1fr));
+  gap:8px;
+}
+.cp-upload-btn {
+  display:inline-flex;align-items:center;gap:7px;
+  padding:7px 16px;background:var(--brand-pale);
+  border:1.5px dashed var(--brand-mid);border-radius:20px;
+  cursor:pointer;font-size:12px;font-weight:700;color:var(--brand);
+  font-family:var(--font);transition:background .15s;
+}
+.cp-upload-btn:hover { background:var(--brand-light); }
