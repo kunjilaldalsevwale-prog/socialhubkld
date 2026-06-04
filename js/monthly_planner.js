@@ -129,7 +129,9 @@ function openCampaignPopup(id) {
           </div>
         </div>
         <button onclick="closeCampaignPopup()"
-          style="width:38px;height:38px;border-radius:50%;background:rgba(255,255,255,.2);border:none;color:#fff;font-size:18px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center">✕</button>
+  style="display:flex;align-items:center;gap:7px;padding:8px 16px;background:rgba(255,255,255,.2);border:none;color:#fff;font-size:14px;font-weight:700;cursor:pointer;border-radius:20px;font-family:var(--font)">
+  ← Back
+</button>
       </div>
 
       <!-- Body -->
