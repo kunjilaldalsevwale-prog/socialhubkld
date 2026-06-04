@@ -175,7 +175,7 @@ function openCampaignPopup(id) {
 
           <!-- Admin feedback on strategy -->
           <div style="margin-top:14px;background:var(--white);border-radius:14px;padding:14px;border:1.5px solid ${c.stratFeedback?'var(--amber)':'var(--border)'}">
-            <div style="font-size:11px;font-weight:700;color:var(--amber);margin-bottom:6px;text-transform:uppercase;letter-spacing:.06em">💬 Admin feedback on strategy</div>
+            <div style="font-size:11px;font-weight:700;color:var(--amber);margin-bottom:6px;text-transform:uppercase;letter-spacing:.06em">💬 Feedback on strategy</div>
             <textarea class="form-input form-textarea" rows="2" placeholder="Leave feedback for the strategist…"
               oninput="updateCampaignField('${id}','stratFeedback',this.value)">${c.stratFeedback||''}</textarea>
           </div>
@@ -205,14 +205,22 @@ function openCampaignPopup(id) {
 
           <!-- Design notes -->
           <div>
-            <div class="cp-field-label">Designer notes</div>
-            <textarea class="form-input form-textarea" rows="3" placeholder="Design decisions, font choices, colour palette, revisions needed…"
+<div style="margin-bottom:14px">
+  <div class="cp-field-label">Assign designer</div>
+  <select class="form-select" onchange="updateCampaignField('${id}','assignedDesigner',this.value)">
+    <option value="">— select designer —</option>
+    ${Object.values(typeof TEAM_USERS!=='undefined'?TEAM_USERS:{})
+      .filter(u=>u.role!=='admin')
+      .map(u=>`<option value="${u.name}" ${c.assignedDesigner===u.name?'selected':''}>${u.name}</option>`).join('')}
+  </select>
+</div>
+<div class="cp-field-label">Designer notes</div>            <textarea class="form-input form-textarea" rows="3" placeholder="Design decisions, font choices, colour palette, revisions needed…"
               oninput="updateCampaignField('${id}','designNotes',this.value)">${c.designNotes||''}</textarea>
           </div>
 
           <!-- Admin feedback on design -->
           <div style="margin-top:14px;background:var(--white);border-radius:14px;padding:14px;border:1.5px solid ${c.designFeedback?'var(--amber)':'var(--border)'}">
-            <div style="font-size:11px;font-weight:700;color:var(--amber);margin-bottom:6px;text-transform:uppercase;letter-spacing:.06em">💬 Admin feedback on design</div>
+            <div style="font-size:11px;font-weight:700;color:var(--amber);margin-bottom:6px;text-transform:uppercase;letter-spacing:.06em">💬 Feedback on design</div>
             <textarea class="form-input form-textarea" rows="2" placeholder="Leave feedback for the designer…"
               oninput="updateCampaignField('${id}','designFeedback',this.value)">${c.designFeedback||''}</textarea>
           </div>
