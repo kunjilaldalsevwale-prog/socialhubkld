@@ -66,16 +66,16 @@ function updateReminderBadge() {
 }
 
 function toggleSidebar() {
-  const sidebar   = document.getElementById('sidebar');
-  const expandBtn = document.getElementById('sidebarExpandBtn');
-  if (window.innerWidth <= 640) {
+  const sidebar  = document.getElementById('sidebar');
+  const backdrop = document.getElementById('sidebarBackdrop');
+  const isMobile = window.innerWidth <= 768;
+  if (isMobile) {
     sidebar.classList.toggle('mobile-open');
+    if (backdrop) backdrop.classList.toggle('show', sidebar.classList.contains('mobile-open'));
   } else {
-    sidebarCollapsed = !sidebarCollapsed;
-    sidebar.classList.toggle('collapsed', sidebarCollapsed);
-    document.getElementById('sidebarToggle').textContent = sidebarCollapsed ? '›' : '‹';
-    // Show/hide the persistent expand button
-    if (expandBtn) expandBtn.style.display = sidebarCollapsed ? 'flex' : 'none';
+    sidebar.classList.toggle('collapsed');
+    const wrapper = document.getElementById('mainWrapper');
+    if (wrapper) wrapper.classList.toggle('sidebar-collapsed');
   }
 }
 // Both buttons call toggleSidebar (onclick already set in HTML for expand btn)
