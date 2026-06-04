@@ -2583,3 +2583,117 @@ body, #app { background: #F5F3EF; }
   font-family:var(--font);transition:background .15s;
 }
 .cp-upload-btn:hover { background:var(--brand-light); }
+
+/* ══════════════════════════════════════════
+   MOBILE RESPONSIVE — Phone friendly
+   Targets ≤ 768px (phones) and ≤ 480px (small phones)
+══════════════════════════════════════════ */
+
+@media (max-width: 768px) {
+
+  /* ── Layout ── */
+  #app { flex-direction: column; }
+  .sidebar { position:fixed;left:-100%;top:0;height:100%;z-index:200;transition:left .25s;width:260px !important; }
+  .sidebar.mobile-open { left:0 !important; }
+  .mobile-menu-btn { display:flex !important; }
+  .main-wrapper { width:100%; }
+
+  /* ── Topbar ── */
+  .topbar { padding:0 14px !important;height:56px !important;gap:8px; }
+  .search-box { display:none; }
+  .topbar-right { gap:6px; }
+  .topbar-right .btn-ghost:not(:last-child) { display:none; }
+  .page-title { font-size:15px !important; }
+
+  /* ── Views ── */
+  .view { padding:16px !important; }
+
+  /* ── Stat cards ── */
+  .meta-stats-row { grid-template-columns:1fr 1fr !important;gap:10px !important; }
+  .meta-stat-card { padding:14px !important; }
+  .msc-val { font-size:22px !important; }
+
+  /* ── Calendar ── */
+  .channel-layout { grid-template-columns:1fr !important; }
+  .calendar-sidebar { display:none !important; }
+  .cal-cell { min-height:70px !important;border-radius:10px !important; }
+  .cal-day-names > div { font-size:9px !important; }
+  .cal-month-label { font-size:16px !important; }
+  .cal-grid { gap:4px !important; }
+  .cal-toolbar { flex-wrap:wrap;gap:8px; }
+  .cal-float-prev,.cal-float-next { display:none !important; }
+  .cal-post-pill { font-size:9px !important;padding:2px 4px !important; }
+  .cell-num { font-size:11px !important; }
+
+  /* ── Modal ── */
+  .modal-overlay { padding:0 !important;align-items:flex-end !important; }
+  .modal { width:100% !important;max-width:100% !important;border-radius:24px 24px 0 0 !important;max-height:92vh !important; }
+
+  /* ── Forms ── */
+  .form-row { grid-template-columns:1fr !important; }
+  .form-input,.form-select { font-size:16px !important; } /* prevents zoom on iOS */
+
+  /* ── Buttons ── */
+  .btn { padding:9px 16px !important;font-size:13px !important; }
+  .btn-sm { padding:6px 12px !important;font-size:11px !important; }
+
+  /* ── Ideas board ── */
+  .ideas-layout { grid-template-columns:1fr !important; }
+  .ideas-sidebar { display:none; }
+  .idea-board-grid { grid-template-columns:1fr 1fr !important;gap:10px !important; }
+  .idea-card { padding:12px !important; }
+
+  /* ── Photos ── */
+  .media-grid { grid-template-columns:repeat(2,1fr) !important;gap:10px !important; }
+  .media-folders-grid { grid-template-columns:repeat(2,1fr) !important;gap:10px !important; }
+  .media-folder-card { padding:14px 10px !important; }
+
+  /* ── Campaign cards ── */
+  .campaign-card { flex-direction:column !important; }
+  .campaign-card-thumb { width:100% !important;height:140px !important; }
+
+  /* ── Campaign popup ── */
+  #campaignPopup { padding:0 !important;align-items:flex-end !important; }
+  #campaignPopup > div { border-radius:24px 24px 0 0 !important;max-height:95vh;overflow-y:auto; }
+
+  /* ── Bottom nav for calendar ── */
+  .cal-bottom-nav { border-radius:16px !important;margin:8px 0 !important; }
+
+  /* ── Settings ── */
+  .settings-layout { grid-template-columns:1fr !important; }
+  .settings-nav { flex-direction:row;overflow-x:auto;border-radius:14px !important;padding:8px !important;gap:4px;display:flex; }
+  .snav-item { white-space:nowrap;padding:7px 14px !important;border-radius:20px !important;font-size:12px; }
+
+  /* ── Team ── */
+  .team-grid { grid-template-columns:1fr 1fr !important; }
+
+  /* ── Sidebar footer logout button ── */
+  .sidebar-footer button { color:var(--text3) !important; }
+}
+
+@media (max-width: 480px) {
+
+  /* ── Extra small phones ── */
+  .meta-stats-row { grid-template-columns:1fr 1fr !important; }
+  .idea-board-grid { grid-template-columns:1fr !important; }
+  .media-grid { grid-template-columns:repeat(2,1fr) !important; }
+  .media-folders-grid { grid-template-columns:repeat(2,1fr) !important; }
+  .team-grid { grid-template-columns:1fr !important; }
+  .cal-cell { min-height:56px !important; }
+
+  /* Topbar — show only menu + title + new post */
+  .topbar-right .btn-ghost { display:none !important; }
+  .topbar-right .btn-primary { padding:7px 14px !important;font-size:12px !important; }
+
+  /* Modal full screen on tiny phones */
+  .modal { max-height:98vh !important; }
+
+  /* Campaign popup full screen */
+  #campaignPopup > div { border-radius:0 !important;min-height:100vh; }
+}
+
+/* ── Mobile sidebar overlay backdrop ── */
+.sidebar-backdrop {
+  display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:199;
+}
+.sidebar-backdrop.show { display:block; }
