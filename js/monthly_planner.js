@@ -435,6 +435,20 @@ function openCampaignPopup(id) {
               ＋ Add designs
             </label>
           </div>
+<!-- Google Drive folder sync -->
+          <div style="margin-bottom:14px;background:var(--white);border-radius:12px;padding:12px 14px;border:1.5px solid var(--border)">
+            <div class="cp-field-label">📁 Google Drive folder link</div>
+            <div style="display:flex;gap:8px">
+              <input class="form-input" id="cp-drive-folder-${id}" value="${c.driveFolderUrl||''}"
+                placeholder="Paste shared Google Drive folder link…" style="font-size:12px;flex:1"
+                onchange="updateCampaignField('${id}','driveFolderUrl',this.value)">
+              <button onclick="syncDriveFolder('${id}')"
+                style="padding:8px 14px;background:var(--brand);color:#fff;border:none;border-radius:12px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;font-family:var(--font)">
+                🔄 Sync
+              </button>
+            </div>
+            <div style="font-size:11px;color:var(--text3);margin-top:5px">Designer shares Google Drive folder → paste link → click Sync → images appear below automatically</div>
+          </div>
 
           <!-- Designer notes -->
           <div style="margin-bottom:14px">
@@ -531,4 +545,35 @@ function deleteStickyNoteFromBanner(noteId) {
   );
   plan.stickyNotes = (plan.stickyNotes||[]).filter(n=>n.id!==noteId);
   saveState(); _refreshCalStickyBanner();
+}
+function syncDriveFolder(campId) {
+  const c = _getCampaigns().find(x=>x.id===campId);
+  if (!c || !c.driveFolderUrl) { showToast('Paste a Drive folder link first','error'); return; }
+  const m = c.driveFolderUrl.match(/folders\/([a-zA-Z0-9_-]+)/);
+  if (!m) { showToast('Invalid Drive folder link','error'); return; }
+  const folderId = m[1];
+  // Drive folders show thumbnails via this pattern
+  // We use the folder's embed URL to extract file IDs
+  showToast('☁️ Syncing from Drive…');
+  fetch(`https://drive.google.com/embeddedfolderview?id=${folderId}#list`)
+    .then(r => r.text())
+    .then(html => {
+      const matches = [...html.matchAll(/\/file\/d\/([a-zA-Z0-9_-]+)\//g)];
+      const ids = [...new Set(matches.map(m=>m[1]))];
+      if (!ids.length) { showToast('No files found — make sure folder is set to Anyone with link','error'); return; }
+      if (!c.designImages) c.designImages = [];
+      let added = 0;
+      ids.forEach(fileId => {
+        const url = `https://drive.google.com/uc?export=view&id=${fileId}`;
+        if (!c.designImages.find(img=>img.url===url)) {
+          c.designImages.push({ url, name:`drive-${fileId.slice(0,8)}.jpg`, source:'drive' });
+          added++;
+        }
+      });
+      saveState();
+      const grid = document.getElementById(`cp-design-images-${campId}`);
+      if (grid) grid.innerHTML = _renderCpImages(c.designImages, campId, 'design');
+      showToast(`✅ ${added} new image${added!==1?'s':''} synced from Drive!`, 'success');
+    })
+    .catch(() => showToast('Could not reach Drive — check folder sharing settings','error'));
 }
