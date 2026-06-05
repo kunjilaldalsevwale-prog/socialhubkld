@@ -3,7 +3,8 @@
    Social Media · Email · WhatsApp · Meta Ads · Google Ads
    ============================================================ */
 
-channelCalYear=new Date().getFullYear();channelCalMonth=new Date().getMonth();
+let channelCalYear  = new Date().getFullYear();
+let channelCalMonth = new Date().getMonth();
 let activeChannel   = 'social';
 
 const CHANNEL_CONFIG = {
