@@ -560,32 +560,26 @@ function deleteStickyNoteFromBanner(noteId) {
 }
 function syncDriveFolder(campId) {
   const c = _getCampaigns().find(x=>x.id===campId);
-  if (!c || !c.driveFolderUrl) { showToast('Paste a Drive folder link first','error'); return; }
-  const m = c.driveFolderUrl.match(/folders\/([a-zA-Z0-9_-]+)/);
-  if (!m) { showToast('Invalid Drive folder link','error'); return; }
-  const folderId = m[1];
-  // Drive folders show thumbnails via this pattern
-  // We use the folder's embed URL to extract file IDs
-  showToast('☁️ Syncing from Drive…');
-  fetch(`https://drive.google.com/embeddedfolderview?id=${folderId}#list`)
-    .then(r => r.text())
-    .then(html => {
-      const matches = [...html.matchAll(/\/file\/d\/([a-zA-Z0-9_-]+)\//g)];
-      const ids = [...new Set(matches.map(m=>m[1]))];
-      if (!ids.length) { showToast('No files found — make sure folder is set to Anyone with link','error'); return; }
-      if (!c.designImages) c.designImages = [];
-      let added = 0;
-      ids.forEach(fileId => {
-        const url = `https://drive.google.com/uc?export=view&id=${fileId}`;
-        if (!c.designImages.find(img=>img.url===url)) {
-          c.designImages.push({ url, name:`drive-${fileId.slice(0,8)}.jpg`, source:'drive' });
-          added++;
-        }
-      });
-      saveState();
-      const grid = document.getElementById(`cp-design-images-${campId}`);
-      if (grid) grid.innerHTML = _renderCpImages(c.designImages, campId, 'design');
-      showToast(`✅ ${added} new image${added!==1?'s':''} synced from Drive!`, 'success');
-    })
-    .catch(() => showToast('Could not reach Drive — check folder sharing settings','error'));
+  if (!c) return;
+  const input = document.getElementById('cp-drive-'+campId);
+  const url = input ? input.value.trim() : c.driveFolderUrl||'';
+  if (!url) { showToast('Paste a Drive file or folder link first','error'); return; }
+
+  // Extract file ID from individual file link
+  const fileMatch = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+  if (fileMatch) {
+    const fileId  = fileMatch[1];
+    const viewUrl = `https://drive.google.com/uc?export=view&id=${fileId}`;
+    if (!c.designImages) c.designImages = [];
+    if (c.designImages.find(img=>img.url===viewUrl)) {
+      showToast('Already added',''); return;
+    }
+    c.designImages.push({ url:viewUrl, name:`drive-${fileId.slice(0,8)}.jpg`, source:'drive' });
+    saveState();
+    const grid = document.getElementById(`cp-design-images-${campId}`);
+    if (grid) grid.innerHTML = _renderCpImages(c.designImages, campId, 'design');
+    showToast('✅ Design added from Drive!','success');
+    return;
+  }
+  showToast('Paste an individual file link (not folder) — open file in Drive → Share → Copy link','error');
 }
