@@ -285,7 +285,7 @@ async function syncDriveFolder(campId) {
       if (!c.designImages) c.designImages = [];
       let added = 0;
       data.files.forEach(file => {
-        const viewUrl = `https://drive.google.com/uc?export=view&id=${file.id}`;
+        const viewUrl = `https://lh3.googleusercontent.com/d/${file.id}`;
         if (!c.designImages.find(img=>img.url===viewUrl)) {
           c.designImages.push({ url:viewUrl, name:file.name, source:'drive' });
           added++;
