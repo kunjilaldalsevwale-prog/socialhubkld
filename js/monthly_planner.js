@@ -79,7 +79,8 @@ function addNewCampaign() {
     id, name:'New Campaign', brief:'', startDate:'', endDate:'',
     stratImages:[], stratNotes:'', stratFeedback:'',
     designImages:[], designNotes:'', designFeedback:'',
-    created: new Date().toISOString()
+    approvals:{}, approvalDays:3,
+    createdAt: new Date().toISOString(), created: new Date().toISOString()
   });
   saveState();
   _renderCampaignsList();
@@ -129,9 +130,7 @@ function openCampaignPopup(id) {
           </div>
         </div>
         <button onclick="closeCampaignPopup()"
-  style="display:flex;align-items:center;gap:7px;padding:8px 16px;background:rgba(255,255,255,.2);border:none;color:#fff;font-size:14px;font-weight:700;cursor:pointer;border-radius:20px;font-family:var(--font)">
-  ← Back
-</button>
+          style="width:38px;height:38px;border-radius:50%;background:rgba(255,255,255,.2);border:none;color:#fff;font-size:18px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center">✕</button>
       </div>
 
       <!-- Body -->
@@ -175,7 +174,7 @@ function openCampaignPopup(id) {
 
           <!-- Admin feedback on strategy -->
           <div style="margin-top:14px;background:var(--white);border-radius:14px;padding:14px;border:1.5px solid ${c.stratFeedback?'var(--amber)':'var(--border)'}">
-            <div style="font-size:11px;font-weight:700;color:var(--amber);margin-bottom:6px;text-transform:uppercase;letter-spacing:.06em">💬 Feedback on strategy</div>
+            <div style="font-size:11px;font-weight:700;color:var(--amber);margin-bottom:6px;text-transform:uppercase;letter-spacing:.06em">💬 Admin feedback on strategy</div>
             <textarea class="form-input form-textarea" rows="2" placeholder="Leave feedback for the strategist…"
               oninput="updateCampaignField('${id}','stratFeedback',this.value)">${c.stratFeedback||''}</textarea>
           </div>
@@ -205,22 +204,14 @@ function openCampaignPopup(id) {
 
           <!-- Design notes -->
           <div>
-<div style="margin-bottom:14px">
-  <div class="cp-field-label">Assign designer</div>
-  <select class="form-select" onchange="updateCampaignField('${id}','assignedDesigner',this.value)">
-    <option value="">— select designer —</option>
-    ${Object.values(typeof TEAM_USERS!=='undefined'?TEAM_USERS:{})
-      .filter(u=>u.role!=='admin')
-      .map(u=>`<option value="${u.name}" ${c.assignedDesigner===u.name?'selected':''}>${u.name}</option>`).join('')}
-  </select>
-</div>
-<div class="cp-field-label">Designer notes</div>            <textarea class="form-input form-textarea" rows="3" placeholder="Design decisions, font choices, colour palette, revisions needed…"
+            <div class="cp-field-label">Designer notes</div>
+            <textarea class="form-input form-textarea" rows="3" placeholder="Design decisions, font choices, colour palette, revisions needed…"
               oninput="updateCampaignField('${id}','designNotes',this.value)">${c.designNotes||''}</textarea>
           </div>
 
           <!-- Admin feedback on design -->
           <div style="margin-top:14px;background:var(--white);border-radius:14px;padding:14px;border:1.5px solid ${c.designFeedback?'var(--amber)':'var(--border)'}">
-            <div style="font-size:11px;font-weight:700;color:var(--amber);margin-bottom:6px;text-transform:uppercase;letter-spacing:.06em">💬 Feedback on design</div>
+            <div style="font-size:11px;font-weight:700;color:var(--amber);margin-bottom:6px;text-transform:uppercase;letter-spacing:.06em">💬 Admin feedback on design</div>
             <textarea class="form-input form-textarea" rows="2" placeholder="Leave feedback for the designer…"
               oninput="updateCampaignField('${id}','designFeedback',this.value)">${c.designFeedback||''}</textarea>
           </div>
@@ -363,4 +354,86 @@ function deleteStickyNoteFromBanner(noteId) {
   plan.stickyNotes = (plan.stickyNotes||[]).filter(n=>n.id!==noteId);
   saveState();
   _refreshCalStickyBanner();
+}
+
+/* ── Approval helpers ────────────────────────────────────── */
+function _renderApprovalBadge(c) {
+  const all = ['anusha','anjani','tejasv'];
+  const approvals = c.approvals || {};
+  const days = c.approvalDays || 3;
+  const allApproved = all.every(a => _getAutoApprovalStatus(c,a)==='approved'||_getAutoApprovalStatus(c,a)==='auto');
+  const anyRejected = all.some(a => _getAutoApprovalStatus(c,a)==='rejected');
+  if (anyRejected) return `<span style="padding:5px 14px;border-radius:20px;background:#FEF2F2;color:#991B1B;font-size:12px;font-weight:700">❌ Changes requested</span>`;
+  if (allApproved)  return `<span style="padding:5px 14px;border-radius:20px;background:#ECFDF5;color:#065F46;font-size:12px;font-weight:700">✅ All approved</span>`;
+  const count = all.filter(a=>_getAutoApprovalStatus(c,a)==='approved'||_getAutoApprovalStatus(c,a)==='auto').length;
+  return `<span style="padding:5px 14px;border-radius:20px;background:#EFF6FF;color:#1D4ED8;font-size:12px;font-weight:700">${count}/3 approved</span>`;
+}
+
+function _getAutoApprovalStatus(c, adminId) {
+  const approvals = c.approvals || {};
+  if (approvals[adminId]) return approvals[adminId].status;
+  // Check if deadline passed
+  if (c.createdAt) {
+    const days = c.approvalDays || 3;
+    const deadline = new Date(c.createdAt).getTime() + days*24*60*60*1000;
+    if (Date.now() > deadline) return 'auto';
+  }
+  return 'pending';
+}
+
+function _getDeadlineText(c) {
+  if (!c.createdAt) return '';
+  const days = c.approvalDays || 3;
+  const deadline = new Date(new Date(c.createdAt).getTime() + days*24*60*60*1000);
+  const now = new Date();
+  const diff = Math.ceil((deadline - now) / (1000*60*60*24));
+  if (diff <= 0) return '(deadline passed — auto-approved)';
+  return `(${diff} day${diff!==1?'s':''} left)`;
+}
+
+function _renderCpImagesWithBrief(images, campId) {
+  if (!images.length) return `<div style="color:var(--text3);font-size:12px;padding:8px 0">No images yet — upload references above</div>`;
+  return images.map((img, i) => `
+    <div style="background:var(--white);border:1px solid var(--border);border-radius:14px;overflow:hidden;display:flex;gap:0">
+      <div style="width:100px;flex-shrink:0;cursor:zoom-in" onclick="_openCpLightbox('${img.url}')">
+        <img src="${img.url}" style="width:100%;height:100%;object-fit:cover;display:block;min-height:80px">
+      </div>
+      <div style="flex:1;padding:10px 12px;display:flex;flex-direction:column;gap:6px">
+        <input class="form-input" value="${(img.brief||'').replace(/"/g,'&quot;')}" placeholder="Brief for this reference (e.g. warm tones, festive mood)…"
+          style="font-size:12px;padding:6px 10px"
+          oninput="updateCpImageBrief('${campId}',${i},this.value)">
+      </div>
+      <button onclick="removeCpImage('${campId}','strat',${i})"
+        style="width:30px;background:var(--coral-light);border:none;cursor:pointer;color:var(--coral);font-size:14px;flex-shrink:0">✕</button>
+    </div>`).join('');
+}
+
+function updateCpImageBrief(campId, idx, brief) {
+  const c = _getCampaigns().find(x=>x.id===campId);
+  if (c && c.stratImages && c.stratImages[idx]) {
+    c.stratImages[idx].brief = brief;
+    clearTimeout(window._cpSaveTimer);
+    window._cpSaveTimer = setTimeout(() => saveState(), 800);
+  }
+}
+
+function setCampaignApproval(campId, adminId, status) {
+  const c = _getCampaigns().find(x=>x.id===campId);
+  if (!c) return;
+  if (!c.approvals) c.approvals = {};
+  c.approvals[adminId] = { status, ts: new Date().toISOString(), by: currentUser?currentUser.name:adminId };
+  saveState();
+  // Re-render approval rows
+  const badge = document.getElementById('strat-approval-badge-'+campId);
+  if (badge) badge.innerHTML = _renderApprovalBadge(c);
+  // Re-render the approval section
+  openCampaignPopup(campId);
+  showToast(status==='approved'?'✅ Approved!':'Changes requested', status==='approved'?'success':'error');
+}
+
+function updateApprovalDeadline(campId) {
+  const c = _getCampaigns().find(x=>x.id===campId);
+  if (!c) return;
+  const el = document.getElementById('strat-deadline-'+campId);
+  if (el) el.textContent = _getDeadlineText(c);
 }
