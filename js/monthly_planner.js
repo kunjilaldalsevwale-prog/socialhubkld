@@ -305,7 +305,7 @@ async function syncDriveFolder(campId) {
   const fileMatch = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
   if (fileMatch) {
     const fileId  = fileMatch[1];
-    const viewUrl = `https://drive.google.com/uc?export=view&id=${fileId}`;
+    const viewUrl = `https://lh3.googleusercontent.com/d/${fileId}`;
     if (!c.designImages) c.designImages = [];
     if (c.designImages.find(img=>img.url===viewUrl)) { showToast('Already added',''); return; }
     c.designImages.push({ url:viewUrl, name:`drive-${fileId.slice(0,8)}.jpg`, source:'drive' });
