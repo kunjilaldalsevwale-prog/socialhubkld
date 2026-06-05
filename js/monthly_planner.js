@@ -258,12 +258,50 @@ function _openCpLightbox(url) {
 /* ══════════════════════════════════════════════════════════
    DRIVE SYNC
 ══════════════════════════════════════════════════════════ */
-function syncDriveFolder(campId) {
+const GDRIVE_API_KEY = 'AIzaSyDd5G37VmvL3xg5Dtqty8Enl15v-Kh6KJ0';
+
+async function syncDriveFolder(campId) {
   const c = _getCampaigns().find(x=>x.id===campId);
   if (!c) return;
   const input = document.getElementById('cp-drive-'+campId);
-  const url = input ? input.value.trim() : c.driveFolderUrl||'';
-  if (!url) { showToast('Paste a Drive file link first','error'); return; }
+  const url = (input ? input.value.trim() : c.driveFolderUrl||'');
+  if (!url) { showToast('Paste a Drive folder or file link','error'); return; }
+
+  // Save the URL
+  c.driveFolderUrl = url;
+
+  // Check if it's a folder link
+  const folderMatch = url.match(/folders\/([a-zA-Z0-9_-]+)/);
+  if (folderMatch) {
+    const folderId = folderMatch[1];
+    showToast('☁️ Syncing folder from Drive…');
+    try {
+      const res = await fetch(
+        `https://www.googleapis.com/drive/v3/files?q='${folderId}'+in+parents+and+mimeType+contains+'image/'&key=${GDRIVE_API_KEY}&fields=files(id,name,mimeType)&pageSize=50`
+      );
+      const data = await res.json();
+      if (data.error) { showToast('Drive API error: '+data.error.message,'error'); return; }
+      if (!data.files||!data.files.length) { showToast('No images found in folder — make sure it is shared publicly','error'); return; }
+      if (!c.designImages) c.designImages = [];
+      let added = 0;
+      data.files.forEach(file => {
+        const viewUrl = `https://drive.google.com/uc?export=view&id=${file.id}`;
+        if (!c.designImages.find(img=>img.url===viewUrl)) {
+          c.designImages.push({ url:viewUrl, name:file.name, source:'drive' });
+          added++;
+        }
+      });
+      saveState();
+      const grid = document.getElementById(`cp-design-images-${campId}`);
+      if (grid) grid.innerHTML = _renderCpImages(c.designImages, campId, 'design');
+      showToast(`✅ ${added} image${added!==1?'s':''} synced from Drive folder!`,'success');
+    } catch(e) {
+      showToast('Could not reach Drive — check folder is shared publicly','error');
+    }
+    return;
+  }
+
+  // Single file link
   const fileMatch = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
   if (fileMatch) {
     const fileId  = fileMatch[1];
@@ -277,7 +315,7 @@ function syncDriveFolder(campId) {
     showToast('✅ Design added from Drive!','success');
     return;
   }
-  showToast('Paste an individual file link — open file in Drive → Share → Copy link','error');
+  showToast('Invalid Drive link','error');
 }
 
 /* ══════════════════════════════════════════════════════════
