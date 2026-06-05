@@ -1,7 +1,8 @@
 /* ============================================================
-   MONTHLY PLANNER — Campaign-based content planning
-   Each month has campaigns. Each campaign opens as a full popup.
-   Strategist uploads refs → Admin feedback → Designer uploads → Admin feedback
+   MONTHLY PLANNER — Campaign-based
+   Strategist uploads refs with briefs + approval system
+   Designer uploads designs + Drive sync
+   3 admin approvals with auto-approval deadline
    ============================================================ */
 
 let plannerYear  = new Date().getFullYear();
@@ -12,7 +13,6 @@ function renderMonthlyPlanner() {
   _renderCampaignsList();
 }
 
-/* ── Header ─────────────────────────────────────────────── */
 function _renderPlannerHeader() {
   const el = document.getElementById('plannerMonthLabel');
   if (el) el.textContent = new Date(plannerYear, plannerMonth, 1)
@@ -26,22 +26,20 @@ function changePlannerMonth(dir) {
   renderMonthlyPlanner();
 }
 
-/* ── State helpers ───────────────────────────────────────── */
 function _getPlannerKey() { return `${plannerYear}-${plannerMonth}`; }
 
 function _getCampaigns() {
   if (!state.monthlyPlans) state.monthlyPlans = {};
-  if (!state.monthlyPlans[_getPlannerKey()]) state.monthlyPlans[_getPlannerKey()] = { campaigns:[] };
-  if (!state.monthlyPlans[_getPlannerKey()].campaigns) state.monthlyPlans[_getPlannerKey()].campaigns = [];
-  return state.monthlyPlans[_getPlannerKey()].campaigns;
+  const k = _getPlannerKey();
+  if (!state.monthlyPlans[k]) state.monthlyPlans[k] = { campaigns:[] };
+  if (!state.monthlyPlans[k].campaigns) state.monthlyPlans[k].campaigns = [];
+  return state.monthlyPlans[k].campaigns;
 }
 
-/* ── Campaigns List ─────────────────────────────────────── */
 function _renderCampaignsList() {
   const el = document.getElementById('plannerCampaignsList');
   if (!el) return;
   const campaigns = _getCampaigns();
-
   el.innerHTML = campaigns.length ? campaigns.map(c => `
     <div class="campaign-card" onclick="openCampaignPopup('${c.id}')">
       <div class="campaign-card-thumb">
@@ -56,7 +54,7 @@ function _renderCampaignsList() {
         <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
           <span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;background:var(--brand-pale);color:var(--brand)">${(c.stratImages||[]).length} refs</span>
           <span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;background:var(--green-light);color:var(--green)">${(c.designImages||[]).length} designs</span>
-          ${c.stratFeedback?`<span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;background:var(--amber-light);color:#92400E">💬 Feedback</span>`:''}
+          <span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;background:${_allApproved(c)?'#ECFDF5':'#EFF6FF'};color:${_allApproved(c)?'#065F46':'#1D4ED8'}">${_approvalCount(c)}/3 approved</span>
         </div>
       </div>
       <div style="padding:14px;display:flex;flex-direction:column;gap:6px;justify-content:center">
@@ -71,7 +69,6 @@ function _renderCampaignsList() {
     </div>`;
 }
 
-/* ── Add Campaign ────────────────────────────────────────── */
 function addNewCampaign() {
   const campaigns = _getCampaigns();
   const id = 'camp_' + Date.now();
@@ -79,8 +76,10 @@ function addNewCampaign() {
     id, name:'New Campaign', brief:'', startDate:'', endDate:'',
     stratImages:[], stratNotes:'', stratFeedback:'',
     designImages:[], designNotes:'', designFeedback:'',
+    driveFolderUrl:'', assignedDesigner:'',
     approvals:{}, approvalDays:3,
-    createdAt: new Date().toISOString(), created: new Date().toISOString()
+    createdAt: new Date().toISOString(),
+    created: new Date().toISOString()
   });
   saveState();
   _renderCampaignsList();
@@ -88,11 +87,182 @@ function addNewCampaign() {
 }
 
 function deleteCampaign(id) {
-  const key = _getPlannerKey();
-  if (!state.monthlyPlans[key]) return;
-  state.monthlyPlans[key].campaigns = state.monthlyPlans[key].campaigns.filter(c=>c.id!==id);
+  const k = _getPlannerKey();
+  if (!state.monthlyPlans[k]) return;
+  state.monthlyPlans[k].campaigns = state.monthlyPlans[k].campaigns.filter(c=>c.id!==id);
+  saveState(); _renderCampaignsList();
+}
+
+/* ══════════════════════════════════════════════════════════
+   APPROVAL HELPERS
+══════════════════════════════════════════════════════════ */
+function _approvalCount(c) {
+  return ['anusha','anjani','tejasv'].filter(a => {
+    const s = _getApprovalStatus(c,a);
+    return s==='approved'||s==='auto';
+  }).length;
+}
+function _allApproved(c) { return _approvalCount(c)===3; }
+
+function _getApprovalStatus(c, adminId) {
+  const approvals = c.approvals || {};
+  if (approvals[adminId]) return approvals[adminId].status;
+  if (c.createdAt) {
+    const days = c.approvalDays || 3;
+    const deadline = new Date(c.createdAt).getTime() + days*24*60*60*1000;
+    if (Date.now() > deadline) return 'auto';
+  }
+  return 'pending';
+}
+
+function _getDeadlineText(c) {
+  if (!c.createdAt) return '';
+  const days = c.approvalDays || 3;
+  const deadline = new Date(new Date(c.createdAt).getTime() + days*24*60*60*1000);
+  const diff = Math.ceil((deadline - Date.now()) / (1000*60*60*24));
+  if (diff <= 0) return '(deadline passed — auto-approved)';
+  return `(${diff} day${diff!==1?'s':''} left)`;
+}
+
+function _renderApprovalBadge(c) {
+  const rejected = ['anusha','anjani','tejasv'].some(a=>_getApprovalStatus(c,a)==='rejected');
+  if (rejected) return `<span style="padding:5px 14px;border-radius:20px;background:#FEF2F2;color:#991B1B;font-size:12px;font-weight:700">❌ Changes requested</span>`;
+  if (_allApproved(c)) return `<span style="padding:5px 14px;border-radius:20px;background:#ECFDF5;color:#065F46;font-size:12px;font-weight:700">✅ All approved</span>`;
+  return `<span style="padding:5px 14px;border-radius:20px;background:#EFF6FF;color:#1D4ED8;font-size:12px;font-weight:700">${_approvalCount(c)}/3 approved</span>`;
+}
+
+function setCampaignApproval(campId, adminId, status) {
+  const c = _getCampaigns().find(x=>x.id===campId);
+  if (!c) return;
+  if (!c.approvals) c.approvals = {};
+  c.approvals[adminId] = { status, ts: new Date().toISOString(), by: currentUser?currentUser.name:adminId };
   saveState();
-  _renderCampaignsList();
+  openCampaignPopup(campId);
+  showToast(status==='approved'?'✅ Approved!':'Changes requested', status==='approved'?'success':'error');
+}
+
+function updateApprovalDeadline(campId) {
+  const c = _getCampaigns().find(x=>x.id===campId);
+  if (!c) return;
+  const el = document.getElementById('strat-deadline-'+campId);
+  if (el) el.textContent = _getDeadlineText(c);
+}
+
+/* ══════════════════════════════════════════════════════════
+   IMAGE HELPERS
+══════════════════════════════════════════════════════════ */
+function _renderCpImages(images, campId, section) {
+  if (!images.length) return `<div style="color:var(--text3);font-size:12px;padding:8px 0">No images yet</div>`;
+  return images.map((img,i) => `
+    <div style="position:relative;border-radius:12px;overflow:hidden;aspect-ratio:1;background:var(--surface3)">
+      <img src="${img.url}" style="width:100%;height:100%;object-fit:cover;cursor:zoom-in" onclick="_openCpLightbox('${img.url}')">
+      <button onclick="removeCpImage('${campId}','${section}',${i})"
+        style="position:absolute;top:4px;right:4px;width:22px;height:22px;border-radius:50%;background:rgba(0,0,0,.6);color:#fff;border:none;cursor:pointer;font-size:11px">✕</button>
+    </div>`).join('');
+}
+
+function _renderCpImagesWithBrief(images, campId) {
+  if (!images.length) return `<div style="color:var(--text3);font-size:12px;padding:8px 0">No images yet — upload references below</div>`;
+  return images.map((img,i) => `
+    <div style="background:var(--white);border:1px solid var(--border);border-radius:14px;overflow:hidden;display:flex;gap:0">
+      <div style="width:90px;flex-shrink:0;cursor:zoom-in" onclick="_openCpLightbox('${img.url}')">
+        <img src="${img.url}" style="width:100%;height:100%;object-fit:cover;display:block;min-height:80px">
+      </div>
+      <div style="flex:1;padding:10px 12px">
+        <input class="form-input" value="${(img.brief||'').replace(/"/g,'&quot;')}"
+          placeholder="Brief for this image (e.g. warm tones, festive mood)…"
+          style="font-size:12px;padding:6px 10px"
+          oninput="updateCpImageBrief('${campId}',${i},this.value)">
+      </div>
+      <button onclick="removeCpImage('${campId}','strat',${i})"
+        style="width:30px;background:var(--coral-light);border:none;cursor:pointer;color:var(--coral);font-size:14px;flex-shrink:0">✕</button>
+    </div>`).join('');
+}
+
+function updateCpImageBrief(campId, idx, brief) {
+  const c = _getCampaigns().find(x=>x.id===campId);
+  if (c && c.stratImages && c.stratImages[idx]) {
+    c.stratImages[idx].brief = brief;
+    clearTimeout(window._cpSaveTimer);
+    window._cpSaveTimer = setTimeout(()=>saveState(), 800);
+  }
+}
+
+async function uploadCpImages(input, campId, section) {
+  const files = Array.from(input.files||[]);
+  if (!files.length) return;
+  input.value = '';
+  const c = _getCampaigns().find(x=>x.id===campId);
+  if (!c) return;
+  const key = section==='strat' ? 'stratImages' : 'designImages';
+  if (!c[key]) c[key] = [];
+  showToast(`☁️ Uploading ${files.length} file${files.length>1?'s':''}…`);
+  for (const file of files) {
+    try {
+      const result = await uploadToCloudinary(file);
+      c[key].push({ url:result.url, name:file.name });
+      if (typeof autoSaveToMediaLibrary==='function') autoSaveToMediaLibrary(result.url, file.name, 'cloudinary');
+    } catch(e) { showToast('Upload failed: '+file.name,'error'); }
+  }
+  saveState();
+  const grid = document.getElementById(`cp-${section}-images-${campId}`);
+  if (grid) grid.innerHTML = section==='strat'
+    ? _renderCpImagesWithBrief(c[key], campId)
+    : _renderCpImages(c[key], campId, section);
+  showToast(`✅ Uploaded!`,'success');
+}
+
+function removeCpImage(campId, section, idx) {
+  const c = _getCampaigns().find(x=>x.id===campId);
+  if (!c) return;
+  const key = section==='strat' ? 'stratImages' : 'designImages';
+  c[key].splice(idx, 1);
+  saveState();
+  const grid = document.getElementById(`cp-${section}-images-${campId}`);
+  if (grid) grid.innerHTML = section==='strat'
+    ? _renderCpImagesWithBrief(c[key], campId)
+    : _renderCpImages(c[key], campId, section);
+}
+
+function _openCpLightbox(url) {
+  const lb = document.createElement('div');
+  lb.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:3000;display:flex;align-items:center;justify-content:center;cursor:zoom-out';
+  lb.onclick = () => lb.remove();
+  lb.innerHTML = `<img src="${url}" style="max-width:90vw;max-height:90vh;object-fit:contain;border-radius:12px">`;
+  document.body.appendChild(lb);
+}
+
+/* ══════════════════════════════════════════════════════════
+   DRIVE SYNC
+══════════════════════════════════════════════════════════ */
+function syncDriveFolder(campId) {
+  const c = _getCampaigns().find(x=>x.id===campId);
+  if (!c || !c.driveFolderUrl) { showToast('Paste a Drive folder link first','error'); return; }
+  const m = c.driveFolderUrl.match(/folders\/([a-zA-Z0-9_-]+)/);
+  if (!m) { showToast('Invalid Drive folder link','error'); return; }
+  const folderId = m[1];
+  showToast('☁️ Syncing from Drive…');
+  fetch(`https://drive.google.com/embeddedfolderview?id=${folderId}#list`)
+    .then(r=>r.text())
+    .then(html => {
+      const matches = [...html.matchAll(/\/file\/d\/([a-zA-Z0-9_-]+)\//g)];
+      const ids = [...new Set(matches.map(x=>x[1]))];
+      if (!ids.length) { showToast('No files found — ensure folder is set to Anyone with link','error'); return; }
+      if (!c.designImages) c.designImages = [];
+      let added = 0;
+      ids.forEach(fileId => {
+        const url = `https://drive.google.com/uc?export=view&id=${fileId}`;
+        if (!c.designImages.find(img=>img.url===url)) {
+          c.designImages.push({ url, name:`drive-${fileId.slice(0,8)}.jpg`, source:'drive' });
+          added++;
+        }
+      });
+      saveState();
+      const grid = document.getElementById(`cp-design-images-${campId}`);
+      if (grid) grid.innerHTML = _renderCpImages(c.designImages, campId, 'design');
+      showToast(`✅ ${added} new image${added!==1?'s':''} synced!`,'success');
+    })
+    .catch(()=>showToast('Could not reach Drive — check sharing settings','error'));
 }
 
 /* ══════════════════════════════════════════════════════════
@@ -101,7 +271,6 @@ function deleteCampaign(id) {
 function openCampaignPopup(id) {
   const c = _getCampaigns().find(x=>x.id===id);
   if (!c) return;
-
   let popup = document.getElementById('campaignPopup');
   if (!popup) {
     popup = document.createElement('div');
@@ -109,6 +278,8 @@ function openCampaignPopup(id) {
     popup.style.cssText = 'position:fixed;inset:0;background:rgba(20,18,16,.55);z-index:2000;display:flex;align-items:flex-start;justify-content:center;padding:20px;overflow-y:auto;backdrop-filter:blur(6px);animation:fadeIn .2s ease';
     document.body.appendChild(popup);
   }
+
+  const ADMINS = ['anusha','anjani','tejasv'];
 
   popup.innerHTML = `
     <div style="background:var(--white);border-radius:24px;width:100%;max-width:780px;box-shadow:0 32px 80px rgba(0,0,0,.2);overflow:hidden;margin:auto">
@@ -119,45 +290,50 @@ function openCampaignPopup(id) {
           <input id="cp-name" value="${c.name}" placeholder="Campaign name…"
             style="background:rgba(255,255,255,.15);border:none;border-radius:10px;padding:8px 14px;font-size:20px;font-weight:800;color:#fff;font-family:var(--font);width:100%;outline:none"
             oninput="updateCampaignField('${id}','name',this.value)">
-          <div style="display:flex;gap:10px;margin-top:10px">
-            <input type="date" id="cp-start" value="${c.startDate||''}"
+          <div style="display:flex;gap:10px;margin-top:10px;flex-wrap:wrap">
+            <input type="date" value="${c.startDate||''}"
               style="background:rgba(255,255,255,.15);border:none;border-radius:8px;padding:5px 10px;font-size:12px;color:#fff;font-family:var(--font);outline:none;color-scheme:dark"
               oninput="updateCampaignField('${id}','startDate',this.value)">
             <span style="color:rgba(255,255,255,.6);line-height:2">→</span>
-            <input type="date" id="cp-end" value="${c.endDate||''}"
+            <input type="date" value="${c.endDate||''}"
               style="background:rgba(255,255,255,.15);border:none;border-radius:8px;padding:5px 10px;font-size:12px;color:#fff;font-family:var(--font);outline:none;color-scheme:dark"
               oninput="updateCampaignField('${id}','endDate',this.value)">
           </div>
         </div>
         <button onclick="closeCampaignPopup()"
-          style="width:38px;height:38px;border-radius:50%;background:rgba(255,255,255,.2);border:none;color:#fff;font-size:18px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center">✕</button>
+          style="display:flex;align-items:center;gap:7px;padding:8px 16px;background:rgba(255,255,255,.2);border:none;color:#fff;font-size:14px;font-weight:700;cursor:pointer;border-radius:20px;font-family:var(--font)">
+          ← Back
+        </button>
       </div>
 
       <!-- Body -->
       <div style="padding:28px;display:flex;flex-direction:column;gap:24px">
 
-        <!-- Campaign Brief -->
+        <!-- Brief -->
         <div>
           <div class="cp-section-label">📋 Campaign brief & reasoning</div>
           <textarea class="form-input form-textarea" rows="3" placeholder="Describe the campaign goal, target audience, key message, reasoning…"
             style="min-height:80px" oninput="updateCampaignField('${id}','brief',this.value)">${c.brief||''}</textarea>
         </div>
 
-        <!-- STRATEGIST SECTION -->
+        <!-- ══ STRATEGIST ══ -->
         <div style="background:var(--beige);border-radius:18px;padding:20px;border:1px solid var(--border)">
-          <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
-            <div style="width:36px;height:36px;border-radius:50%;background:#DBEAFE;color:#1D4ED8;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:800">S</div>
-            <div>
-              <div style="font-size:14px;font-weight:800;color:var(--text)">Strategist</div>
-              <div style="font-size:11px;color:var(--text3)">Upload reference images & add strategy notes</div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px">
+            <div style="display:flex;align-items:center;gap:10px">
+              <div style="width:36px;height:36px;border-radius:50%;background:#DBEAFE;color:#1D4ED8;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:800">S</div>
+              <div>
+                <div style="font-size:14px;font-weight:800;color:var(--text)">Strategist</div>
+                <div style="font-size:11px;color:var(--text3)">Upload references with brief · add consolidated thought</div>
+              </div>
             </div>
+            <div id="strat-approval-badge-${id}">${_renderApprovalBadge(c)}</div>
           </div>
 
-          <!-- Strat images -->
+          <!-- Reference images with individual briefs -->
           <div style="margin-bottom:14px">
-            <div class="cp-field-label">Reference images</div>
-            <div id="cp-strat-images-${id}" class="cp-images-grid">
-              ${_renderCpImages(c.stratImages||[], id, 'strat')}
+            <div class="cp-field-label">Reference images <span style="font-weight:400;opacity:.6;text-transform:none;font-size:10px">(add a brief for each)</span></div>
+            <div id="cp-strat-images-${id}" style="display:flex;flex-direction:column;gap:10px">
+              ${_renderCpImagesWithBrief(c.stratImages||[], id)}
             </div>
             <label class="cp-upload-btn" style="margin-top:10px">
               <input type="file" accept="image/*" multiple style="display:none" onchange="uploadCpImages(this,'${id}','strat')">
@@ -165,32 +341,90 @@ function openCampaignPopup(id) {
             </label>
           </div>
 
-          <!-- Strat notes -->
-          <div>
-            <div class="cp-field-label">Strategy notes</div>
-            <textarea class="form-input form-textarea" rows="3" placeholder="Content angles, hooks, tone of voice, platform notes…"
+          <!-- Consolidated thought -->
+          <div style="margin-bottom:14px">
+            <div class="cp-field-label">Consolidated thought / overall strategy</div>
+            <textarea class="form-input form-textarea" rows="4"
+              placeholder="Summarise the overall strategy — content angles, hooks, tone of voice, platform notes, key message…"
               oninput="updateCampaignField('${id}','stratNotes',this.value)">${c.stratNotes||''}</textarea>
           </div>
 
-          <!-- Admin feedback on strategy -->
-          <div style="margin-top:14px;background:var(--white);border-radius:14px;padding:14px;border:1.5px solid ${c.stratFeedback?'var(--amber)':'var(--border)'}">
-            <div style="font-size:11px;font-weight:700;color:var(--amber);margin-bottom:6px;text-transform:uppercase;letter-spacing:.06em">💬 Admin feedback on strategy</div>
-            <textarea class="form-input form-textarea" rows="2" placeholder="Leave feedback for the strategist…"
-              oninput="updateCampaignField('${id}','stratFeedback',this.value)">${c.stratFeedback||''}</textarea>
+          <!-- Approval panel -->
+          <div style="background:var(--white);border-radius:14px;padding:16px;border:1.5px solid var(--border)">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+              <div style="font-size:12px;font-weight:800;color:var(--text)">✅ Admin Approvals</div>
+              <div style="display:flex;align-items:center;gap:8px">
+                <span style="font-size:11px;color:var(--text3)">Auto-approve after</span>
+                <input type="number" min="1" max="30" value="${c.approvalDays||3}"
+                  style="width:48px;padding:4px 8px;border:1.5px solid var(--border2);border-radius:8px;font-size:12px;font-family:var(--font);text-align:center"
+                  onchange="updateCampaignField('${id}','approvalDays',parseInt(this.value));updateApprovalDeadline('${id}')">
+                <span style="font-size:11px;color:var(--text3)">days</span>
+                <span id="strat-deadline-${id}" style="font-size:11px;font-weight:600;color:var(--brand)">${_getDeadlineText(c)}</span>
+              </div>
+            </div>
+            ${ADMINS.map(adminId => {
+              const u = typeof TEAM_USERS!=='undefined'&&TEAM_USERS[adminId] ? TEAM_USERS[adminId] : {name:adminId,avatar:adminId.slice(0,2).toUpperCase(),color:'#DBEAFE',textColor:'#1D4ED8'};
+              const status = _getApprovalStatus(c, adminId);
+              return `<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)">
+                <div style="width:28px;height:28px;border-radius:50%;background:${u.color||'#DBEAFE'};color:${u.textColor||'#1D4ED8'};display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;flex-shrink:0">${u.avatar||u.name.slice(0,2).toUpperCase()}</div>
+                <div style="flex:1;font-size:13px;font-weight:700;color:var(--text)">${u.name||adminId}</div>
+                ${status==='auto'
+                  ? `<span style="font-size:11px;font-weight:700;padding:4px 10px;border-radius:20px;background:#F0FDF4;color:#166534">✅ Auto-approved</span>`
+                  : status==='approved'
+                  ? `<span style="font-size:11px;font-weight:700;padding:4px 10px;border-radius:20px;background:#ECFDF5;color:#065F46">✅ Approved</span>`
+                  : status==='rejected'
+                  ? `<span style="font-size:11px;font-weight:700;padding:4px 10px;border-radius:20px;background:#FEF2F2;color:#991B1B">❌ Changes requested</span>`
+                  : `<div style="display:flex;gap:6px">
+                      <button onclick="setCampaignApproval('${id}','${adminId}','approved')"
+                        style="padding:5px 12px;background:#ECFDF5;color:#065F46;border:1.5px solid #6EE7B7;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;font-family:var(--font)">✅ Approve</button>
+                      <button onclick="setCampaignApproval('${id}','${adminId}','rejected')"
+                        style="padding:5px 12px;background:#FEF2F2;color:#991B1B;border:1.5px solid #FCA5A5;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;font-family:var(--font)">❌ Reject</button>
+                    </div>`}
+              </div>`;
+            }).join('')}
+            <!-- Feedback -->
+            <div style="margin-top:12px">
+              <div class="cp-field-label">💬 Feedback on strategy</div>
+              <textarea class="form-input form-textarea" rows="2" placeholder="Leave feedback for the strategist…"
+                oninput="updateCampaignField('${id}','stratFeedback',this.value)">${c.stratFeedback||''}</textarea>
+            </div>
           </div>
         </div>
 
-        <!-- DESIGNER SECTION -->
+        <!-- ══ DESIGNER ══ -->
         <div style="background:var(--beige);border-radius:18px;padding:20px;border:1px solid var(--border)">
           <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
             <div style="width:36px;height:36px;border-radius:50%;background:#DCFCE7;color:#065F46;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:800">D</div>
-            <div>
+            <div style="flex:1">
               <div style="font-size:14px;font-weight:800;color:var(--text)">Designer</div>
-              <div style="font-size:11px;color:var(--text3)">Upload design files & add notes</div>
+              <div style="font-size:11px;color:var(--text3)">Upload designs · sync from Drive · add notes</div>
             </div>
           </div>
 
-          <!-- Design images -->
+          <!-- Assign designer -->
+          <div style="margin-bottom:14px">
+            <div class="cp-field-label">Assign designer</div>
+            <select class="form-select" onchange="updateCampaignField('${id}','assignedDesigner',this.value)">
+              <option value="">— select designer —</option>
+              ${typeof TEAM_USERS!=='undefined' ? Object.values(TEAM_USERS).filter(u=>u.role!=='admin').map(u=>`<option value="${u.name}" ${c.assignedDesigner===u.name?'selected':''}>${u.name}</option>`).join('') : ''}
+            </select>
+          </div>
+
+          <!-- Drive folder sync -->
+          <div style="margin-bottom:14px;background:var(--white);border-radius:12px;padding:12px 14px;border:1.5px solid var(--border)">
+            <div class="cp-field-label">📁 Google Drive folder (auto-sync designs)</div>
+            <div style="display:flex;gap:8px">
+              <input class="form-input" id="cp-drive-${id}" value="${c.driveFolderUrl||''}"
+                placeholder="Paste shared Google Drive folder link…"
+                style="font-size:12px;flex:1"
+                onchange="updateCampaignField('${id}','driveFolderUrl',this.value)">
+              <button onclick="syncDriveFolder('${id}')"
+                style="padding:8px 14px;background:var(--brand);color:#fff;border:none;border-radius:12px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;font-family:var(--font)">🔄 Sync</button>
+            </div>
+            <div style="font-size:11px;color:var(--text3);margin-top:5px">Designer uploads to Drive folder → paste link → Sync → images appear below</div>
+          </div>
+
+          <!-- Design uploads -->
           <div style="margin-bottom:14px">
             <div class="cp-field-label">Design uploads</div>
             <div id="cp-design-images-${id}" class="cp-images-grid">
@@ -202,16 +436,17 @@ function openCampaignPopup(id) {
             </label>
           </div>
 
-          <!-- Design notes -->
-          <div>
+          <!-- Designer notes -->
+          <div style="margin-bottom:14px">
             <div class="cp-field-label">Designer notes</div>
-            <textarea class="form-input form-textarea" rows="3" placeholder="Design decisions, font choices, colour palette, revisions needed…"
+            <textarea class="form-input form-textarea" rows="3"
+              placeholder="Design decisions, font choices, colour palette, revisions needed…"
               oninput="updateCampaignField('${id}','designNotes',this.value)">${c.designNotes||''}</textarea>
           </div>
 
-          <!-- Admin feedback on design -->
-          <div style="margin-top:14px;background:var(--white);border-radius:14px;padding:14px;border:1.5px solid ${c.designFeedback?'var(--amber)':'var(--border)'}">
-            <div style="font-size:11px;font-weight:700;color:var(--amber);margin-bottom:6px;text-transform:uppercase;letter-spacing:.06em">💬 Admin feedback on design</div>
+          <!-- Feedback on design -->
+          <div style="background:var(--white);border-radius:14px;padding:14px;border:1.5px solid ${c.designFeedback?'var(--amber)':'var(--border)'}">
+            <div class="cp-field-label">💬 Feedback on design</div>
             <textarea class="form-input form-textarea" rows="2" placeholder="Leave feedback for the designer…"
               oninput="updateCampaignField('${id}','designFeedback',this.value)">${c.designFeedback||''}</textarea>
           </div>
@@ -221,7 +456,7 @@ function openCampaignPopup(id) {
 
       <!-- Footer -->
       <div style="padding:16px 28px;border-top:1px solid var(--border);background:var(--beige);display:flex;justify-content:space-between;align-items:center;border-radius:0 0 24px 24px">
-        <button class="btn btn-ghost btn-sm" onclick="deleteCampaign('${id}');closeCampaignPopup()" style="color:var(--coral);border-color:var(--coral)">🗑 Delete campaign</button>
+        <button class="btn btn-ghost btn-sm" onclick="deleteCampaign('${id}');closeCampaignPopup()" style="color:var(--coral);border-color:var(--coral)">🗑 Delete</button>
         <button class="btn btn-primary" onclick="saveCampaignAndClose('${id}')">💾 Save & close</button>
       </div>
     </div>`;
@@ -232,80 +467,24 @@ function openCampaignPopup(id) {
 function closeCampaignPopup() {
   const p = document.getElementById('campaignPopup');
   if (p) p.style.display = 'none';
-  saveState();
-  _renderCampaignsList();
+  saveState(); _renderCampaignsList();
 }
 
 function saveCampaignAndClose(id) {
-  saveState();
-  closeCampaignPopup();
-  showToast('✅ Campaign saved!', 'success');
+  saveState(); closeCampaignPopup();
+  showToast('✅ Campaign saved!','success');
 }
 
 function updateCampaignField(id, field, value) {
   const c = _getCampaigns().find(x=>x.id===id);
-  if (c) { c[field] = value; }
-  // Debounce save
+  if (c) c[field] = value;
   clearTimeout(window._cpSaveTimer);
-  window._cpSaveTimer = setTimeout(() => saveState(), 800);
+  window._cpSaveTimer = setTimeout(()=>saveState(), 800);
 }
 
-/* ── Image helpers ───────────────────────────────────────── */
-function _renderCpImages(images, campId, section) {
-  if (!images.length) return `<div style="color:var(--text3);font-size:12px;padding:8px 0">No images yet</div>`;
-  return images.map((img, i) => `
-    <div style="position:relative;border-radius:12px;overflow:hidden;aspect-ratio:1;background:var(--surface3)">
-      <img src="${img.url}" style="width:100%;height:100%;object-fit:cover;cursor:zoom-in"
-        onclick="_openCpLightbox('${img.url}')">
-      <button onclick="removeCpImage('${campId}','${section}',${i})"
-        style="position:absolute;top:4px;right:4px;width:22px;height:22px;border-radius:50%;background:rgba(0,0,0,.6);color:#fff;border:none;cursor:pointer;font-size:11px;display:flex;align-items:center;justify-content:center">✕</button>
-    </div>`).join('');
-}
-
-async function uploadCpImages(input, campId, section) {
-  const files = Array.from(input.files||[]);
-  if (!files.length) return;
-  input.value = '';
-  const c = _getCampaigns().find(x=>x.id===campId);
-  if (!c) return;
-  const key = section==='strat' ? 'stratImages' : 'designImages';
-  if (!c[key]) c[key] = [];
-
-  showToast(`☁️ Uploading ${files.length} file${files.length>1?'s':''}…`);
-
-  for (const file of files) {
-    try {
-      const result = await uploadToCloudinary(file);
-      c[key].push({ url: result.url, name: file.name });
-      if (typeof autoSaveToMediaLibrary==='function') autoSaveToMediaLibrary(result.url, file.name, 'cloudinary');
-    } catch(e) { showToast('Upload failed: '+file.name, 'error'); }
-  }
-
-  saveState();
-  const grid = document.getElementById(`cp-${section}-images-${campId}`);
-  if (grid) grid.innerHTML = _renderCpImages(c[key], campId, section);
-  showToast(`✅ ${files.length} image${files.length>1?'s':''} uploaded!`, 'success');
-}
-
-function removeCpImage(campId, section, idx) {
-  const c = _getCampaigns().find(x=>x.id===campId);
-  if (!c) return;
-  const key = section==='strat' ? 'stratImages' : 'designImages';
-  c[key].splice(idx, 1);
-  saveState();
-  const grid = document.getElementById(`cp-${section}-images-${campId}`);
-  if (grid) grid.innerHTML = _renderCpImages(c[key], campId, section);
-}
-
-function _openCpLightbox(url) {
-  const lb = document.createElement('div');
-  lb.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:3000;display:flex;align-items:center;justify-content:center;cursor:zoom-out';
-  lb.onclick = () => lb.remove();
-  lb.innerHTML = `<img src="${url}" style="max-width:90vw;max-height:90vh;object-fit:contain;border-radius:12px">`;
-  document.body.appendChild(lb);
-}
-
-/* ── Sticky notes (kept for calendar banner) ─────────────── */
+/* ══════════════════════════════════════════════════════════
+   STICKY NOTES (for calendar banner)
+══════════════════════════════════════════════════════════ */
 function addStickyNote() {
   const key = _getPlannerKey();
   if (!state.monthlyPlans) state.monthlyPlans = {};
@@ -313,12 +492,7 @@ function addStickyNote() {
   if (!state.monthlyPlans[key].stickyNotes) state.monthlyPlans[key].stickyNotes = [];
   const id = Date.now();
   state.monthlyPlans[key].stickyNotes.push({ id, text:'', color:'#FEF9C3' });
-  saveState();
-  _refreshCalStickyBanner();
-  setTimeout(() => {
-    const ta = document.querySelector('.sticky-note:last-child .sticky-textarea');
-    if (ta) ta.focus();
-  }, 50);
+  saveState(); _refreshCalStickyBanner();
 }
 
 function _ensureMonth(y, m) {
@@ -331,8 +505,10 @@ function _ensureMonth(y, m) {
 function _refreshCalStickyBanner() {
   const banner = document.getElementById('calStickyBanner');
   if (!banner) return;
-  const plan  = _ensureMonth(typeof channelCalYear!=='undefined'?channelCalYear:plannerYear,
-                              typeof channelCalMonth!=='undefined'?channelCalMonth:plannerMonth);
+  const plan  = _ensureMonth(
+    typeof channelCalYear!=='undefined'?channelCalYear:plannerYear,
+    typeof channelCalMonth!=='undefined'?channelCalMonth:plannerMonth
+  );
   const notes = plan.stickyNotes || [];
   if (notes.length) {
     banner.innerHTML = notes.map(n => `
@@ -349,91 +525,10 @@ function _refreshCalStickyBanner() {
 }
 
 function deleteStickyNoteFromBanner(noteId) {
-  const plan = _ensureMonth(typeof channelCalYear!=='undefined'?channelCalYear:plannerYear,
-                             typeof channelCalMonth!=='undefined'?channelCalMonth:plannerMonth);
+  const plan = _ensureMonth(
+    typeof channelCalYear!=='undefined'?channelCalYear:plannerYear,
+    typeof channelCalMonth!=='undefined'?channelCalMonth:plannerMonth
+  );
   plan.stickyNotes = (plan.stickyNotes||[]).filter(n=>n.id!==noteId);
-  saveState();
-  _refreshCalStickyBanner();
-}
-
-/* ── Approval helpers ────────────────────────────────────── */
-function _renderApprovalBadge(c) {
-  const all = ['anusha','anjani','tejasv'];
-  const approvals = c.approvals || {};
-  const days = c.approvalDays || 3;
-  const allApproved = all.every(a => _getAutoApprovalStatus(c,a)==='approved'||_getAutoApprovalStatus(c,a)==='auto');
-  const anyRejected = all.some(a => _getAutoApprovalStatus(c,a)==='rejected');
-  if (anyRejected) return `<span style="padding:5px 14px;border-radius:20px;background:#FEF2F2;color:#991B1B;font-size:12px;font-weight:700">❌ Changes requested</span>`;
-  if (allApproved)  return `<span style="padding:5px 14px;border-radius:20px;background:#ECFDF5;color:#065F46;font-size:12px;font-weight:700">✅ All approved</span>`;
-  const count = all.filter(a=>_getAutoApprovalStatus(c,a)==='approved'||_getAutoApprovalStatus(c,a)==='auto').length;
-  return `<span style="padding:5px 14px;border-radius:20px;background:#EFF6FF;color:#1D4ED8;font-size:12px;font-weight:700">${count}/3 approved</span>`;
-}
-
-function _getAutoApprovalStatus(c, adminId) {
-  const approvals = c.approvals || {};
-  if (approvals[adminId]) return approvals[adminId].status;
-  // Check if deadline passed
-  if (c.createdAt) {
-    const days = c.approvalDays || 3;
-    const deadline = new Date(c.createdAt).getTime() + days*24*60*60*1000;
-    if (Date.now() > deadline) return 'auto';
-  }
-  return 'pending';
-}
-
-function _getDeadlineText(c) {
-  if (!c.createdAt) return '';
-  const days = c.approvalDays || 3;
-  const deadline = new Date(new Date(c.createdAt).getTime() + days*24*60*60*1000);
-  const now = new Date();
-  const diff = Math.ceil((deadline - now) / (1000*60*60*24));
-  if (diff <= 0) return '(deadline passed — auto-approved)';
-  return `(${diff} day${diff!==1?'s':''} left)`;
-}
-
-function _renderCpImagesWithBrief(images, campId) {
-  if (!images.length) return `<div style="color:var(--text3);font-size:12px;padding:8px 0">No images yet — upload references above</div>`;
-  return images.map((img, i) => `
-    <div style="background:var(--white);border:1px solid var(--border);border-radius:14px;overflow:hidden;display:flex;gap:0">
-      <div style="width:100px;flex-shrink:0;cursor:zoom-in" onclick="_openCpLightbox('${img.url}')">
-        <img src="${img.url}" style="width:100%;height:100%;object-fit:cover;display:block;min-height:80px">
-      </div>
-      <div style="flex:1;padding:10px 12px;display:flex;flex-direction:column;gap:6px">
-        <input class="form-input" value="${(img.brief||'').replace(/"/g,'&quot;')}" placeholder="Brief for this reference (e.g. warm tones, festive mood)…"
-          style="font-size:12px;padding:6px 10px"
-          oninput="updateCpImageBrief('${campId}',${i},this.value)">
-      </div>
-      <button onclick="removeCpImage('${campId}','strat',${i})"
-        style="width:30px;background:var(--coral-light);border:none;cursor:pointer;color:var(--coral);font-size:14px;flex-shrink:0">✕</button>
-    </div>`).join('');
-}
-
-function updateCpImageBrief(campId, idx, brief) {
-  const c = _getCampaigns().find(x=>x.id===campId);
-  if (c && c.stratImages && c.stratImages[idx]) {
-    c.stratImages[idx].brief = brief;
-    clearTimeout(window._cpSaveTimer);
-    window._cpSaveTimer = setTimeout(() => saveState(), 800);
-  }
-}
-
-function setCampaignApproval(campId, adminId, status) {
-  const c = _getCampaigns().find(x=>x.id===campId);
-  if (!c) return;
-  if (!c.approvals) c.approvals = {};
-  c.approvals[adminId] = { status, ts: new Date().toISOString(), by: currentUser?currentUser.name:adminId };
-  saveState();
-  // Re-render approval rows
-  const badge = document.getElementById('strat-approval-badge-'+campId);
-  if (badge) badge.innerHTML = _renderApprovalBadge(c);
-  // Re-render the approval section
-  openCampaignPopup(campId);
-  showToast(status==='approved'?'✅ Approved!':'Changes requested', status==='approved'?'success':'error');
-}
-
-function updateApprovalDeadline(campId) {
-  const c = _getCampaigns().find(x=>x.id===campId);
-  if (!c) return;
-  const el = document.getElementById('strat-deadline-'+campId);
-  if (el) el.textContent = _getDeadlineText(c);
+  saveState(); _refreshCalStickyBanner();
 }
