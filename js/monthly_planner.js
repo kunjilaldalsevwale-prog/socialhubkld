@@ -409,8 +409,20 @@ function openCampaignPopup(id) {
               ${typeof TEAM_USERS!=='undefined' ? Object.values(TEAM_USERS).filter(u=>u.role!=='admin').map(u=>`<option value="${u.name}" ${c.assignedDesigner===u.name?'selected':''}>${u.name}</option>`).join('') : ''}
             </select>
           </div>
+          
+           <!--2.Design reference images with brief -->
+          <div style="margin-bottom:14px">
+            <div class="cp-field-label">Reference images for drafts <span style="font-weight:400;opacity:.6;text-transform:none;font-size:10px">(add brief for each)</span></div>
+            <div id="cp-design-refs-${id}" style="display:flex;flex-direction:column;gap:10px">
+              ${_renderCpImagesWithBrief(c.designRefs||[], id)}
+            </div>
+            <label class="cp-upload-btn" style="margin-top:10px">
+              <input type="file" accept="image/*" multiple style="display:none" onchange="uploadCpDesignRefs(this,'${id}')">
+              ＋ Add reference images
+            </label>
+          </div>
 
-          <!-- 2. Designer notes -->
+          <!-- 3. Designer notes -->
           <div style="margin-bottom:14px">
             <div class="cp-field-label">Designer notes</div>
             <textarea class="form-input form-textarea" rows="3"
@@ -418,14 +430,14 @@ function openCampaignPopup(id) {
               oninput="updateCampaignField('${id}','designNotes',this.value)">${c.designNotes||''}</textarea>
           </div>
 
-          <!-- 3. Feedback on design -->
+          <!-- 4. Feedback on design -->
           <div style="margin-bottom:14px;background:var(--white);border-radius:14px;padding:14px;border:1.5px solid ${c.designFeedback?'var(--amber)':'var(--border)'}">
             <div class="cp-field-label">💬 Feedback on design</div>
             <textarea class="form-input form-textarea" rows="2" placeholder="Leave feedback for the designer…"
               oninput="updateCampaignField('${id}','designFeedback',this.value)">${c.designFeedback||''}</textarea>
           </div>
 
-          <!-- 4. Design uploads -->
+          <!-- 5 . Design uploads -->
           <div style="margin-bottom:14px">
             <div class="cp-field-label">Design uploads</div>
             <div id="cp-design-images-${id}" class="cp-images-grid">
@@ -437,7 +449,7 @@ function openCampaignPopup(id) {
             </label>
           </div>
 
-          <!-- 5. Google Drive folder sync -->
+          <!-- 6. Google Drive folder sync -->
           <div style="background:var(--white);border-radius:12px;padding:12px 14px;border:1.5px solid var(--border)">
             <div class="cp-field-label">📁 Google Drive folder (auto-sync designs)</div>
             <div style="display:flex;gap:8px">
