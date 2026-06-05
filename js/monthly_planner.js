@@ -1,8 +1,5 @@
 /* ============================================================
    MONTHLY PLANNER — Campaign-based
-   Strategist uploads refs with briefs + approval system
-   Designer uploads designs + Drive sync
-   3 admin approvals with auto-approval deadline
    ============================================================ */
 
 let plannerYear  = new Date().getFullYear();
@@ -75,7 +72,7 @@ function addNewCampaign() {
   campaigns.push({
     id, name:'New Campaign', brief:'', startDate:'', endDate:'',
     stratImages:[], stratNotes:'', stratFeedback:'',
-    designImages:[], designNotes:'', designFeedback:'',
+    designRefs:[], designImages:[], designNotes:'', designFeedback:'',
     driveFolderUrl:'', assignedDesigner:'',
     approvals:{}, approvalDays:3,
     createdAt: new Date().toISOString(),
@@ -161,8 +158,9 @@ function _renderCpImages(images, campId, section) {
     </div>`).join('');
 }
 
-function _renderCpImagesWithBrief(images, campId) {
-  if (!images.length) return `<div style="color:var(--text3);font-size:12px;padding:8px 0">No images yet — upload references below</div>`;
+function _renderCpImagesWithBrief(images, campId, section) {
+  section = section || 'strat';
+  if (!images.length) return `<div style="color:var(--text3);font-size:12px;padding:8px 0">No images yet</div>`;
   return images.map((img,i) => `
     <div style="background:var(--white);border:1px solid var(--border);border-radius:14px;overflow:hidden;display:flex;gap:0">
       <div style="width:90px;flex-shrink:0;cursor:zoom-in" onclick="_openCpLightbox('${img.url}')">
@@ -172,17 +170,18 @@ function _renderCpImagesWithBrief(images, campId) {
         <input class="form-input" value="${(img.brief||'').replace(/"/g,'&quot;')}"
           placeholder="Brief for this image (e.g. warm tones, festive mood)…"
           style="font-size:12px;padding:6px 10px"
-          oninput="updateCpImageBrief('${campId}',${i},this.value)">
+          oninput="updateCpImageBrief('${campId}',${i},this.value,'${section}')">
       </div>
-      <button onclick="removeCpImage('${campId}','strat',${i})"
+      <button onclick="removeCpImage('${campId}','${section}',${i})"
         style="width:30px;background:var(--coral-light);border:none;cursor:pointer;color:var(--coral);font-size:14px;flex-shrink:0">✕</button>
     </div>`).join('');
 }
 
-function updateCpImageBrief(campId, idx, brief) {
+function updateCpImageBrief(campId, idx, brief, section) {
   const c = _getCampaigns().find(x=>x.id===campId);
-  if (c && c.stratImages && c.stratImages[idx]) {
-    c.stratImages[idx].brief = brief;
+  const key = section==='designRefs' ? 'designRefs' : 'stratImages';
+  if (c && c[key] && c[key][idx]) {
+    c[key][idx].brief = brief;
     clearTimeout(window._cpSaveTimer);
     window._cpSaveTimer = setTimeout(()=>saveState(), 800);
   }
@@ -200,17 +199,18 @@ async function uploadCpImages(input, campId, section) {
   for (const file of files) {
     try {
       const result = await uploadToCloudinary(file);
-      c[key].push({ url:result.url, name:file.name });
+      c[key].push({ url:result.url, name:file.name, brief:'' });
       if (typeof autoSaveToMediaLibrary==='function') autoSaveToMediaLibrary(result.url, file.name, 'cloudinary');
     } catch(e) { showToast('Upload failed: '+file.name,'error'); }
   }
   saveState();
   const grid = document.getElementById(`cp-${section}-images-${campId}`);
   if (grid) grid.innerHTML = section==='strat'
-    ? _renderCpImagesWithBrief(c[key], campId)
+    ? _renderCpImagesWithBrief(c[key], campId, 'strat')
     : _renderCpImages(c[key], campId, section);
   showToast(`✅ Uploaded!`,'success');
 }
+
 async function uploadCpDesignRefs(input, campId) {
   const files = Array.from(input.files||[]);
   if (!files.length) return;
@@ -223,11 +223,12 @@ async function uploadCpDesignRefs(input, campId) {
     try {
       const result = await uploadToCloudinary(file);
       c.designRefs.push({ url:result.url, name:file.name, brief:'' });
+      if (typeof autoSaveToMediaLibrary==='function') autoSaveToMediaLibrary(result.url, file.name, 'cloudinary');
     } catch(e) { showToast('Upload failed: '+file.name,'error'); }
   }
   saveState();
   const grid = document.getElementById(`cp-design-refs-${campId}`);
-  if (grid) grid.innerHTML = _renderCpImagesWithBrief(c.designRefs, campId);
+  if (grid) grid.innerHTML = _renderCpImagesWithBrief(c.designRefs, campId, 'designRefs');
   showToast('✅ Uploaded!','success');
 }
 
@@ -238,11 +239,11 @@ function removeCpImage(campId, section, idx) {
   if (!c[key]) return;
   c[key].splice(idx, 1);
   saveState();
-  const grid = document.getElementById(`cp-${section}-images-${campId}`);
-  if (grid) grid.innerHTML = section==='strat'
-    ? _renderCpImagesWithBrief(c[key], campId)
-    : section==='designRefs'
-    ? _renderCpImagesWithBrief(c[key], campId)
+  const grid = section==='designRefs'
+    ? document.getElementById(`cp-design-refs-${campId}`)
+    : document.getElementById(`cp-${section}-images-${campId}`);
+  if (grid) grid.innerHTML = (section==='strat'||section==='designRefs')
+    ? _renderCpImagesWithBrief(c[key], campId, section)
     : _renderCpImages(c[key], campId, section);
 }
 
@@ -262,17 +263,13 @@ function syncDriveFolder(campId) {
   if (!c) return;
   const input = document.getElementById('cp-drive-'+campId);
   const url = input ? input.value.trim() : c.driveFolderUrl||'';
-  if (!url) { showToast('Paste a Drive file or folder link first','error'); return; }
-
-  // Extract file ID from individual file link
+  if (!url) { showToast('Paste a Drive file link first','error'); return; }
   const fileMatch = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
   if (fileMatch) {
     const fileId  = fileMatch[1];
     const viewUrl = `https://drive.google.com/uc?export=view&id=${fileId}`;
     if (!c.designImages) c.designImages = [];
-    if (c.designImages.find(img=>img.url===viewUrl)) {
-      showToast('Already added',''); return;
-    }
+    if (c.designImages.find(img=>img.url===viewUrl)) { showToast('Already added',''); return; }
     c.designImages.push({ url:viewUrl, name:`drive-${fileId.slice(0,8)}.jpg`, source:'drive' });
     saveState();
     const grid = document.getElementById(`cp-design-images-${campId}`);
@@ -280,7 +277,7 @@ function syncDriveFolder(campId) {
     showToast('✅ Design added from Drive!','success');
     return;
   }
-  showToast('Paste an individual file link (not folder) — open file in Drive → Share → Copy link','error');
+  showToast('Paste an individual file link — open file in Drive → Share → Copy link','error');
 }
 
 /* ══════════════════════════════════════════════════════════
@@ -347,11 +344,11 @@ function openCampaignPopup(id) {
             <div id="strat-approval-badge-${id}">${_renderApprovalBadge(c)}</div>
           </div>
 
-          <!-- Reference images with individual briefs -->
+          <!-- Reference images with briefs -->
           <div style="margin-bottom:14px">
             <div class="cp-field-label">Reference images <span style="font-weight:400;opacity:.6;text-transform:none;font-size:10px">(add a brief for each)</span></div>
             <div id="cp-strat-images-${id}" style="display:flex;flex-direction:column;gap:10px">
-              ${_renderCpImagesWithBrief(c.stratImages||[], id)}
+              ${_renderCpImagesWithBrief(c.stratImages||[], id, 'strat')}
             </div>
             <label class="cp-upload-btn" style="margin-top:10px">
               <input type="file" accept="image/*" multiple style="display:none" onchange="uploadCpImages(this,'${id}','strat')">
@@ -367,41 +364,51 @@ function openCampaignPopup(id) {
               oninput="updateCampaignField('${id}','stratNotes',this.value)">${c.stratNotes||''}</textarea>
           </div>
 
-          <!-- Approval panel -->
+          <!-- Approval panel — single slab -->
           <div style="background:var(--white);border-radius:14px;padding:16px;border:1.5px solid var(--border)">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
-              <div style="font-size:12px;font-weight:800;color:var(--text)">✅ Admin Approvals</div>
-              <div style="display:flex;align-items:center;gap:8px">
-                <span style="font-size:11px;color:var(--text3)">Auto-approve after</span>
-                <input type="number" min="1" max="30" value="${c.approvalDays||3}"
-                  style="width:48px;padding:4px 8px;border:1.5px solid var(--border2);border-radius:8px;font-size:12px;font-family:var(--font);text-align:center"
-                  onchange="updateCampaignField('${id}','approvalDays',parseInt(this.value));updateApprovalDeadline('${id}')">
-                <span style="font-size:11px;color:var(--text3)">days</span>
-                <span id="strat-deadline-${id}" style="font-size:11px;font-weight:600;color:var(--brand)">${_getDeadlineText(c)}</span>
+            <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
+              <div style="display:flex;align-items:center;gap:14px">
+                <div style="display:flex;gap:6px">
+                  ${ADMINS.map(a => {
+                    const s = _getApprovalStatus(c,a);
+                    const bg = s==='approved'||s==='auto' ? '#10B981' : s==='rejected' ? '#EF4444' : '#E5E7EB';
+                    const icon = s==='approved'||s==='auto' ? '✓' : s==='rejected' ? '✕' : '';
+                    const u = typeof TEAM_USERS!=='undefined'&&TEAM_USERS[a] ? TEAM_USERS[a].name : a;
+                    return `<div style="width:32px;height:32px;border-radius:50%;background:${bg};display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:#fff;border:2px solid ${bg==='#E5E7EB'?'#D1D5DB':'transparent'}" title="${u}">${icon}</div>`;
+                  }).join('')}
+                </div>
+                <div>
+                  <div>${_renderApprovalBadge(c)}</div>
+                  <div style="font-size:11px;color:var(--text3);margin-top:3px">
+                    Auto-approve after
+                    <input type="number" min="1" max="30" value="${c.approvalDays||3}"
+                      style="width:36px;padding:2px 6px;border:1px solid var(--border2);border-radius:6px;font-size:11px;font-family:var(--font);text-align:center;margin:0 3px"
+                      onchange="updateCampaignField('${id}','approvalDays',parseInt(this.value));updateApprovalDeadline('${id}')">
+                    days · <span id="strat-deadline-${id}">${_getDeadlineText(c)}</span>
+                  </div>
+                </div>
               </div>
+              ${currentUser && ADMINS.includes(currentUser.id) && _getApprovalStatus(c,currentUser.id)==='pending' ? `
+              <div style="display:flex;gap:8px">
+                <button onclick="setCampaignApproval('${id}','${currentUser.id}','approved')"
+                  style="padding:8px 18px;background:#ECFDF5;color:#065F46;border:1.5px solid #6EE7B7;border-radius:20px;font-size:13px;font-weight:700;cursor:pointer;font-family:var(--font)">✅ Approve</button>
+                <button onclick="setCampaignApproval('${id}','${currentUser.id}','rejected')"
+                  style="padding:8px 18px;background:#FEF2F2;color:#991B1B;border:1.5px solid #FCA5A5;border-radius:20px;font-size:13px;font-weight:700;cursor:pointer;font-family:var(--font)">❌ Reject</button>
+              </div>` : `
+              <div style="display:flex;gap:6px;flex-wrap:wrap">
+                ${ADMINS.map(a=>{
+                  const u = typeof TEAM_USERS!=='undefined'&&TEAM_USERS[a] ? TEAM_USERS[a].name : a;
+                  const s = _getApprovalStatus(c,a);
+                  const show = s==='pending' ? `<div style="display:flex;gap:5px">
+                    <button onclick="setCampaignApproval('${id}','${a}','approved')" style="padding:4px 10px;background:#ECFDF5;color:#065F46;border:1px solid #6EE7B7;border-radius:16px;font-size:11px;font-weight:700;cursor:pointer;font-family:var(--font)">✅</button>
+                    <button onclick="setCampaignApproval('${id}','${a}','rejected')" style="padding:4px 10px;background:#FEF2F2;color:#991B1B;border:1px solid #FCA5A5;border-radius:16px;font-size:11px;font-weight:700;cursor:pointer;font-family:var(--font)">❌</button>
+                  </div>` : `<span style="font-size:11px;color:var(--text3)">${s==='auto'?'auto ✓':s}</span>`;
+                  return `<div style="font-size:11px;color:var(--text2);display:flex;align-items:center;gap:5px"><strong>${u}</strong>${show}</div>`;
+                }).join('')}
+              </div>`}
             </div>
-            ${ADMINS.map(adminId => {
-              const u = typeof TEAM_USERS!=='undefined'&&TEAM_USERS[adminId] ? TEAM_USERS[adminId] : {name:adminId,avatar:adminId.slice(0,2).toUpperCase(),color:'#DBEAFE',textColor:'#1D4ED8'};
-              const status = _getApprovalStatus(c, adminId);
-              return `<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)">
-                <div style="width:28px;height:28px;border-radius:50%;background:${u.color||'#DBEAFE'};color:${u.textColor||'#1D4ED8'};display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;flex-shrink:0">${u.avatar||u.name.slice(0,2).toUpperCase()}</div>
-                <div style="flex:1;font-size:13px;font-weight:700;color:var(--text)">${u.name||adminId}</div>
-                ${status==='auto'
-                  ? `<span style="font-size:11px;font-weight:700;padding:4px 10px;border-radius:20px;background:#F0FDF4;color:#166534">✅ Auto-approved</span>`
-                  : status==='approved'
-                  ? `<span style="font-size:11px;font-weight:700;padding:4px 10px;border-radius:20px;background:#ECFDF5;color:#065F46">✅ Approved</span>`
-                  : status==='rejected'
-                  ? `<span style="font-size:11px;font-weight:700;padding:4px 10px;border-radius:20px;background:#FEF2F2;color:#991B1B">❌ Changes requested</span>`
-                  : `<div style="display:flex;gap:6px">
-                      <button onclick="setCampaignApproval('${id}','${adminId}','approved')"
-                        style="padding:5px 12px;background:#ECFDF5;color:#065F46;border:1.5px solid #6EE7B7;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;font-family:var(--font)">✅ Approve</button>
-                      <button onclick="setCampaignApproval('${id}','${adminId}','rejected')"
-                        style="padding:5px 12px;background:#FEF2F2;color:#991B1B;border:1.5px solid #FCA5A5;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;font-family:var(--font)">❌ Reject</button>
-                    </div>`}
-              </div>`;
-            }).join('')}
-            <!-- Feedback -->
-            <div style="margin-top:12px">
+            <!-- Feedback on strategy -->
+            <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border)">
               <div class="cp-field-label">💬 Feedback on strategy</div>
               <textarea class="form-input form-textarea" rows="2" placeholder="Leave feedback for the strategist…"
                 oninput="updateCampaignField('${id}','stratFeedback',this.value)">${c.stratFeedback||''}</textarea>
@@ -409,13 +416,13 @@ function openCampaignPopup(id) {
           </div>
         </div>
 
-       <!-- ══ DESIGNER ══ -->
+        <!-- ══ DESIGNER ══ -->
         <div style="background:var(--beige);border-radius:18px;padding:20px;border:1px solid var(--border)">
           <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
             <div style="width:36px;height:36px;border-radius:50%;background:#DCFCE7;color:#065F46;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:800">D</div>
             <div style="flex:1">
               <div style="font-size:14px;font-weight:800;color:var(--text)">Designer</div>
-              <div style="font-size:11px;color:var(--text3)">Add notes · upload designs · sync from Drive</div>
+              <div style="font-size:11px;color:var(--text3)">Upload references · add notes · upload designs · sync from Drive</div>
             </div>
           </div>
 
@@ -427,12 +434,12 @@ function openCampaignPopup(id) {
               ${typeof TEAM_USERS!=='undefined' ? Object.values(TEAM_USERS).filter(u=>u.role!=='admin').map(u=>`<option value="${u.name}" ${c.assignedDesigner===u.name?'selected':''}>${u.name}</option>`).join('') : ''}
             </select>
           </div>
-          
-           <!--2.Design reference images with brief -->
+
+          <!-- 2. Reference images for drafts -->
           <div style="margin-bottom:14px">
             <div class="cp-field-label">Reference images for drafts <span style="font-weight:400;opacity:.6;text-transform:none;font-size:10px">(add brief for each)</span></div>
             <div id="cp-design-refs-${id}" style="display:flex;flex-direction:column;gap:10px">
-              ${_renderCpImagesWithBrief(c.designRefs||[], id)}
+              ${_renderCpImagesWithBrief(c.designRefs||[], id, 'designRefs')}
             </div>
             <label class="cp-upload-btn" style="margin-top:10px">
               <input type="file" accept="image/*" multiple style="display:none" onchange="uploadCpDesignRefs(this,'${id}')">
@@ -455,7 +462,7 @@ function openCampaignPopup(id) {
               oninput="updateCampaignField('${id}','designFeedback',this.value)">${c.designFeedback||''}</textarea>
           </div>
 
-          <!-- 5 . Design uploads -->
+          <!-- 5. Design uploads -->
           <div style="margin-bottom:14px">
             <div class="cp-field-label">Design uploads</div>
             <div id="cp-design-images-${id}" class="cp-images-grid">
@@ -467,21 +474,23 @@ function openCampaignPopup(id) {
             </label>
           </div>
 
-          <!-- 6. Google Drive folder sync -->
+          <!-- 6. Google Drive sync -->
           <div style="background:var(--white);border-radius:12px;padding:12px 14px;border:1.5px solid var(--border)">
-            <div class="cp-field-label">📁 Google Drive folder (auto-sync designs)</div>
+            <div class="cp-field-label">📁 Google Drive (paste individual file link)</div>
             <div style="display:flex;gap:8px">
               <input class="form-input" id="cp-drive-${id}" value="${c.driveFolderUrl||''}"
-                placeholder="Paste shared Google Drive folder link…"
+                placeholder="Open file in Drive → Share → Copy link → paste here"
                 style="font-size:12px;flex:1"
                 onchange="updateCampaignField('${id}','driveFolderUrl',this.value)">
               <button onclick="syncDriveFolder('${id}')"
-                style="padding:8px 14px;background:var(--brand);color:#fff;border:none;border-radius:12px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;font-family:var(--font)">🔄 Sync</button>
+                style="padding:8px 14px;background:var(--brand);color:#fff;border:none;border-radius:12px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;font-family:var(--font)">🔄 Add</button>
             </div>
-            <div style="font-size:11px;color:var(--text3);margin-top:5px">Designer uploads to Drive folder → paste link → Sync → images appear above</div>
+            <div style="font-size:11px;color:var(--text3);margin-top:5px">Paste one file link at a time → click Add → appears in Design uploads above</div>
           </div>
 
         </div>
+
+      </div>
 
       <!-- Footer -->
       <div style="padding:16px 28px;border-top:1px solid var(--border);background:var(--beige);display:flex;justify-content:space-between;align-items:center;border-radius:0 0 24px 24px">
@@ -512,7 +521,7 @@ function updateCampaignField(id, field, value) {
 }
 
 /* ══════════════════════════════════════════════════════════
-   STICKY NOTES (for calendar banner)
+   STICKY NOTES
 ══════════════════════════════════════════════════════════ */
 function addStickyNote() {
   const key = _getPlannerKey();
@@ -534,7 +543,7 @@ function _ensureMonth(y, m) {
 function _refreshCalStickyBanner() {
   const banner = document.getElementById('calStickyBanner');
   if (!banner) return;
-  const plan  = _ensureMonth(
+  const plan = _ensureMonth(
     typeof channelCalYear!=='undefined'?channelCalYear:plannerYear,
     typeof channelCalMonth!=='undefined'?channelCalMonth:plannerMonth
   );
@@ -560,29 +569,4 @@ function deleteStickyNoteFromBanner(noteId) {
   );
   plan.stickyNotes = (plan.stickyNotes||[]).filter(n=>n.id!==noteId);
   saveState(); _refreshCalStickyBanner();
-}
-function syncDriveFolder(campId) {
-  const c = _getCampaigns().find(x=>x.id===campId);
-  if (!c) return;
-  const input = document.getElementById('cp-drive-'+campId);
-  const url = input ? input.value.trim() : c.driveFolderUrl||'';
-  if (!url) { showToast('Paste a Drive file or folder link first','error'); return; }
-
-  // Extract file ID from individual file link
-  const fileMatch = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
-  if (fileMatch) {
-    const fileId  = fileMatch[1];
-    const viewUrl = `https://drive.google.com/uc?export=view&id=${fileId}`;
-    if (!c.designImages) c.designImages = [];
-    if (c.designImages.find(img=>img.url===viewUrl)) {
-      showToast('Already added',''); return;
-    }
-    c.designImages.push({ url:viewUrl, name:`drive-${fileId.slice(0,8)}.jpg`, source:'drive' });
-    saveState();
-    const grid = document.getElementById(`cp-design-images-${campId}`);
-    if (grid) grid.innerHTML = _renderCpImages(c.designImages, campId, 'design');
-    showToast('✅ Design added from Drive!','success');
-    return;
-  }
-  showToast('Paste an individual file link (not folder) — open file in Drive → Share → Copy link','error');
 }
