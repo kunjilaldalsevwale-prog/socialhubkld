@@ -234,11 +234,14 @@ async function uploadCpDesignRefs(input, campId) {
 function removeCpImage(campId, section, idx) {
   const c = _getCampaigns().find(x=>x.id===campId);
   if (!c) return;
-  const key = section==='strat' ? 'stratImages' : 'designImages';
+  const key = section==='strat' ? 'stratImages' : section==='designRefs' ? 'designRefs' : 'designImages';
+  if (!c[key]) return;
   c[key].splice(idx, 1);
   saveState();
   const grid = document.getElementById(`cp-${section}-images-${campId}`);
   if (grid) grid.innerHTML = section==='strat'
+    ? _renderCpImagesWithBrief(c[key], campId)
+    : section==='designRefs'
     ? _renderCpImagesWithBrief(c[key], campId)
     : _renderCpImages(c[key], campId, section);
 }
