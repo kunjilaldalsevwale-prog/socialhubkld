@@ -288,6 +288,7 @@ async function syncDriveFolder(campId) {
         const viewUrl = `https://lh3.googleusercontent.com/d/${file.id}`;
         if (!c.designImages.find(img=>img.url===viewUrl)) {
           c.designImages.push({ url:viewUrl, name:file.name, source:'drive' });
+        if (typeof autoSaveToMediaLibrary==='function') autoSaveToMediaLibrary(viewUrl, file.name, 'drive');
           added++;
         }
       });
@@ -308,7 +309,8 @@ async function syncDriveFolder(campId) {
     const viewUrl = `https://lh3.googleusercontent.com/d/${fileId}`;
     if (!c.designImages) c.designImages = [];
     if (c.designImages.find(img=>img.url===viewUrl)) { showToast('Already added',''); return; }
-    c.designImages.push({ url:viewUrl, name:`drive-${fileId.slice(0,8)}.jpg`, source:'drive' });
+   c.designImages.push({ url:viewUrl, name:`drive-${fileId.slice(0,8)}.jpg`, source:'drive' });
+    if (typeof autoSaveToMediaLibrary==='function') autoSaveToMediaLibrary(viewUrl, `drive-${fileId.slice(0,8)}.jpg`, 'drive');
     saveState();
     const grid = document.getElementById(`cp-design-images-${campId}`);
     if (grid) grid.innerHTML = _renderCpImages(c.designImages, campId, 'design');
