@@ -211,6 +211,25 @@ async function uploadCpImages(input, campId, section) {
     : _renderCpImages(c[key], campId, section);
   showToast(`✅ Uploaded!`,'success');
 }
+async function uploadCpDesignRefs(input, campId) {
+  const files = Array.from(input.files||[]);
+  if (!files.length) return;
+  input.value = '';
+  const c = _getCampaigns().find(x=>x.id===campId);
+  if (!c) return;
+  if (!c.designRefs) c.designRefs = [];
+  showToast(`☁️ Uploading ${files.length} file${files.length>1?'s':''}…`);
+  for (const file of files) {
+    try {
+      const result = await uploadToCloudinary(file);
+      c.designRefs.push({ url:result.url, name:file.name, brief:'' });
+    } catch(e) { showToast('Upload failed: '+file.name,'error'); }
+  }
+  saveState();
+  const grid = document.getElementById(`cp-design-refs-${campId}`);
+  if (grid) grid.innerHTML = _renderCpImagesWithBrief(c.designRefs, campId);
+  showToast('✅ Uploaded!','success');
+}
 
 function removeCpImage(campId, section, idx) {
   const c = _getCampaigns().find(x=>x.id===campId);
