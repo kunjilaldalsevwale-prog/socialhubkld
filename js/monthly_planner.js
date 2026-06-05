@@ -391,17 +391,17 @@ function openCampaignPopup(id) {
           </div>
         </div>
 
-        <!-- ══ DESIGNER ══ -->
+       <!-- ══ DESIGNER ══ -->
         <div style="background:var(--beige);border-radius:18px;padding:20px;border:1px solid var(--border)">
           <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
             <div style="width:36px;height:36px;border-radius:50%;background:#DCFCE7;color:#065F46;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:800">D</div>
             <div style="flex:1">
               <div style="font-size:14px;font-weight:800;color:var(--text)">Designer</div>
-              <div style="font-size:11px;color:var(--text3)">Upload designs · sync from Drive · add notes</div>
+              <div style="font-size:11px;color:var(--text3)">Add notes · upload designs · sync from Drive</div>
             </div>
           </div>
 
-          <!-- Assign designer -->
+          <!-- 1. Assign designer -->
           <div style="margin-bottom:14px">
             <div class="cp-field-label">Assign designer</div>
             <select class="form-select" onchange="updateCampaignField('${id}','assignedDesigner',this.value)">
@@ -410,21 +410,22 @@ function openCampaignPopup(id) {
             </select>
           </div>
 
-          <!-- Drive folder sync -->
-          <div style="margin-bottom:14px;background:var(--white);border-radius:12px;padding:12px 14px;border:1.5px solid var(--border)">
-            <div class="cp-field-label">📁 Google Drive folder (auto-sync designs)</div>
-            <div style="display:flex;gap:8px">
-              <input class="form-input" id="cp-drive-${id}" value="${c.driveFolderUrl||''}"
-                placeholder="Paste shared Google Drive folder link…"
-                style="font-size:12px;flex:1"
-                onchange="updateCampaignField('${id}','driveFolderUrl',this.value)">
-              <button onclick="syncDriveFolder('${id}')"
-                style="padding:8px 14px;background:var(--brand);color:#fff;border:none;border-radius:12px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;font-family:var(--font)">🔄 Sync</button>
-            </div>
-            <div style="font-size:11px;color:var(--text3);margin-top:5px">Designer uploads to Drive folder → paste link → Sync → images appear below</div>
+          <!-- 2. Designer notes -->
+          <div style="margin-bottom:14px">
+            <div class="cp-field-label">Designer notes</div>
+            <textarea class="form-input form-textarea" rows="3"
+              placeholder="Design decisions, font choices, colour palette, revisions needed…"
+              oninput="updateCampaignField('${id}','designNotes',this.value)">${c.designNotes||''}</textarea>
           </div>
 
-          <!-- Design uploads -->
+          <!-- 3. Feedback on design -->
+          <div style="margin-bottom:14px;background:var(--white);border-radius:14px;padding:14px;border:1.5px solid ${c.designFeedback?'var(--amber)':'var(--border)'}">
+            <div class="cp-field-label">💬 Feedback on design</div>
+            <textarea class="form-input form-textarea" rows="2" placeholder="Leave feedback for the designer…"
+              oninput="updateCampaignField('${id}','designFeedback',this.value)">${c.designFeedback||''}</textarea>
+          </div>
+
+          <!-- 4. Design uploads -->
           <div style="margin-bottom:14px">
             <div class="cp-field-label">Design uploads</div>
             <div id="cp-design-images-${id}" class="cp-images-grid">
@@ -435,38 +436,22 @@ function openCampaignPopup(id) {
               ＋ Add designs
             </label>
           </div>
-<!-- Google Drive folder sync -->
-          <div style="margin-bottom:14px;background:var(--white);border-radius:12px;padding:12px 14px;border:1.5px solid var(--border)">
-            <div class="cp-field-label">📁 Google Drive folder link</div>
+
+          <!-- 5. Google Drive folder sync -->
+          <div style="background:var(--white);border-radius:12px;padding:12px 14px;border:1.5px solid var(--border)">
+            <div class="cp-field-label">📁 Google Drive folder (auto-sync designs)</div>
             <div style="display:flex;gap:8px">
-              <input class="form-input" id="cp-drive-folder-${id}" value="${c.driveFolderUrl||''}"
-                placeholder="Paste shared Google Drive folder link…" style="font-size:12px;flex:1"
+              <input class="form-input" id="cp-drive-${id}" value="${c.driveFolderUrl||''}"
+                placeholder="Paste shared Google Drive folder link…"
+                style="font-size:12px;flex:1"
                 onchange="updateCampaignField('${id}','driveFolderUrl',this.value)">
               <button onclick="syncDriveFolder('${id}')"
-                style="padding:8px 14px;background:var(--brand);color:#fff;border:none;border-radius:12px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;font-family:var(--font)">
-                🔄 Sync
-              </button>
+                style="padding:8px 14px;background:var(--brand);color:#fff;border:none;border-radius:12px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;font-family:var(--font)">🔄 Sync</button>
             </div>
-            <div style="font-size:11px;color:var(--text3);margin-top:5px">Designer shares Google Drive folder → paste link → click Sync → images appear below automatically</div>
+            <div style="font-size:11px;color:var(--text3);margin-top:5px">Designer uploads to Drive folder → paste link → Sync → images appear above</div>
           </div>
 
-          <!-- Designer notes -->
-          <div style="margin-bottom:14px">
-            <div class="cp-field-label">Designer notes</div>
-            <textarea class="form-input form-textarea" rows="3"
-              placeholder="Design decisions, font choices, colour palette, revisions needed…"
-              oninput="updateCampaignField('${id}','designNotes',this.value)">${c.designNotes||''}</textarea>
-          </div>
-
-          <!-- Feedback on design -->
-          <div style="background:var(--white);border-radius:14px;padding:14px;border:1.5px solid ${c.designFeedback?'var(--amber)':'var(--border)'}">
-            <div class="cp-field-label">💬 Feedback on design</div>
-            <textarea class="form-input form-textarea" rows="2" placeholder="Leave feedback for the designer…"
-              oninput="updateCampaignField('${id}','designFeedback',this.value)">${c.designFeedback||''}</textarea>
-          </div>
         </div>
-
-      </div>
 
       <!-- Footer -->
       <div style="padding:16px 28px;border-top:1px solid var(--border);background:var(--beige);display:flex;justify-content:space-between;align-items:center;border-radius:0 0 24px 24px">
