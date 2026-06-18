@@ -447,7 +447,7 @@ function saveIdea(existingId) {
   window._ideaColorScheme  = [];
   window._ideaRefImageUrl  = null;
   window._ideaRefImageName = null;
-  saveState(); closeModal(); renderIdeasBoard(); renderSidebarIdeas();
+  saveState(); syncPush(); closeModal(); renderIdeasBoard(); renderSidebarIdeas();
 }
 
 function _openIdeaRefLightbox(url) {
