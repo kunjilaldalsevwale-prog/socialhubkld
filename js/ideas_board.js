@@ -97,11 +97,12 @@ function _renderIdeaCards() {
     const pf  = PLATFORM_COLORS[idea.platform] || {};
     const hasScheme = idea.colorScheme && idea.colorScheme.length > 0;
     const hasRef    = !!idea.refImageUrl;
-    return `<div class="idea-card" id="idea-${idea.id}"
+return `<div class="idea-card" id="idea-${idea.id}"
       draggable="true"
       ondragstart="ideaDragStart(event,${idea.id})"
       ondragend="ideaDragEnd(event)"
-      style="background:${idea.color || cat.color}">
+      onclick="toggleIdeaExpand(${idea.id})"
+      style="background:${idea.color || cat.color};cursor:pointer">
       <div class="idea-card-top">
         <span class="idea-cat-badge" style="background:${cat.text}22;color:${cat.text}">${cat.label}</span>
         <div class="idea-card-actions">
@@ -125,7 +126,6 @@ function _renderIdeaCards() {
 
       <div class="idea-footer">
         <span class="idea-platform" style="font-size:11px;color:var(--text2);font-weight:600">${(IDEA_CHANNELS[idea.platform]||{}).label||idea.platform}</span>
-        <button class="idea-schedule-btn" onclick="scheduleIdeaModal(${idea.id})">📅 Schedule</button>
       </div>
       <div class="idea-drag-hint">⠿ drag to calendar date</div>
     </div>`;
@@ -617,4 +617,9 @@ function deleteBoardRefImage(id) {
   state.boardRefImages = (state.boardRefImages||[]).filter(r=>r.id!=id);
   saveState();
   _renderBoardRefImages();
+}
+function toggleIdeaExpand(id) {
+  const idea = (state.ideas||[]).find(i=>i.id===id);
+  if (!idea) return;
+  showIdeaModal(idea);
 }
