@@ -211,10 +211,11 @@ function _renderMediaGrid() {
       <div class="media-info">
         <div class="media-name" title="${m.name}">${m.name}</div>
         <div class="media-meta">${m.size||''} · ${m.source==='cloudinary'?'☁️ Cloud':'📱 Device'}</div>
-        <div style="display:flex;gap:5px;margin-top:7px;flex-wrap:wrap">
+<div style="display:flex;gap:5px;margin-top:7px;flex-wrap:wrap">
           <button class="media-action-btn" onclick="event.stopPropagation();downloadMedia(${m.id})">⬇ Download</button>
           <button class="media-action-btn" onclick="event.stopPropagation();moveToFolderPicker(${m.id})">📁 Move</button>
           <button class="media-action-btn" onclick="event.stopPropagation();copyMediaUrl(${m.id})">📋 Copy</button>
+          <button class="media-action-btn" onclick="event.stopPropagation();addMediaToPlanner(${m.id})" style="color:var(--brand);border-color:var(--brand-mid)">🗒 Add to Planner</button>
         </div>
       </div>
       <button class="media-delete" onclick="event.stopPropagation();deleteMedia(${m.id})" title="Remove">✕</button>
@@ -684,4 +685,57 @@ function _fmtSize(b) {
   if (b < 1024)       return b + ' B';
   if (b < 1024*1024)  return (b/1024).toFixed(1) + ' KB';
   return (b/(1024*1024)).toFixed(1) + ' MB';
+}
+
+function addMediaToPlanner(mediaId) {
+  const m = (state.mediaLibrary||[]).find(x=>x.id===mediaId);
+  if (!m || !m.url) return;
+
+  // Get current campaigns
+  if (!state.monthlyPlans) state.monthlyPlans = {};
+  const now = new Date();
+  const key = `${now.getFullYear()}-${now.getMonth()}`;
+  if (!state.monthlyPlans[key]) state.monthlyPlans[key] = { campaigns:[] };
+  const campaigns = state.monthlyPlans[key].campaigns || [];
+
+  if (!campaigns.length) {
+    showToast('No campaigns this month — create one in Monthly Planner first', 'error');
+    return;
+  }
+
+  // Show campaign picker
+  document.getElementById('modalTitle').textContent = '🗒 Add to Monthly Planner';
+  document.getElementById('modalBody').innerHTML = `
+    <div style="font-size:13px;color:var(--text2);margin-bottom:14px">
+      Adding: <strong>${m.name}</strong><br>
+      <span style="font-size:11px;color:var(--text3)">Select which campaign to add this image to</span>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      ${campaigns.map(c => `
+        <div style="display:flex;align-items:center;gap:12px;padding:12px;background:var(--surface2);border-radius:14px;border:1px solid var(--border)">
+          <div style="font-size:13px;font-weight:700;color:var(--text);flex:1">${c.name}</div>
+          <div style="display:flex;gap:6px">
+            <button class="btn btn-ghost btn-sm" onclick="addToPlanner('${mediaId}','${c.id}','strat');closeModal()">📌 Strat refs</button>
+            <button class="btn btn-primary btn-sm" onclick="addToPlanner('${mediaId}','${c.id}','design');closeModal()">🎨 Designs</button>
+          </div>
+        </div>`).join('')}
+    </div>`;
+  document.getElementById('modalFooter').innerHTML = `<button class="btn btn-ghost" onclick="closeModal()">Cancel</button>`;
+  document.getElementById('modalOverlay').classList.add('open');
+}
+
+function addToPlanner(mediaId, campId, section) {
+  const m = (state.mediaLibrary||[]).find(x=>x.id===mediaId);
+  if (!m) return;
+  const now = new Date();
+  const key = `${now.getFullYear()}-${now.getMonth()}`;
+  const campaigns = state.monthlyPlans[key].campaigns || [];
+  const c = campaigns.find(x=>x.id===campId);
+  if (!c) return;
+  const field = section==='strat' ? 'stratImages' : 'designImages';
+  if (!c[field]) c[field] = [];
+  if (c[field].find(img=>img.url===m.url)) { showToast('Already in this campaign',''); return; }
+  c[field].push({ url:m.url, name:m.name, brief:'' });
+  saveState();
+  showToast(`✅ Added to ${c.name} — ${section==='strat'?'Strategy refs':'Designs'}!`, 'success');
 }
