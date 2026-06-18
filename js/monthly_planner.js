@@ -183,7 +183,7 @@ function updateCpImageBrief(campId, idx, brief, section) {
   if (c && c[key] && c[key][idx]) {
     c[key][idx].brief = brief;
     clearTimeout(window._cpSaveTimer);
-    window._cpSaveTimer = setTimeout(()=>saveState(), 800);
+    window._cpSaveTimer = setTimeout(()=>saveState(), 300);
   }
 }
 
