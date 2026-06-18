@@ -75,10 +75,17 @@ function _startListening() {
       }
     });
 
-    if (changed) {
+if (changed) {
       DB.save(state);
       _rerender();
       _flash('↓ Updated', '#2563EB');
+      // Re-render current view with fresh data
+      if (typeof currentView !== 'undefined') {
+        if (currentView === 'ideas'    && typeof renderIdeasBoard      === 'function') renderIdeasBoard();
+        if (currentView === 'agenda'   && typeof renderMonthlyPlanner  === 'function') renderMonthlyPlanner();
+        if (currentView === 'channels' && typeof renderChannelGrid     === 'function') renderChannelGrid();
+        if (currentView === 'media'    && typeof renderMediaLibrary    === 'function') renderMediaLibrary();
+      }
     }
   });
 }
