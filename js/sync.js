@@ -96,7 +96,7 @@ if (changed) {
 function syncPush() {
   if (!_syncEnabled) return;
   clearTimeout(_pushTimer);
-  _pushTimer = setTimeout(_doPush, 1500);
+  _pushTimer = setTimeout(_doPush, 300);
 }
 
 function _doPush() {
