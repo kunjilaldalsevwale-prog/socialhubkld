@@ -543,13 +543,18 @@ function openCampaignPopup(id) {
 }
 
 function closeCampaignPopup() {
+  clearTimeout(window._cpSaveTimer);
+  saveState();
+  if (typeof syncPush === 'function') syncPush();
   const p = document.getElementById('campaignPopup');
   if (p) p.style.display = 'none';
-  saveState(); _renderCampaignsList();
+  _renderCampaignsList();
 }
-
 function saveCampaignAndClose(id) {
-  saveState(); closeCampaignPopup();
+  clearTimeout(window._cpSaveTimer);
+  saveState();
+  if (typeof syncPush === 'function') syncPush();
+  closeCampaignPopup();
   showToast('✅ Campaign saved!','success');
 }
 
