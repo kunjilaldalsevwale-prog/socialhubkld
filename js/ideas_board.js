@@ -354,8 +354,8 @@ function showIdeaModal(existing) {
 
     <div class="form-group">
       <label class="form-label">Notes / details</label>
-      <textarea class="form-input form-textarea" id="ni-body" rows="3"
-        placeholder="Concept, tone, visual direction…" style="min-height:70px">${idea.body||''}</textarea>
+<textarea class="form-input form-textarea" id="ni-body" rows="6"
+        placeholder="Concept, tone, visual direction…" style="min-height:140px">${idea.body||''}</textarea>
     </div>
 
     <div class="form-row">
