@@ -399,7 +399,7 @@ function openChannelAddModal(dateStr, occasionName, occasionEmoji) {
       <input class="form-input" id="cadd-title" value="${prefillTitle}" placeholder="Post title" autofocus></div>
 
     <div class="form-group"><label class="form-label">Caption</label>
-      <textarea class="form-input form-textarea" id="cadd-caption" rows="3" style="min-height:65px">${prefillCaption}</textarea></div>
+      <textarea class="form-input form-textarea" id="cadd-caption" rows="6" style="min-height:140px">${prefillCaption}</textarea></div>
 
     <!-- Hidden platform field — uses active channel -->
     <input type="hidden" id="cadd-platform" value="${isWA ? 'WhatsApp' : cfg.label}">
