@@ -2937,3 +2937,39 @@ body, #app { background: #F5F3EF; }
   .cal-cell { min-height: 58px !important; }
   .mmm-grid { grid-template-columns: repeat(4,1fr); }
 }
+
+@media (max-width: 768px) {
+  /* Calendar sidebar — show as scrollable section below calendar */
+  .calendar-sidebar {
+    display: block !important;
+    width: 100% !important;
+    margin-top: 16px;
+    border-radius: 18px !important;
+    max-height: none !important;
+  }
+  .calendar-sidebar .panel {
+    border-radius: 18px !important;
+    height: auto !important;
+  }
+  /* Ideas sidebar */
+  .ideas-sidebar {
+    display: block !important;
+    margin-top: 16px;
+  }
+  /* Cal sidebar tabs — horizontal scroll */
+  .cal-sidebar-tabs {
+    overflow-x: auto;
+    display: flex;
+    gap: 6px;
+    padding-bottom: 4px;
+  }
+  .cst-tab {
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  /* Sidebar panels full height */
+  #csp-ideas, #csp-docs, #csp-festivals {
+    max-height: 400px;
+    overflow-y: auto;
+  }
+}
