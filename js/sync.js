@@ -64,7 +64,7 @@ function _startListening() {
     const fields = ['posts','emailCampaigns','ads','ideas','monthlyPlans',
                     'reminders','customerLists','googleAds','teamPermissions',
                     'teamPasswords','settings','notes','attachedDocs',
-                    'mediaLibrary','mediaFolders'];
+                    'mediaLibrary','mediaFolders','ideaFolders','activityLog','attachedDocs'];
 
     let changed = false;
     fields.forEach(f => {
@@ -126,6 +126,9 @@ function _doPush() {
       thumb: (m.source==='cloudinary'||m.source==='drive') ? m.thumb : null,
     })),
     mediaFolders:    state.mediaFolders    || [],
+     attachedDocs:    state.attachedDocs    || [],
+    ideaFolders:     state.ideaFolders     || [],
+    activityLog:     state.activityLog     || [],
     _editor:         currentUser ? currentUser.name : 'Unknown',
     _time:           Date.now(),
   };
