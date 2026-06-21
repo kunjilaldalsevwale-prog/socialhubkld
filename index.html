@@ -8,7 +8,7 @@
   <!-- Firebase SDK — loaded from CDN before everything else -->
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
-  <link rel="preconnect" href="https://fonts.googleapis.com"F><link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 </head>
 <body>
@@ -36,9 +36,13 @@
       <!-- Calendar with dropdown for 5 channel views -->
       <div class="nav-section-label">Workspace</div>
 
+      <a class="nav-item active" data-view="home" onclick="navigate('home',this)">
+        <span class="nav-icon">🏠</span><span class="nav-label">Home</span>
+      </a>
+
       <!-- Calendar parent item + dropdown -->
       <div class="nav-group" id="navGroupCalendar">
-        <a class="nav-item nav-parent active" data-view="channels" onclick="navigate('channels',this);toggleNavGroup('navGroupCalendar')">
+        <a class="nav-item nav-parent" data-view="channels" onclick="navigate('channels',this);toggleNavGroup('navGroupCalendar')">
           <span class="nav-icon">📅</span><span class="nav-label">Calendar</span>
           <span class="nav-chevron" id="chevron-calendar">▾</span>
         </a>
@@ -68,13 +72,33 @@
         <span class="nav-icon">📸</span><span class="nav-label">Photos</span>
       </a>
 
+      <div class="nav-section-label">Channels</div>
+      <a class="nav-item" data-view="email" onclick="navigate('email',this)">
+        <span class="nav-icon">📧</span><span class="nav-label">Email Marketing</span>
+      </a>
+      <a class="nav-item" data-view="whatsapp" onclick="navigate('whatsapp',this)">
+        <span class="nav-icon">💬</span><span class="nav-label">WhatsApp</span>
+      </a>
+      <a class="nav-item" data-view="meta" onclick="navigate('meta',this)">
+        <span class="nav-icon">📊</span><span class="nav-label">Meta Ads</span>
+      </a>
 
       <div class="nav-section-label">Planning</div>
       <a class="nav-item" data-view="agenda" onclick="navigate('agenda',this)">
         <span class="nav-icon">🗒</span><span class="nav-label">Monthly Planner</span>
       </a>
-    
+      <a class="nav-item" data-view="reminders" onclick="navigate('reminders',this)">
+        <span class="nav-icon">⏰</span><span class="nav-label">Reminders</span>
+        <span class="nav-badge" id="badge-reminders" style="display:none">0</span>
+      </a>
+      <a class="nav-item" data-view="analytics" onclick="navigate('analytics',this)">
+        <span class="nav-icon">📈</span><span class="nav-label">Analytics</span>
+      </a>
+
       <div class="nav-section-label">Account</div>
+      <a class="nav-item" data-view="integrations" onclick="navigate('integrations',this)">
+        <span class="nav-icon">🔗</span><span class="nav-label">Integrations</span>
+      </a>
       <a class="nav-item" data-view="team" onclick="navigate('team',this)">
         <span class="nav-icon">👥</span><span class="nav-label">Team</span>
       </a>
@@ -95,11 +119,10 @@
           <div class="user-plan" id="userPlan">Loading…</div>
         </div>
         <button onclick="event.stopPropagation();logout()" title="Sign out"
-  style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:16px;margin-left:auto;padding:4px 6px;border-radius:6px;transition:all .13s"
-  onmouseover="this.style.color='var(--coral)';this.style.background='var(--coral-light)'" 
-  onmouseout="this.style.color='var(--text3)';this.style.background='none'">
-  ⏻
-</button>
+          style="background:none;border:none;cursor:pointer;color:rgba(255,255,255,.4);font-size:13px;margin-left:auto;padding:2px 4px;border-radius:4px;transition:color .13s"
+          onmouseover="this.style.color='rgba(255,255,255,.8)'" onmouseout="this.style.color='rgba(255,255,255,.4)'">
+          ⏻
+        </button>
       </div>
     </div>
   </aside>
@@ -131,8 +154,70 @@
     <!-- VIEWS -->
     <main class="content" id="content">
 
+      <!-- HOME VIEW -->
+      <div id="view-home" class="view active">
+        <div style="max-width:900px;margin:0 auto">
+
+          <!-- Welcome header -->
+          <div style="margin-bottom:32px">
+            <h1 id="homeGreeting" style="font-size:28px;font-weight:800;color:var(--text);letter-spacing:-.5px;margin-bottom:6px">Good morning 👋</h1>
+            <div style="font-size:14px;color:var(--text3)" id="homeDate"></div>
+          </div>
+
+          <!-- Quick stats -->
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:14px;margin-bottom:36px" id="homeStats"></div>
+
+          <!-- Navigation tiles -->
+          <div style="font-size:12px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:14px">Quick access</div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:16px;margin-bottom:36px">
+
+            <div class="home-tile" onclick="navigate('channels',document.querySelector('[data-view=channels]'))">
+              <div class="home-tile-icon" style="background:linear-gradient(135deg,#DBEAFE,#BFDBFE)">📅</div>
+              <div class="home-tile-label">Calendar</div>
+              <div class="home-tile-sub">Schedule posts</div>
+            </div>
+
+            <div class="home-tile" onclick="navigate('ideas',document.querySelector('[data-view=ideas]'))">
+              <div class="home-tile-icon" style="background:linear-gradient(135deg,#FEF9C3,#FDE68A)">💡</div>
+              <div class="home-tile-label">Ideas Board</div>
+              <div class="home-tile-sub">Capture ideas</div>
+            </div>
+
+            <div class="home-tile" onclick="navigate('media',document.querySelector('[data-view=media]'))">
+              <div class="home-tile-icon" style="background:linear-gradient(135deg,#FCE7F3,#FBCFE8)">📸</div>
+              <div class="home-tile-label">Photos</div>
+              <div class="home-tile-sub">Media library</div>
+            </div>
+
+            <div class="home-tile" onclick="navigate('agenda',document.querySelector('[data-view=agenda]'))">
+              <div class="home-tile-icon" style="background:linear-gradient(135deg,#DCFCE7,#BBF7D0)">🗒</div>
+              <div class="home-tile-label">Monthly Planner</div>
+              <div class="home-tile-sub">Campaigns</div>
+            </div>
+
+            <div class="home-tile" onclick="navigate('team',document.querySelector('[data-view=team]'))">
+              <div class="home-tile-icon" style="background:linear-gradient(135deg,#EDE9FE,#DDD6FE)">👥</div>
+              <div class="home-tile-label">Team</div>
+              <div class="home-tile-sub">Manage members</div>
+            </div>
+
+            <div class="home-tile" onclick="navigate('settings',document.querySelector('[data-view=settings]'))">
+              <div class="home-tile-icon" style="background:linear-gradient(135deg,#F1F5F9,#E2E8F0)">⚙️</div>
+              <div class="home-tile-label">Settings</div>
+              <div class="home-tile-sub">Preferences</div>
+            </div>
+
+          </div>
+
+          <!-- Recent posts -->
+          <div style="font-size:12px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:14px">Recent posts</div>
+          <div id="homeRecentPosts" style="display:flex;flex-direction:column;gap:10px"></div>
+
+        </div>
+      </div>
+
       <!-- CALENDAR VIEW -->
-      <div id="view-calendar" class="view active">
+      <div id="view-calendar" class="view">
 
         <!-- Main calendar + sidebar wrapper -->
         <div class="calendar-layout">
@@ -1085,6 +1170,7 @@
         </div>
 
         <!-- ── STATS ── -->
+        <div class="meta-stats-row" id="mediaStats" style="margin-bottom:22px"></div>
 
         <!-- ── SEARCH + FILTER TOOLBAR ── -->
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px;flex-wrap:wrap">
@@ -1148,7 +1234,8 @@
            IDEAS BOARD VIEW
       ═══════════════════════════════════════════ -->
       <div id="view-ideas" class="view">
-     
+        <div class="meta-stats-row" id="ideaStats"></div>
+
         <div class="ideas-layout">
           <!-- Left: idea cards board -->
           <div class="ideas-main">
@@ -1179,6 +1266,24 @@
                 Upload mood board, reference photos, brand guidelines — visible to your whole team
               </div>
               <div id="boardRefGrid" class="planner-ref-grid"></div>
+            </div>
+
+            <!-- Idea folders -->
+            <div id="ideaFoldersBar" style="display:flex;align-items:center;gap:8px;margin-bottom:14px;flex-wrap:wrap">
+              <button class="media-folder-chip active" id="ideafolder-all" onclick="selectIdeaFolder('all',this)">📁 All ideas</button>
+              <div id="userIdeaFolderChips" style="display:flex;gap:8px;flex-wrap:wrap"></div>
+              <button class="btn btn-ghost btn-sm" onclick="createIdeaFolder()" style="border-style:dashed;font-size:11px">+ New folder</button>
+            </div>
+
+            <!-- Category filters -->
+            <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px">
+              <button class="btn btn-sm idea-filter-btn active" onclick="filterIdeas('all',this)">All</button>
+              <button class="btn btn-sm idea-filter-btn" onclick="filterIdeas('idea',this)">💡 Ideas</button>
+              <button class="btn btn-sm idea-filter-btn" onclick="filterIdeas('video',this)">🎬 Video</button>
+              <button class="btn btn-sm idea-filter-btn" onclick="filterIdeas('caption',this)">✍️ Caption</button>
+              <button class="btn btn-sm idea-filter-btn" onclick="filterIdeas('campaign',this)">📣 Campaign</button>
+              <button class="btn btn-sm idea-filter-btn" onclick="filterIdeas('hashtag',this)">🔖 Hashtag</button>
+              <button class="btn btn-sm idea-filter-btn" onclick="filterIdeas('trend',this)">🔥 Trend</button>
             </div>
 
             <!-- Drag hint banner -->
@@ -1216,6 +1321,65 @@
 
     </main>
   </div>
+  <!-- MOBILE BOTTOM NAV BAR -->
+  <nav class="mobile-bottom-nav" id="mobileBottomNav">
+    <button class="mbn-item active" onclick="navigate('channels',this)" data-view="channels">
+      <span class="mbn-icon">📅</span>
+      <span class="mbn-label">Calendar</span>
+    </button>
+    <button class="mbn-item" onclick="navigate('ideas',this)" data-view="ideas">
+      <span class="mbn-icon">💡</span>
+      <span class="mbn-label">Ideas</span>
+    </button>
+    <button class="mbn-item" onclick="navigate('media',this)" data-view="media">
+      <span class="mbn-icon">📸</span>
+      <span class="mbn-label">Photos</span>
+    </button>
+    <button class="mbn-item" onclick="navigate('agenda',this)" data-view="agenda">
+      <span class="mbn-icon">🗒</span>
+      <span class="mbn-label">Planner</span>
+    </button>
+    <button class="mbn-item" onclick="toggleMobileMenu()" id="mbnMore">
+      <span class="mbn-icon">☰</span>
+      <span class="mbn-label">More</span>
+    </button>
+  </nav>
+
+  <!-- MOBILE MORE MENU -->
+  <div class="mobile-more-menu" id="mobileMoreMenu" style="display:none">
+    <div class="mmm-header">
+      <div style="font-size:15px;font-weight:800;color:var(--text)">More</div>
+      <button onclick="toggleMobileMenu()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text3)">✕</button>
+    </div>
+    <div class="mmm-grid">
+      <button class="mmm-item" onclick="navigate('team',null);toggleMobileMenu()">
+        <span class="mmm-icon" style="background:#EDE9FE">👥</span>
+        <span>Team</span>
+      </button>
+      <button class="mmm-item" onclick="navigate('settings',null);toggleMobileMenu()">
+        <span class="mmm-icon" style="background:#F1F5F9">⚙️</span>
+        <span>Settings</span>
+      </button>
+      <button class="mmm-item" onclick="navigate('activity-log',null);renderActivityLog();toggleMobileMenu()" id="mmm-activity">
+        <span class="mmm-icon" style="background:#FEF9C3">🔍</span>
+        <span>Activity</span>
+      </button>
+      <button class="mmm-item" onclick="logout();toggleMobileMenu()" style="color:var(--coral)">
+        <span class="mmm-icon" style="background:#FEF2F2">⏻</span>
+        <span>Sign out</span>
+      </button>
+    </div>
+    <!-- User info -->
+    <div style="padding:16px;border-top:1px solid var(--border);display:flex;align-items:center;gap:10px">
+      <div id="mbnAvatar" style="width:36px;height:36px;border-radius:50%;background:var(--brand-light);color:var(--brand);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800"></div>
+      <div>
+        <div id="mbnName" style="font-size:13px;font-weight:700;color:var(--text)"></div>
+        <div id="mbnRole" style="font-size:11px;color:var(--text3)"></div>
+      </div>
+    </div>
+  </div>
+  <div class="mmm-backdrop" id="mmmBackdrop" onclick="toggleMobileMenu()" style="display:none"></div>
+
 </div>
 
 <!-- MODAL -->
