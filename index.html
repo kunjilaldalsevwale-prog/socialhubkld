@@ -1159,7 +1159,6 @@
         </div>
 
         <!-- ── STATS ── -->
-        <div class="meta-stats-row" id="mediaStats" style="margin-bottom:22px"></div>
 
         <!-- ── SEARCH + FILTER TOOLBAR ── -->
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px;flex-wrap:wrap">
@@ -1167,15 +1166,6 @@
             <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--text3)">🔍</span>
             <input class="form-input" id="mediaSearchInput" placeholder="Search by name…"
               style="padding-left:36px;font-size:12px" oninput="filterMediaBySearch(this.value)">
-          </div>
-          <div class="filter-tabs">
-            <button class="ftab active" data-filter="all" onclick="filterMedia('all',this)">All</button>
-            <button class="ftab" data-filter="image" onclick="filterMedia('image',this)">Images</button>
-            <button class="ftab" data-filter="video" onclick="filterMedia('video',this)">Videos</button>
-          </div>
-          <div style="display:flex;gap:4px">
-            <button id="viewGrid" class="btn btn-ghost btn-sm active" onclick="setMediaView('grid',this)" title="Grid">⊞</button>
-            <button id="viewList" class="btn btn-ghost btn-sm" onclick="setMediaView('list',this)" title="List">≡</button>
           </div>
         </div>
 
