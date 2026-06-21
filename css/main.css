@@ -2697,3 +2697,243 @@ body, #app { background: #F5F3EF; }
   display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:199;
 }
 .sidebar-backdrop.show { display:block; }
+
+/* ══════════════════════════════════════════
+   HOME PAGE TILES
+══════════════════════════════════════════ */
+.home-tile {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 20px 16px;
+  text-align: center;
+  cursor: pointer;
+  transition: all .18s cubic-bezier(.4,0,.2,1);
+  box-shadow: var(--sh-sm);
+}
+.home-tile:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 28px rgba(37,99,235,.13);
+  border-color: var(--brand-mid);
+}
+.home-tile-icon {
+  width: 56px; height: 56px;
+  border-radius: 16px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 26px;
+  margin: 0 auto 12px;
+}
+.home-tile-label {
+  font-size: 14px; font-weight: 800; color: var(--text);
+  margin-bottom: 3px;
+}
+.home-tile-sub {
+  font-size: 11px; color: var(--text3); font-weight: 500;
+}
+
+/* ══════════════════════════════════════════════════════════
+   MOBILE BOTTOM NAV BAR
+══════════════════════════════════════════════════════════ */
+.mobile-bottom-nav {
+  display: none;
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  height: 64px;
+  background: var(--white);
+  border-top: 1px solid var(--border);
+  box-shadow: 0 -4px 20px rgba(100,80,60,.08);
+  z-index: 300;
+  flex-direction: row;
+  align-items: stretch;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+.mbn-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 6px 4px;
+  color: var(--text3);
+  font-family: var(--font);
+  transition: all .15s;
+  position: relative;
+}
+.mbn-item.active { color: var(--brand); }
+.mbn-item.active::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 20%; right: 20%;
+  height: 2.5px;
+  background: var(--brand);
+  border-radius: 0 0 4px 4px;
+}
+.mbn-icon { font-size: 22px; line-height: 1; }
+.mbn-label { font-size: 10px; font-weight: 600; white-space: nowrap; }
+
+/* More menu */
+.mobile-more-menu {
+  position: fixed;
+  bottom: 64px; left: 0; right: 0;
+  background: var(--white);
+  border-radius: 24px 24px 0 0;
+  box-shadow: 0 -8px 40px rgba(100,80,60,.15);
+  z-index: 400;
+  padding: 16px;
+  animation: slideUp .25s cubic-bezier(.4,0,.2,1);
+}
+.mmm-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+.mmm-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  margin-bottom: 4px;
+}
+.mmm-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 6px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: var(--font);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text2);
+  border-radius: 14px;
+  transition: background .15s;
+}
+.mmm-item:hover { background: var(--beige); }
+.mmm-icon {
+  width: 44px; height: 44px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+}
+.mmm-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.3);
+  z-index: 399;
+}
+
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+
+/* ══ MOBILE OVERRIDES ══ */
+@media (max-width: 768px) {
+  /* Show bottom nav */
+  .mobile-bottom-nav { display: flex; }
+
+  /* Hide sidebar completely on mobile */
+  .sidebar { display: none !important; }
+
+  /* Remove topbar hamburger (not needed with bottom nav) */
+  .mobile-menu-btn { display: none !important; }
+
+  /* Add padding so content doesn't hide behind bottom nav */
+  .content { padding-bottom: 72px !important; }
+
+  /* Topbar compact */
+  .topbar { padding: 0 14px !important; height: 52px !important; }
+  .topbar-right { gap: 6px; }
+  .topbar-right .btn-ghost { display: none; }
+  .topbar-right .btn-primary { padding: 7px 14px !important; font-size: 12px !important; }
+  .search-box { display: none; }
+  .page-title { font-size: 15px !important; font-weight: 800 !important; }
+
+  /* Views */
+  .view { padding: 14px !important; }
+
+  /* Calendar */
+  .channel-layout { grid-template-columns: 1fr !important; }
+  .calendar-sidebar { display: none !important; }
+  .cal-cell { min-height: 72px !important; border-radius: 12px !important; }
+  .cal-day-names > div { font-size: 9px !important; }
+  .cal-month-label { font-size: 17px !important; }
+  .cal-grid { gap: 5px !important; }
+  .cal-toolbar { flex-wrap: wrap; gap: 8px; }
+  .cal-post-pill { font-size: 9px !important; padding: 2px 4px !important; }
+
+  /* Modal — slides up from bottom */
+  .modal-overlay { padding: 0 !important; align-items: flex-end !important; }
+  .modal {
+    width: 100% !important;
+    max-width: 100% !important;
+    border-radius: 24px 24px 0 0 !important;
+    max-height: 92vh !important;
+  }
+
+  /* Campaign popup */
+  #campaignPopup { padding: 0 !important; align-items: flex-end !important; }
+  #campaignPopup > div {
+    border-radius: 24px 24px 0 0 !important;
+    max-height: 95vh;
+    overflow-y: auto;
+    margin: 0 !important;
+    width: 100% !important;
+  }
+
+  /* Forms */
+  .form-row { grid-template-columns: 1fr !important; }
+  .form-input, .form-select { font-size: 16px !important; }
+
+  /* Ideas */
+  .ideas-layout { grid-template-columns: 1fr !important; }
+  .ideas-sidebar { display: none; }
+  .idea-board-grid { grid-template-columns: 1fr 1fr !important; gap: 10px !important; }
+
+  /* Photos */
+  .media-grid { grid-template-columns: repeat(2,1fr) !important; gap: 10px !important; }
+  .media-folders-grid { grid-template-columns: repeat(2,1fr) !important; gap: 10px !important; }
+  .media-card-body { padding: 8px !important; }
+
+  /* Campaign cards */
+  .campaign-card { flex-direction: column !important; }
+  .campaign-card-thumb { width: 100% !important; height: 140px !important; }
+
+  /* Settings */
+  .settings-layout { grid-template-columns: 1fr !important; }
+  .settings-nav {
+    flex-direction: row !important;
+    overflow-x: auto !important;
+    display: flex !important;
+    padding: 8px !important;
+    gap: 4px;
+    border-radius: 14px !important;
+  }
+  .snav-item { white-space: nowrap; padding: 7px 14px !important; border-radius: 20px !important; font-size: 12px; }
+
+  /* Team */
+  .team-grid { grid-template-columns: 1fr 1fr !important; }
+
+  /* Stat cards */
+  .meta-stats-row { grid-template-columns: 1fr 1fr !important; gap: 10px !important; }
+  .meta-stat-card { padding: 14px !important; }
+  .msc-val { font-size: 22px !important; }
+}
+
+@media (max-width: 480px) {
+  .idea-board-grid { grid-template-columns: 1fr !important; }
+  .team-grid { grid-template-columns: 1fr !important; }
+  .media-grid { grid-template-columns: repeat(2,1fr) !important; }
+  .cal-cell { min-height: 58px !important; }
+  .mmm-grid { grid-template-columns: repeat(4,1fr); }
+}
