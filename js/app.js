@@ -3,7 +3,7 @@ let currentView = 'channels';
 let sidebarCollapsed = false;
 
 const VIEW_TITLES = {
-  channels:'Calendar', ideas:'Ideas Board', agenda:'Monthly Planner', home:'Home', integrations:'Integrations', 'activity-log':'Activity Log', meta:'Meta Ads Manager', whatsapp:'WhatsApp Marketing',
+  channels:'Calendar', ideas:'Ideas Board', agenda:'Monthly Planner', integrations:'Integrations', 'activity-log':'Activity Log', meta:'Meta Ads Manager', whatsapp:'WhatsApp Marketing',
   email:'Email Marketing', media:'Media Library',
   reminders:'Reminders', agenda:'Monthly Agenda', analytics:'Analytics',
   team:'Team', settings:'Settings',
@@ -12,13 +12,12 @@ const VIEW_TITLES = {
 };
 
 const ALL_VIEWS = [
-  'home','channels','calendar','posts','create',
+  'channels','calendar','posts','create',
   'meta','whatsapp','email','media','ideas',
   'reminders','agenda','analytics','integrations','activity-log','team','settings'
 ];
 
 function navigate(view, el) {
-  if (view === 'home') setTimeout(renderHomePage, 50);
   _updateMobileNav(view);
   ALL_VIEWS.forEach(n => {
     const v = document.getElementById('view-' + n);
