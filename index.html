@@ -72,17 +72,6 @@
         <span class="nav-icon">📸</span><span class="nav-label">Photos</span>
       </a>
 
-      <div class="nav-section-label">Channels</div>
-      <a class="nav-item" data-view="email" onclick="navigate('email',this)">
-        <span class="nav-icon">📧</span><span class="nav-label">Email Marketing</span>
-      </a>
-      <a class="nav-item" data-view="whatsapp" onclick="navigate('whatsapp',this)">
-        <span class="nav-icon">💬</span><span class="nav-label">WhatsApp</span>
-      </a>
-      <a class="nav-item" data-view="meta" onclick="navigate('meta',this)">
-        <span class="nav-icon">📊</span><span class="nav-label">Meta Ads</span>
-      </a>
-
       <div class="nav-section-label">Planning</div>
       <a class="nav-item" data-view="agenda" onclick="navigate('agenda',this)">
         <span class="nav-icon">🗒</span><span class="nav-label">Monthly Planner</span>
@@ -1234,7 +1223,6 @@
            IDEAS BOARD VIEW
       ═══════════════════════════════════════════ -->
       <div id="view-ideas" class="view">
-        <div class="meta-stats-row" id="ideaStats"></div>
 
         <div class="ideas-layout">
           <!-- Left: idea cards board -->
@@ -1276,15 +1264,7 @@
             </div>
 
             <!-- Category filters -->
-            <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px">
-              <button class="btn btn-sm idea-filter-btn active" onclick="filterIdeas('all',this)">All</button>
-              <button class="btn btn-sm idea-filter-btn" onclick="filterIdeas('idea',this)">💡 Ideas</button>
-              <button class="btn btn-sm idea-filter-btn" onclick="filterIdeas('video',this)">🎬 Video</button>
-              <button class="btn btn-sm idea-filter-btn" onclick="filterIdeas('caption',this)">✍️ Caption</button>
-              <button class="btn btn-sm idea-filter-btn" onclick="filterIdeas('campaign',this)">📣 Campaign</button>
-              <button class="btn btn-sm idea-filter-btn" onclick="filterIdeas('hashtag',this)">🔖 Hashtag</button>
-              <button class="btn btn-sm idea-filter-btn" onclick="filterIdeas('trend',this)">🔥 Trend</button>
-            </div>
+            
 
             <!-- Drag hint banner -->
             <div class="idea-drag-banner">
