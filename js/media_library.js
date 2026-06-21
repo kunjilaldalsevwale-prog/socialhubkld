@@ -37,6 +37,7 @@ async function uploadToCloudinary(file, onProgress) {
 /* ══════════════════════════════════════════════════════════
    RENDER — main entry point
 ══════════════════════════════════════════════════════════ */
+function renderMediaLibrary() {
   _renderFoldersRow();
   _renderMediaGrid();
   _renderBreadcrumb();
