@@ -37,25 +37,13 @@ async function uploadToCloudinary(file, onProgress) {
 /* ══════════════════════════════════════════════════════════
    RENDER — main entry point
 ══════════════════════════════════════════════════════════ */
-function renderMediaLibrary() {
-  _renderMediaStats();
   _renderFoldersRow();
   _renderMediaGrid();
   _renderBreadcrumb();
 }
 
 /* ── Stats ────────────────────────────────────────────── */
-function _renderMediaStats() {
-  const el  = document.getElementById('mediaStats');
-  if (!el) return;
-  const lib = state.mediaLibrary || [];
-  const folders = state.mediaFolders || [];
-  el.innerHTML = `
-    <div class="meta-stat-card"><div class="msc-label">Total files</div><div class="msc-val">${lib.length}</div><div class="msc-sub">In library</div></div>
-    <div class="meta-stat-card"><div class="msc-label">Images</div><div class="msc-val">${lib.filter(m=>m.type==='image').length}</div><div class="msc-sub">Photos & graphics</div></div>
-    <div class="meta-stat-card"><div class="msc-label">Videos</div><div class="msc-val">${lib.filter(m=>m.type==='video').length}</div><div class="msc-sub">Clips & reels</div></div>
-    <div class="meta-stat-card"><div class="msc-label">Folders</div><div class="msc-val">${folders.length}</div><div class="msc-sub">Organised sets</div></div>`;
-}
+
 
 /* ── Breadcrumb ───────────────────────────────────────── */
 function _renderBreadcrumb() {
