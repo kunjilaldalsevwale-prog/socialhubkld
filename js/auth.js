@@ -227,7 +227,7 @@ function _enterApp() {
   document.getElementById('app').style.display = 'flex';
   _applyUserPermissions();
   _updateUserChip();
-  navigate('channels', document.querySelector('.nav-item[data-view="channels"]'));
+  navigate('home', document.querySelector('.nav-item[data-view="home"]'));
   showToast(`Welcome, ${currentUser.name}! ${currentUser.role==='admin'?'⭐':'👤'}`, 'success');
 }
 
