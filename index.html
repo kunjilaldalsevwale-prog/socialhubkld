@@ -36,9 +36,7 @@
       <!-- Calendar with dropdown for 5 channel views -->
       <div class="nav-section-label">Workspace</div>
 
-      <a class="nav-item active" data-view="home" onclick="navigate('home',this)">
-        <span class="nav-icon">🏠</span><span class="nav-label">Home</span>
-      </a>
+
 
       <!-- Calendar parent item + dropdown -->
       <div class="nav-group" id="navGroupCalendar">
@@ -142,68 +140,6 @@
 
     <!-- VIEWS -->
     <main class="content" id="content">
-
-      <!-- HOME VIEW -->
-      <div id="view-home" class="view active">
-        <div style="max-width:900px;margin:0 auto">
-
-          <!-- Welcome header -->
-          <div style="margin-bottom:32px">
-            <h1 id="homeGreeting" style="font-size:28px;font-weight:800;color:var(--text);letter-spacing:-.5px;margin-bottom:6px">Good morning 👋</h1>
-            <div style="font-size:14px;color:var(--text3)" id="homeDate"></div>
-          </div>
-
-          <!-- Quick stats -->
-          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:14px;margin-bottom:36px" id="homeStats"></div>
-
-          <!-- Navigation tiles -->
-          <div style="font-size:12px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:14px">Quick access</div>
-          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:16px;margin-bottom:36px">
-
-            <div class="home-tile" onclick="navigate('channels',document.querySelector('[data-view=channels]'))">
-              <div class="home-tile-icon" style="background:linear-gradient(135deg,#DBEAFE,#BFDBFE)">📅</div>
-              <div class="home-tile-label">Calendar</div>
-              <div class="home-tile-sub">Schedule posts</div>
-            </div>
-
-            <div class="home-tile" onclick="navigate('ideas',document.querySelector('[data-view=ideas]'))">
-              <div class="home-tile-icon" style="background:linear-gradient(135deg,#FEF9C3,#FDE68A)">💡</div>
-              <div class="home-tile-label">Ideas Board</div>
-              <div class="home-tile-sub">Capture ideas</div>
-            </div>
-
-            <div class="home-tile" onclick="navigate('media',document.querySelector('[data-view=media]'))">
-              <div class="home-tile-icon" style="background:linear-gradient(135deg,#FCE7F3,#FBCFE8)">📸</div>
-              <div class="home-tile-label">Photos</div>
-              <div class="home-tile-sub">Media library</div>
-            </div>
-
-            <div class="home-tile" onclick="navigate('agenda',document.querySelector('[data-view=agenda]'))">
-              <div class="home-tile-icon" style="background:linear-gradient(135deg,#DCFCE7,#BBF7D0)">🗒</div>
-              <div class="home-tile-label">Monthly Planner</div>
-              <div class="home-tile-sub">Campaigns</div>
-            </div>
-
-            <div class="home-tile" onclick="navigate('team',document.querySelector('[data-view=team]'))">
-              <div class="home-tile-icon" style="background:linear-gradient(135deg,#EDE9FE,#DDD6FE)">👥</div>
-              <div class="home-tile-label">Team</div>
-              <div class="home-tile-sub">Manage members</div>
-            </div>
-
-            <div class="home-tile" onclick="navigate('settings',document.querySelector('[data-view=settings]'))">
-              <div class="home-tile-icon" style="background:linear-gradient(135deg,#F1F5F9,#E2E8F0)">⚙️</div>
-              <div class="home-tile-label">Settings</div>
-              <div class="home-tile-sub">Preferences</div>
-            </div>
-
-          </div>
-
-          <!-- Recent posts -->
-          <div style="font-size:12px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:14px">Recent posts</div>
-          <div id="homeRecentPosts" style="display:flex;flex-direction:column;gap:10px"></div>
-
-        </div>
-      </div>
 
       <!-- CALENDAR VIEW -->
       <div id="view-calendar" class="view">
