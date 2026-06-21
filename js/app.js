@@ -3,7 +3,7 @@ let currentView = 'channels';
 let sidebarCollapsed = false;
 
 const VIEW_TITLES = {
-  channels:'Calendar', ideas:'Ideas Board', agenda:'Monthly Planner', integrations:'Integrations', 'activity-log':'Activity Log', meta:'Meta Ads Manager', whatsapp:'WhatsApp Marketing',
+  channels:'Calendar', ideas:'Ideas Board', agenda:'Monthly Planner', home:'Home', integrations:'Integrations', 'activity-log':'Activity Log', meta:'Meta Ads Manager', whatsapp:'WhatsApp Marketing',
   email:'Email Marketing', media:'Media Library',
   reminders:'Reminders', agenda:'Monthly Agenda', analytics:'Analytics',
   team:'Team', settings:'Settings',
@@ -12,12 +12,14 @@ const VIEW_TITLES = {
 };
 
 const ALL_VIEWS = [
-  'channels','calendar','posts','create',
+  'home','channels','calendar','posts','create',
   'meta','whatsapp','email','media','ideas',
   'reminders','agenda','analytics','integrations','activity-log','team','settings'
 ];
 
 function navigate(view, el) {
+  if (view === 'home') setTimeout(renderHomePage, 50);
+  _updateMobileNav(view);
   ALL_VIEWS.forEach(n => {
     const v = document.getElementById('view-' + n);
     if (v) v.classList.toggle('active', n === view);
@@ -66,16 +68,16 @@ function updateReminderBadge() {
 }
 
 function toggleSidebar() {
-  const sidebar  = document.getElementById('sidebar');
-  const backdrop = document.getElementById('sidebarBackdrop');
-  const isMobile = window.innerWidth <= 768;
-  if (isMobile) {
+  const sidebar   = document.getElementById('sidebar');
+  const expandBtn = document.getElementById('sidebarExpandBtn');
+  if (window.innerWidth <= 640) {
     sidebar.classList.toggle('mobile-open');
-    if (backdrop) backdrop.classList.toggle('show', sidebar.classList.contains('mobile-open'));
   } else {
-    sidebar.classList.toggle('collapsed');
-    const wrapper = document.getElementById('mainWrapper');
-    if (wrapper) wrapper.classList.toggle('sidebar-collapsed');
+    sidebarCollapsed = !sidebarCollapsed;
+    sidebar.classList.toggle('collapsed', sidebarCollapsed);
+    document.getElementById('sidebarToggle').textContent = sidebarCollapsed ? '›' : '‹';
+    // Show/hide the persistent expand button
+    if (expandBtn) expandBtn.style.display = sidebarCollapsed ? 'flex' : 'none';
   }
 }
 // Both buttons call toggleSidebar (onclick already set in HTML for expand btn)
@@ -312,4 +314,35 @@ function switchCalSidebarTab(tab, el) {
   if (tab === 'ideas') renderSidebarIdeas && renderSidebarIdeas();
   if (tab === 'festivals') renderChannelFestivalSidebar && renderChannelFestivalSidebar();
   if (tab === 'docs') renderAttachedDocs();
+}
+
+/* ══════════════════════════════════════════════════════════
+   MOBILE BOTTOM NAV
+══════════════════════════════════════════════════════════ */
+function _updateMobileNav(view) {
+  const items = document.querySelectorAll('.mbn-item');
+  items.forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.view === view);
+  });
+}
+
+function toggleMobileMenu() {
+  const menu     = document.getElementById('mobileMoreMenu');
+  const backdrop = document.getElementById('mmmBackdrop');
+  const isOpen   = menu && menu.style.display !== 'none';
+  if (menu)     menu.style.display     = isOpen ? 'none' : 'block';
+  if (backdrop) backdrop.style.display = isOpen ? 'none' : 'block';
+
+  // Update user info in more menu
+  if (!isOpen && currentUser) {
+    const av   = document.getElementById('mbnAvatar');
+    const nm   = document.getElementById('mbnName');
+    const rl   = document.getElementById('mbnRole');
+    if (av) { av.textContent = currentUser.avatar; av.style.background = currentUser.color; av.style.color = currentUser.textColor; }
+    if (nm) nm.textContent = currentUser.name;
+    if (rl) rl.textContent = currentUser.role==='admin' ? '⭐ Admin' : '👤 Member';
+    // Hide activity log for non-admins
+    const actBtn = document.getElementById('mmm-activity');
+    if (actBtn) actBtn.style.display = currentUser.role==='admin' ? '' : 'none';
+  }
 }
