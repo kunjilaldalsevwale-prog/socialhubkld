@@ -59,7 +59,7 @@ function _startListening() {
   _syncRef.on('value', snap => {
     const remote = snap.val();
     if (!remote) return;
-    if (Date.now() - _lastPush < 3000) return; // ignore our own push
+    if (Date.now() - _lastPush < 800) return; // ignore our own push
 
     const fields = ['posts','emailCampaigns','ads','ideas','monthlyPlans',
                     'reminders','customerLists','googleAds','teamPermissions',
