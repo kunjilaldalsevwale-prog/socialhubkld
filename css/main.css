@@ -2973,3 +2973,14 @@ body, #app { background: #F5F3EF; }
     overflow-y: auto;
   }
 }
+
+@media (max-width: 768px) {
+  /* Fix scrolling — only content area scrolls, not the whole page */
+  body, #app {
+    overflow: hidden !important;
+    height: 100vh !important;
+    height: 100dvh !important;
+  }
+  .main-wrapper {
+    height: 100vh !important;
+    height: 100dvh
