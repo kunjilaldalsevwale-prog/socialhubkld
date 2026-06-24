@@ -41,7 +41,9 @@ function _renderCampaignsList() {
     <div class="campaign-card" onclick="openCampaignPopup('${c.id}')">
       <div class="campaign-card-thumb">
         ${c.stratImages&&c.stratImages[0]
-          ? `<img src="${c.stratImages[0].url}" style="width:100%;height:100%;object-fit:cover">`
+          ? (c.stratImages[0].name||'').match(/\.(mp4|mov|webm)/i)
+            ? `<video src="${c.stratImages[0].url}" style="width:100%;height:100%;object-fit:cover" muted></video>`
+            : `<img src="${c.stratImages[0].url}" style="width:100%;height:100%;object-fit:cover">`
           : `<div style="font-size:28px;display:flex;align-items:center;justify-content:center;height:100%;background:var(--brand-pale)">📣</div>`}
       </div>
       <div class="campaign-card-body">
@@ -117,8 +119,8 @@ function _getDeadlineText(c) {
   const days = c.approvalDays || 3;
   const deadline = new Date(new Date(c.createdAt).getTime() + days*24*60*60*1000);
   const diff = Math.ceil((deadline - Date.now()) / (1000*60*60*24));
-  if (diff <= 0) return '(deadline passed — auto-approved)';
-  return `(${diff} day${diff!==1?'s':''} left)`;
+  if (diff <= 0) return '(auto-approved)';
+  return `(${diff}d left)`;
 }
 
 function _renderApprovalBadge(c) {
@@ -146,31 +148,45 @@ function updateApprovalDeadline(campId) {
 }
 
 /* ══════════════════════════════════════════════════════════
-   IMAGE HELPERS
+   MEDIA RENDERING
 ══════════════════════════════════════════════════════════ */
+function _isVideo(name) {
+  return (name||'').match(/\.(mp4|mov|webm|avi|mkv)$/i);
+}
+
+function _renderMediaThumb(url, name, small) {
+  const h = small ? '80px' : '100px';
+  if (_isVideo(name)) {
+    return `<video src="${url}" style="width:100%;height:${h};object-fit:cover;display:block;border-radius:8px" muted preload="metadata"></video>`;
+  }
+  return `<img src="${url}" loading="lazy" style="width:100%;height:${h};object-fit:cover;display:block;border-radius:8px" onerror="this.style.display='none'">`;
+}
+
 function _renderCpImages(images, campId, section) {
-  if (!images.length) return `<div style="color:var(--text3);font-size:12px;padding:8px 0">No images yet</div>`;
-  return images.map((img,i) => `
-    <div style="position:relative;border-radius:12px;overflow:hidden;aspect-ratio:1;background:var(--surface3)">
-      <img src="${img.url}" style="width:100%;height:100%;object-fit:cover;cursor:zoom-in" onclick="_openCpLightbox('${img.url}')">
-      <button onclick="removeCpImage('${campId}','${section}',${i})"
-        style="position:absolute;top:4px;right:4px;width:22px;height:22px;border-radius:50%;background:rgba(0,0,0,.6);color:#fff;border:none;cursor:pointer;font-size:11px">✕</button>
-    </div>`).join('');
+  if (!images.length) return `<div style="color:var(--text3);font-size:12px;padding:8px 0">No files yet</div>`;
+  return `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(90px,1fr));gap:8px">` +
+    images.map((img,i) => `
+    <div style="position:relative;border-radius:12px;overflow:hidden;background:var(--surface3);cursor:pointer" onclick="_openCpLightbox('${img.url}','${img.name||''}')">
+      ${_renderMediaThumb(img.url, img.name, true)}
+      ${_isVideo(img.name) ? `<div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,.5);border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:14px">▶</div>` : ''}
+      <button onclick="event.stopPropagation();removeCpImage('${campId}','${section}',${i})"
+        style="position:absolute;top:4px;right:4px;width:20px;height:20px;border-radius:50%;background:rgba(0,0,0,.65);color:#fff;border:none;cursor:pointer;font-size:10px;display:flex;align-items:center;justify-content:center">✕</button>
+    </div>`).join('') + `</div>`;
 }
 
 function _renderCpImagesWithBrief(images, campId, section) {
   section = section || 'strat';
-  if (!images.length) return `<div style="color:var(--text3);font-size:12px;padding:8px 0">No images yet</div>`;
+  if (!images.length) return `<div style="color:var(--text3);font-size:12px;padding:8px 0">No files yet</div>`;
   return images.map((img,i) => `
-    <div style="background:var(--white);border:1px solid var(--border);border-radius:14px;overflow:hidden;display:flex;gap:0">
-<div style="width:90px;flex-shrink:0;cursor:zoom-in" onclick="_openCpLightbox('${img.url}','${img.name||''}')">
-        ${(img.name||'').match(/\.(mp4|mov|webm|avi)$/i)
-          ? `<video src="${img.url}" style="width:100%;height:80px;object-fit:cover;display:block" preload="metadata"></video>`
-          : `<img src="${img.url}" style="width:100%;height:100%;object-fit:cover;display:block;min-height:80px">`}
+    <div style="background:var(--white);border:1px solid var(--border);border-radius:14px;overflow:hidden;display:flex;gap:0;margin-bottom:8px">
+      <div style="width:90px;flex-shrink:0;cursor:pointer;position:relative" onclick="_openCpLightbox('${img.url}','${img.name||''}')">
+        ${_renderMediaThumb(img.url, img.name, true)}
+        ${_isVideo(img.name) ? `<div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,.5);border-radius:50%;width:24px;height:24px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px">▶</div>` : ''}
       </div>
       <div style="flex:1;padding:10px 12px">
+        <div style="font-size:11px;font-weight:600;color:var(--text3);margin-bottom:5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${img.name||''}</div>
         <input class="form-input" value="${(img.brief||'').replace(/"/g,'&quot;')}"
-          placeholder="Brief for this image (e.g. warm tones, festive mood)…"
+          placeholder="Add a brief for this reference…"
           style="font-size:12px;padding:6px 10px"
           oninput="updateCpImageBrief('${campId}',${i},this.value,'${section}')">
       </div>
@@ -185,10 +201,13 @@ function updateCpImageBrief(campId, idx, brief, section) {
   if (c && c[key] && c[key][idx]) {
     c[key][idx].brief = brief;
     clearTimeout(window._cpSaveTimer);
-    window._cpSaveTimer = setTimeout(()=>saveState(), 300);
+    window._cpSaveTimer = setTimeout(()=>saveState(), 500);
   }
 }
 
+/* ══════════════════════════════════════════════════════════
+   UPLOAD — fast with instant preview
+══════════════════════════════════════════════════════════ */
 async function uploadCpImages(input, campId, section) {
   const files = Array.from(input.files||[]);
   if (!files.length) return;
@@ -197,19 +216,36 @@ async function uploadCpImages(input, campId, section) {
   if (!c) return;
   const key = section==='strat' ? 'stratImages' : 'designImages';
   if (!c[key]) c[key] = [];
+
+  // Show instant local preview first
+  files.forEach(file => {
+    const localUrl = URL.createObjectURL(file);
+    c[key].push({ url:localUrl, name:file.name, brief:'', source:'local', _uploading:true });
+  });
+  openCampaignPopup(campId); // refresh immediately with local preview
   showToast(`☁️ Uploading ${files.length} file${files.length>1?'s':''}…`);
-  for (const file of files) {
+
+  // Upload to Cloudinary in background
+  for (let i = 0; i < files.length; i++) {
+    const file = files[i];
     try {
       const result = await uploadToCloudinary(file);
-      c[key].push({ url:result.url, name:file.name, brief:'' });
-      if (typeof autoSaveToMediaLibrary==='function') autoSaveToMediaLibrary(result.url, file.name, 'cloudinary');
-    } catch(e) { showToast('Upload failed: '+file.name,'error'); }
+      // Find and replace local URL with Cloudinary URL
+      const item = c[key].find(x=>x.name===file.name&&x._uploading);
+      if (item) {
+        item.url = result.url;
+        item.source = 'cloudinary';
+        delete item._uploading;
+        if (typeof autoSaveToMediaLibrary==='function') autoSaveToMediaLibrary(result.url, file.name, 'cloudinary');
+      }
+    } catch(e) {
+      // Remove failed item
+      c[key] = c[key].filter(x=>!(x.name===file.name&&x._uploading));
+      showToast('Upload failed: '+file.name,'error');
+    }
   }
   saveState();
-  const grid = document.getElementById(`cp-${section}-images-${campId}`);
-  if (grid) grid.innerHTML = section==='strat'
-    ? _renderCpImagesWithBrief(c[key], campId, 'strat')
-    : _renderCpImages(c[key], campId, section);
+  openCampaignPopup(campId);
   showToast(`✅ Uploaded!`,'success');
 }
 
@@ -220,17 +256,27 @@ async function uploadCpDesignRefs(input, campId) {
   const c = _getCampaigns().find(x=>x.id===campId);
   if (!c) return;
   if (!c.designRefs) c.designRefs = [];
-  showToast(`☁️ Uploading ${files.length} file${files.length>1?'s':''}…`);
+
+  // Instant local preview
+  files.forEach(file => {
+    const localUrl = URL.createObjectURL(file);
+    c.designRefs.push({ url:localUrl, name:file.name, brief:'', source:'local', _uploading:true });
+  });
+  openCampaignPopup(campId);
+  showToast(`☁️ Uploading…`);
+
   for (const file of files) {
     try {
       const result = await uploadToCloudinary(file);
-      c.designRefs.push({ url:result.url, name:file.name, brief:'' });
-      if (typeof autoSaveToMediaLibrary==='function') autoSaveToMediaLibrary(result.url, file.name, 'cloudinary');
-    } catch(e) { showToast('Upload failed: '+file.name,'error'); }
+      const item = c.designRefs.find(x=>x.name===file.name&&x._uploading);
+      if (item) { item.url=result.url; item.source='cloudinary'; delete item._uploading; }
+    } catch(e) {
+      c.designRefs = c.designRefs.filter(x=>!(x.name===file.name&&x._uploading));
+      showToast('Upload failed: '+file.name,'error');
+    }
   }
   saveState();
-  const grid = document.getElementById(`cp-design-refs-${campId}`);
-  if (grid) grid.innerHTML = _renderCpImagesWithBrief(c.designRefs, campId, 'designRefs');
+  openCampaignPopup(campId);
   showToast('✅ Uploaded!','success');
 }
 
@@ -241,22 +287,23 @@ function removeCpImage(campId, section, idx) {
   if (!c[key]) return;
   c[key].splice(idx, 1);
   saveState();
-  const grid = section==='designRefs'
-    ? document.getElementById(`cp-design-refs-${campId}`)
-    : document.getElementById(`cp-${section}-images-${campId}`);
-  if (grid) grid.innerHTML = (section==='strat'||section==='designRefs')
-    ? _renderCpImagesWithBrief(c[key], campId, section)
-    : _renderCpImages(c[key], campId, section);
+  openCampaignPopup(campId);
 }
 
 function _openCpLightbox(url, name) {
+  const existing = document.getElementById('cpLightbox');
+  if (existing) existing.remove();
   const lb = document.createElement('div');
-  lb.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:3000;display:flex;align-items:center;justify-content:center;cursor:zoom-out';
+  lb.id = 'cpLightbox';
+  lb.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:3000;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px';
   lb.onclick = e => { if(e.target===lb) lb.remove(); };
-  const isVideo = (name||url).match(/\.(mp4|mov|webm|avi)$/i);
-  lb.innerHTML = isVideo
-    ? `<video src="${url}" controls autoplay style="max-width:90vw;max-height:90vh;border-radius:12px"></video>`
-    : `<img src="${url}" style="max-width:90vw;max-height:90vh;object-fit:contain;border-radius:12px">`;
+  const isVid = _isVideo(name||url);
+  lb.innerHTML = `
+    <button onclick="document.getElementById('cpLightbox').remove()" style="position:fixed;top:16px;right:16px;width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,.2);border:none;color:#fff;font-size:16px;cursor:pointer">✕</button>
+    ${isVid
+      ? `<video src="${url}" controls autoplay style="max-width:90vw;max-height:80vh;border-radius:12px"></video>`
+      : `<img src="${url}" style="max-width:90vw;max-height:80vh;object-fit:contain;border-radius:12px">`}
+    <div style="margin-top:12px;font-size:12px;color:rgba(255,255,255,.6)">${name||''}</div>`;
   document.body.appendChild(lb);
 }
 
@@ -271,55 +318,45 @@ async function syncDriveFolder(campId) {
   const input = document.getElementById('cp-drive-'+campId);
   const url = (input ? input.value.trim() : c.driveFolderUrl||'');
   if (!url) { showToast('Paste a Drive folder or file link','error'); return; }
-
-  // Save the URL
   c.driveFolderUrl = url;
 
-  // Check if it's a folder link
   const folderMatch = url.match(/folders\/([a-zA-Z0-9_-]+)/);
   if (folderMatch) {
     const folderId = folderMatch[1];
-    showToast('☁️ Syncing folder from Drive…');
+    showToast('☁️ Syncing from Drive…');
     try {
-      const res = await fetch(
-        `https://www.googleapis.com/drive/v3/files?q='${folderId}'+in+parents+and+mimeType+contains+'image/'&key=${GDRIVE_API_KEY}&fields=files(id,name,mimeType)&pageSize=50`
-      );
+      const res = await fetch(`https://www.googleapis.com/drive/v3/files?q='${folderId}'+in+parents&key=${GDRIVE_API_KEY}&fields=files(id,name,mimeType)&pageSize=50`);
       const data = await res.json();
-      if (data.error) { showToast('Drive API error: '+data.error.message,'error'); return; }
-      if (!data.files||!data.files.length) { showToast('No images found in folder — make sure it is shared publicly','error'); return; }
+      if (data.error) { showToast('Drive error: '+data.error.message,'error'); return; }
+      if (!data.files||!data.files.length) { showToast('No files found — set folder to Anyone with link','error'); return; }
       if (!c.designImages) c.designImages = [];
       let added = 0;
       data.files.forEach(file => {
         const viewUrl = `https://lh3.googleusercontent.com/d/${file.id}`;
         if (!c.designImages.find(img=>img.url===viewUrl)) {
           c.designImages.push({ url:viewUrl, name:file.name, source:'drive' });
-        if (typeof autoSaveToMediaLibrary==='function') autoSaveToMediaLibrary(viewUrl, file.name, 'drive');
+          if (typeof autoSaveToMediaLibrary==='function') autoSaveToMediaLibrary(viewUrl, file.name, 'drive');
           added++;
         }
       });
       saveState();
-      const grid = document.getElementById(`cp-design-images-${campId}`);
-      if (grid) grid.innerHTML = _renderCpImages(c.designImages, campId, 'design');
-      showToast(`✅ ${added} image${added!==1?'s':''} synced from Drive folder!`,'success');
-    } catch(e) {
-      showToast('Could not reach Drive — check folder is shared publicly','error');
-    }
+      openCampaignPopup(campId);
+      showToast(`✅ ${added} file${added!==1?'s':''} synced!`,'success');
+    } catch(e) { showToast('Could not reach Drive','error'); }
     return;
   }
 
-  // Single file link
   const fileMatch = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
   if (fileMatch) {
-    const fileId  = fileMatch[1];
+    const fileId = fileMatch[1];
     const viewUrl = `https://lh3.googleusercontent.com/d/${fileId}`;
     if (!c.designImages) c.designImages = [];
     if (c.designImages.find(img=>img.url===viewUrl)) { showToast('Already added',''); return; }
-   c.designImages.push({ url:viewUrl, name:`drive-${fileId.slice(0,8)}.jpg`, source:'drive' });
+    c.designImages.push({ url:viewUrl, name:`drive-${fileId.slice(0,8)}.jpg`, source:'drive' });
     if (typeof autoSaveToMediaLibrary==='function') autoSaveToMediaLibrary(viewUrl, `drive-${fileId.slice(0,8)}.jpg`, 'drive');
     saveState();
-    const grid = document.getElementById(`cp-design-images-${campId}`);
-    if (grid) grid.innerHTML = _renderCpImages(c.designImages, campId, 'design');
-    showToast('✅ Design added from Drive!','success');
+    openCampaignPopup(campId);
+    showToast('✅ Added from Drive!','success');
     return;
   }
   showToast('Invalid Drive link','error');
@@ -335,7 +372,7 @@ function openCampaignPopup(id) {
   if (!popup) {
     popup = document.createElement('div');
     popup.id = 'campaignPopup';
-    popup.style.cssText = 'position:fixed;inset:0;background:rgba(20,18,16,.55);z-index:2000;display:flex;align-items:flex-start;justify-content:center;padding:20px;overflow-y:auto;backdrop-filter:blur(6px);animation:fadeIn .2s ease';
+    popup.style.cssText = 'position:fixed;inset:0;background:rgba(20,18,16,.55);z-index:2000;display:flex;align-items:flex-start;justify-content:center;padding:20px;overflow-y:auto;backdrop-filter:blur(6px)';
     document.body.appendChild(popup);
   }
 
@@ -372,7 +409,7 @@ function openCampaignPopup(id) {
         <!-- Brief -->
         <div>
           <div class="cp-section-label">📋 Campaign brief & reasoning</div>
-          <textarea class="form-input form-textarea" rows="3" placeholder="Describe the campaign goal, target audience, key message, reasoning…"
+          <textarea class="form-input form-textarea" rows="3" placeholder="Describe the campaign goal, target audience, key message…"
             style="min-height:80px" oninput="updateCampaignField('${id}','brief',this.value)">${c.brief||''}</textarea>
         </div>
 
@@ -383,21 +420,21 @@ function openCampaignPopup(id) {
               <div style="width:36px;height:36px;border-radius:50%;background:#DBEAFE;color:#1D4ED8;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:800">S</div>
               <div>
                 <div style="font-size:14px;font-weight:800;color:var(--text)">Strategist</div>
-                <div style="font-size:11px;color:var(--text3)">Upload references with brief · add consolidated thought</div>
+                <div style="font-size:11px;color:var(--text3)">Upload images or videos with brief · add consolidated thought</div>
               </div>
             </div>
-            <div id="strat-approval-badge-${id}">${_renderApprovalBadge(c)}</div>
+            <div>${_renderApprovalBadge(c)}</div>
           </div>
 
-          <!-- Reference images with briefs -->
+          <!-- Reference media -->
           <div style="margin-bottom:14px">
-            <div class="cp-field-label">Reference images <span style="font-weight:400;opacity:.6;text-transform:none;font-size:10px">(add a brief for each)</span></div>
-            <div id="cp-strat-images-${id}" style="display:flex;flex-direction:column;gap:10px">
+            <div class="cp-field-label">Reference images / videos <span style="font-weight:400;opacity:.6;text-transform:none;font-size:10px">(add brief for each)</span></div>
+            <div id="cp-strat-images-${id}" style="margin-bottom:10px">
               ${_renderCpImagesWithBrief(c.stratImages||[], id, 'strat')}
             </div>
-<label class="cp-upload-btn" style="margin-top:10px">
+            <label class="cp-upload-btn">
               <input type="file" accept="image/*,video/*" multiple style="display:none" onchange="uploadCpImages(this,'${id}','strat')">
-              ＋ Add references (image or video)
+              ＋ Add images or videos
             </label>
           </div>
 
@@ -405,11 +442,11 @@ function openCampaignPopup(id) {
           <div style="margin-bottom:14px">
             <div class="cp-field-label">Consolidated thought / overall strategy</div>
             <textarea class="form-input form-textarea" rows="4"
-              placeholder="Summarise the overall strategy — content angles, hooks, tone of voice, platform notes, key message…"
+              placeholder="Summarise the strategy — angles, hooks, tone, platform notes…"
               oninput="updateCampaignField('${id}','stratNotes',this.value)">${c.stratNotes||''}</textarea>
           </div>
 
-          <!-- Approval panel — single slab -->
+          <!-- Approval slab -->
           <div style="background:var(--white);border-radius:14px;padding:16px;border:1.5px solid var(--border)">
             <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
               <div style="display:flex;align-items:center;gap:14px">
@@ -433,26 +470,19 @@ function openCampaignPopup(id) {
                   </div>
                 </div>
               </div>
-              ${currentUser && ADMINS.includes(currentUser.id) && _getApprovalStatus(c,currentUser.id)==='pending' ? `
-              <div style="display:flex;gap:8px">
-                <button onclick="setCampaignApproval('${id}','${currentUser.id}','approved')"
-                  style="padding:8px 18px;background:#ECFDF5;color:#065F46;border:1.5px solid #6EE7B7;border-radius:20px;font-size:13px;font-weight:700;cursor:pointer;font-family:var(--font)">✅ Approve</button>
-                <button onclick="setCampaignApproval('${id}','${currentUser.id}','rejected')"
-                  style="padding:8px 18px;background:#FEF2F2;color:#991B1B;border:1.5px solid #FCA5A5;border-radius:20px;font-size:13px;font-weight:700;cursor:pointer;font-family:var(--font)">❌ Reject</button>
-              </div>` : `
               <div style="display:flex;gap:6px;flex-wrap:wrap">
-                ${ADMINS.map(a=>{
+                ${ADMINS.map(a => {
                   const u = typeof TEAM_USERS!=='undefined'&&TEAM_USERS[a] ? TEAM_USERS[a].name : a;
                   const s = _getApprovalStatus(c,a);
-                  const show = s==='pending' ? `<div style="display:flex;gap:5px">
+                  if (s==='pending') return `<div style="font-size:11px;color:var(--text2);display:flex;align-items:center;gap:5px">
+                    <strong>${u}</strong>
                     <button onclick="setCampaignApproval('${id}','${a}','approved')" style="padding:4px 10px;background:#ECFDF5;color:#065F46;border:1px solid #6EE7B7;border-radius:16px;font-size:11px;font-weight:700;cursor:pointer;font-family:var(--font)">✅</button>
                     <button onclick="setCampaignApproval('${id}','${a}','rejected')" style="padding:4px 10px;background:#FEF2F2;color:#991B1B;border:1px solid #FCA5A5;border-radius:16px;font-size:11px;font-weight:700;cursor:pointer;font-family:var(--font)">❌</button>
-                  </div>` : `<span style="font-size:11px;color:var(--text3)">${s==='auto'?'auto ✓':s}</span>`;
-                  return `<div style="font-size:11px;color:var(--text2);display:flex;align-items:center;gap:5px"><strong>${u}</strong>${show}</div>`;
+                  </div>`;
+                  return `<div style="font-size:11px;color:var(--text3)"><strong>${u}</strong>: ${s==='auto'?'auto ✓':s}</div>`;
                 }).join('')}
-              </div>`}
+              </div>
             </div>
-            <!-- Feedback on strategy -->
             <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border)">
               <div class="cp-field-label">💬 Feedback on strategy</div>
               <textarea class="form-input form-textarea" rows="2" placeholder="Leave feedback for the strategist…"
@@ -465,13 +495,13 @@ function openCampaignPopup(id) {
         <div style="background:var(--beige);border-radius:18px;padding:20px;border:1px solid var(--border)">
           <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
             <div style="width:36px;height:36px;border-radius:50%;background:#DCFCE7;color:#065F46;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:800">D</div>
-            <div style="flex:1">
+            <div>
               <div style="font-size:14px;font-weight:800;color:var(--text)">Designer</div>
               <div style="font-size:11px;color:var(--text3)">Upload references · add notes · upload designs · sync from Drive</div>
             </div>
           </div>
 
-          <!-- 1. Assign designer -->
+          <!-- Assign -->
           <div style="margin-bottom:14px">
             <div class="cp-field-label">Assign designer</div>
             <select class="form-select" onchange="updateCampaignField('${id}','assignedDesigner',this.value)">
@@ -480,59 +510,58 @@ function openCampaignPopup(id) {
             </select>
           </div>
 
-          <!-- 2. Reference images for drafts -->
+          <!-- Design refs -->
           <div style="margin-bottom:14px">
             <div class="cp-field-label">Reference images for drafts <span style="font-weight:400;opacity:.6;text-transform:none;font-size:10px">(add brief for each)</span></div>
-            <div id="cp-design-refs-${id}" style="display:flex;flex-direction:column;gap:10px">
+            <div id="cp-design-refs-${id}" style="margin-bottom:10px">
               ${_renderCpImagesWithBrief(c.designRefs||[], id, 'designRefs')}
             </div>
-            <label class="cp-upload-btn" style="margin-top:10px">
-              <input type="file" accept="image/*" multiple style="display:none" onchange="uploadCpDesignRefs(this,'${id}')">
+            <label class="cp-upload-btn">
+              <input type="file" accept="image/*,video/*" multiple style="display:none" onchange="uploadCpDesignRefs(this,'${id}')">
               ＋ Add reference images
             </label>
           </div>
 
-          <!-- 3. Designer notes -->
+          <!-- Designer notes -->
           <div style="margin-bottom:14px">
             <div class="cp-field-label">Designer notes</div>
             <textarea class="form-input form-textarea" rows="3"
-              placeholder="Design decisions, font choices, colour palette, revisions needed…"
+              placeholder="Design decisions, font choices, colour palette, revisions…"
               oninput="updateCampaignField('${id}','designNotes',this.value)">${c.designNotes||''}</textarea>
           </div>
 
-          <!-- 4. Feedback on design -->
+          <!-- Feedback -->
           <div style="margin-bottom:14px;background:var(--white);border-radius:14px;padding:14px;border:1.5px solid ${c.designFeedback?'var(--amber)':'var(--border)'}">
             <div class="cp-field-label">💬 Feedback on design</div>
             <textarea class="form-input form-textarea" rows="2" placeholder="Leave feedback for the designer…"
               oninput="updateCampaignField('${id}','designFeedback',this.value)">${c.designFeedback||''}</textarea>
           </div>
 
-          <!-- 5. Design uploads -->
+          <!-- Design uploads -->
           <div style="margin-bottom:14px">
             <div class="cp-field-label">Design uploads</div>
-            <div id="cp-design-images-${id}" class="cp-images-grid">
+            <div id="cp-design-images-${id}" style="margin-bottom:10px">
               ${_renderCpImages(c.designImages||[], id, 'design')}
             </div>
-            <label class="cp-upload-btn" style="margin-top:10px">
+            <label class="cp-upload-btn">
               <input type="file" accept="image/*,video/*,.pdf" multiple style="display:none" onchange="uploadCpImages(this,'${id}','design')">
               ＋ Add designs
             </label>
           </div>
 
-          <!-- 6. Google Drive sync -->
+          <!-- Drive sync -->
           <div style="background:var(--white);border-radius:12px;padding:12px 14px;border:1.5px solid var(--border)">
-            <div class="cp-field-label">📁 Google Drive (paste individual file link)</div>
+            <div class="cp-field-label">📁 Google Drive sync</div>
             <div style="display:flex;gap:8px">
               <input class="form-input" id="cp-drive-${id}" value="${c.driveFolderUrl||''}"
-                placeholder="Open file in Drive → Share → Copy link → paste here"
+                placeholder="Paste Drive folder or file link…"
                 style="font-size:12px;flex:1"
                 onchange="updateCampaignField('${id}','driveFolderUrl',this.value)">
               <button onclick="syncDriveFolder('${id}')"
-                style="padding:8px 14px;background:var(--brand);color:#fff;border:none;border-radius:12px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;font-family:var(--font)">🔄 Add</button>
+                style="padding:8px 14px;background:var(--brand);color:#fff;border:none;border-radius:12px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;font-family:var(--font)">🔄 Sync</button>
             </div>
-            <div style="font-size:11px;color:var(--text3);margin-top:5px">Paste one file link at a time → click Add → appears in Design uploads above</div>
+            <div style="font-size:11px;color:var(--text3);margin-top:5px">Paste folder link → Sync → all images appear above</div>
           </div>
-
         </div>
 
       </div>
@@ -550,15 +579,14 @@ function openCampaignPopup(id) {
 function closeCampaignPopup() {
   clearTimeout(window._cpSaveTimer);
   saveState();
-  if (typeof syncPush === 'function') syncPush();
   const p = document.getElementById('campaignPopup');
   if (p) p.style.display = 'none';
   _renderCampaignsList();
 }
+
 function saveCampaignAndClose(id) {
   clearTimeout(window._cpSaveTimer);
   saveState();
-  if (typeof syncPush === 'function') syncPush();
   closeCampaignPopup();
   showToast('✅ Campaign saved!','success');
 }
@@ -567,7 +595,7 @@ function updateCampaignField(id, field, value) {
   const c = _getCampaigns().find(x=>x.id===id);
   if (c) c[field] = value;
   clearTimeout(window._cpSaveTimer);
-  window._cpSaveTimer = setTimeout(()=>saveState(), 800);
+  window._cpSaveTimer = setTimeout(()=>saveState(), 300);
 }
 
 /* ══════════════════════════════════════════════════════════
