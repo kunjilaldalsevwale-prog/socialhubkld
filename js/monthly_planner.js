@@ -217,36 +217,26 @@ async function uploadCpImages(input, campId, section) {
   const key = section==='strat' ? 'stratImages' : 'designImages';
   if (!c[key]) c[key] = [];
 
-  // Show instant local preview first
-  files.forEach(file => {
-    const localUrl = URL.createObjectURL(file);
-    c[key].push({ url:localUrl, name:file.name, brief:'', source:'local', _uploading:true });
-  });
-  openCampaignPopup(campId); // refresh immediately with local preview
+  // Show uploading indicator
   showToast(`☁️ Uploading ${files.length} file${files.length>1?'s':''}…`);
 
-  // Upload to Cloudinary in background
-  for (let i = 0; i < files.length; i++) {
-    const file = files[i];
+  // Upload all to Cloudinary, then save once at the end
+  const results = [];
+  for (const file of files) {
     try {
       const result = await uploadToCloudinary(file);
-      // Find and replace local URL with Cloudinary URL
-      const item = c[key].find(x=>x.name===file.name&&x._uploading);
-      if (item) {
-        item.url = result.url;
-        item.source = 'cloudinary';
-        delete item._uploading;
-        if (typeof autoSaveToMediaLibrary==='function') autoSaveToMediaLibrary(result.url, file.name, 'cloudinary');
-      }
+      results.push({ url:result.url, name:file.name, brief:'', source:'cloudinary' });
+      if (typeof autoSaveToMediaLibrary==='function') autoSaveToMediaLibrary(result.url, file.name, 'cloudinary');
     } catch(e) {
-      // Remove failed item
-      c[key] = c[key].filter(x=>!(x.name===file.name&&x._uploading));
       showToast('Upload failed: '+file.name,'error');
     }
   }
-  saveState();
+
+  // Push all results at once
+  results.forEach(r => c[key].push(r));
+  saveState(); // this calls syncPush automatically
   openCampaignPopup(campId);
-  showToast(`✅ Uploaded!`,'success');
+  if (results.length) showToast(`✅ ${results.length} file${results.length>1?'s':''} uploaded!`,'success');
 }
 
 async function uploadCpDesignRefs(input, campId) {
@@ -257,27 +247,21 @@ async function uploadCpDesignRefs(input, campId) {
   if (!c) return;
   if (!c.designRefs) c.designRefs = [];
 
-  // Instant local preview
-  files.forEach(file => {
-    const localUrl = URL.createObjectURL(file);
-    c.designRefs.push({ url:localUrl, name:file.name, brief:'', source:'local', _uploading:true });
-  });
-  openCampaignPopup(campId);
   showToast(`☁️ Uploading…`);
-
+  const results = [];
   for (const file of files) {
     try {
       const result = await uploadToCloudinary(file);
-      const item = c.designRefs.find(x=>x.name===file.name&&x._uploading);
-      if (item) { item.url=result.url; item.source='cloudinary'; delete item._uploading; }
+      results.push({ url:result.url, name:file.name, brief:'', source:'cloudinary' });
+      if (typeof autoSaveToMediaLibrary==='function') autoSaveToMediaLibrary(result.url, file.name, 'cloudinary');
     } catch(e) {
-      c.designRefs = c.designRefs.filter(x=>!(x.name===file.name&&x._uploading));
       showToast('Upload failed: '+file.name,'error');
     }
   }
+  results.forEach(r => c.designRefs.push(r));
   saveState();
   openCampaignPopup(campId);
-  showToast('✅ Uploaded!','success');
+  if (results.length) showToast('✅ Uploaded!','success');
 }
 
 function removeCpImage(campId, section, idx) {
