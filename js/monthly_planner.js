@@ -163,8 +163,10 @@ function _renderCpImagesWithBrief(images, campId, section) {
   if (!images.length) return `<div style="color:var(--text3);font-size:12px;padding:8px 0">No images yet</div>`;
   return images.map((img,i) => `
     <div style="background:var(--white);border:1px solid var(--border);border-radius:14px;overflow:hidden;display:flex;gap:0">
-      <div style="width:90px;flex-shrink:0;cursor:zoom-in" onclick="_openCpLightbox('${img.url}')">
-        <img src="${img.url}" style="width:100%;height:100%;object-fit:cover;display:block;min-height:80px">
+<div style="width:90px;flex-shrink:0;cursor:zoom-in" onclick="_openCpLightbox('${img.url}','${img.name||''}')">
+        ${(img.name||'').match(/\.(mp4|mov|webm|avi)$/i)
+          ? `<video src="${img.url}" style="width:100%;height:80px;object-fit:cover;display:block" preload="metadata"></video>`
+          : `<img src="${img.url}" style="width:100%;height:100%;object-fit:cover;display:block;min-height:80px">`}
       </div>
       <div style="flex:1;padding:10px 12px">
         <input class="form-input" value="${(img.brief||'').replace(/"/g,'&quot;')}"
@@ -247,11 +249,14 @@ function removeCpImage(campId, section, idx) {
     : _renderCpImages(c[key], campId, section);
 }
 
-function _openCpLightbox(url) {
+function _openCpLightbox(url, name) {
   const lb = document.createElement('div');
   lb.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:3000;display:flex;align-items:center;justify-content:center;cursor:zoom-out';
-  lb.onclick = () => lb.remove();
-  lb.innerHTML = `<img src="${url}" style="max-width:90vw;max-height:90vh;object-fit:contain;border-radius:12px">`;
+  lb.onclick = e => { if(e.target===lb) lb.remove(); };
+  const isVideo = (name||url).match(/\.(mp4|mov|webm|avi)$/i);
+  lb.innerHTML = isVideo
+    ? `<video src="${url}" controls autoplay style="max-width:90vw;max-height:90vh;border-radius:12px"></video>`
+    : `<img src="${url}" style="max-width:90vw;max-height:90vh;object-fit:contain;border-radius:12px">`;
   document.body.appendChild(lb);
 }
 
