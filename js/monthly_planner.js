@@ -390,9 +390,9 @@ function openCampaignPopup(id) {
             <div id="cp-strat-images-${id}" style="display:flex;flex-direction:column;gap:10px">
               ${_renderCpImagesWithBrief(c.stratImages||[], id, 'strat')}
             </div>
-            <label class="cp-upload-btn" style="margin-top:10px">
-              <input type="file" accept="image/*" multiple style="display:none" onchange="uploadCpImages(this,'${id}','strat')">
-              ＋ Add reference images
+<label class="cp-upload-btn" style="margin-top:10px">
+              <input type="file" accept="image/*,video/*" multiple style="display:none" onchange="uploadCpImages(this,'${id}','strat')">
+              ＋ Add references (image or video)
             </label>
           </div>
 
