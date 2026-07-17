@@ -153,6 +153,9 @@ function updateApprovalDeadline(campId) {
 function _isVideo(name) {
   return (name||'').match(/\.(mp4|mov|webm|avi|mkv)$/i);
 }
+function _isPdf(name) {
+  return (name||'').match(/\.pdf$/i);
+}
 
 function _renderMediaThumb(url, name, small) {
   const h = small ? '80px' : '100px';
