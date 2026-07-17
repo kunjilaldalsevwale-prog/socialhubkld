@@ -234,7 +234,8 @@ async function uploadCpImages(input, campId, section) {
 
   // Push all results at once
   results.forEach(r => c[key].push(r));
-  saveState(); // this calls syncPush automatically
+  DB.save(state);
+  if (typeof syncPush === 'function') syncPush();
   openCampaignPopup(campId);
   if (results.length) showToast(`✅ ${results.length} file${results.length>1?'s':''} uploaded!`,'success');
 }
@@ -259,7 +260,8 @@ async function uploadCpDesignRefs(input, campId) {
     }
   }
   results.forEach(r => c.designRefs.push(r));
-  saveState();
+  DB.save(state);
+  if (typeof syncPush === 'function') syncPush();
   openCampaignPopup(campId);
   if (results.length) showToast('✅ Uploaded!','success');
 }
@@ -562,7 +564,8 @@ function openCampaignPopup(id) {
 
 function closeCampaignPopup() {
   clearTimeout(window._cpSaveTimer);
-  saveState();
+  DB.save(state);
+  if (typeof syncPush === 'function') syncPush();
   const p = document.getElementById('campaignPopup');
   if (p) p.style.display = 'none';
   _renderCampaignsList();
@@ -570,7 +573,8 @@ function closeCampaignPopup() {
 
 function saveCampaignAndClose(id) {
   clearTimeout(window._cpSaveTimer);
-  saveState();
+  DB.save(state);
+  if (typeof syncPush === 'function') syncPush();
   closeCampaignPopup();
   showToast('✅ Campaign saved!','success');
 }
@@ -579,7 +583,10 @@ function updateCampaignField(id, field, value) {
   const c = _getCampaigns().find(x=>x.id===id);
   if (c) c[field] = value;
   clearTimeout(window._cpSaveTimer);
-  window._cpSaveTimer = setTimeout(()=>saveState(), 300);
+  window._cpSaveTimer = setTimeout(()=>{
+    DB.save(state);
+    if (typeof syncPush === 'function') syncPush();
+  }, 300);
 }
 
 /* ══════════════════════════════════════════════════════════
