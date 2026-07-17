@@ -2984,3 +2984,32 @@ body, #app { background: #F5F3EF; }
   .main-wrapper {
     height: 100vh !important;
     height: 100dvh
+@media (max-width: 768px) {
+  /* Campaign cards stack vertically */
+  .campaign-card {
+    flex-direction: column !important;
+  }
+  .campaign-card-thumb {
+    width: 100% !important;
+    height: 160px !important;
+  }
+  .campaign-card-body {
+    padding: 14px !important;
+  }
+
+  /* Campaign popup full screen on mobile */
+  #campaignPopup {
+    padding: 0 !important;
+    align-items: flex-end !important;
+  }
+  #campaignPopup > div {
+    border-radius: 24px 24px 0 0 !important;
+    max-height: 95vh !important;
+    overflow-y: auto !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+  }
+
+  /* Campaign popup header padding */
+  #campaignPopup > div > div:first-child
