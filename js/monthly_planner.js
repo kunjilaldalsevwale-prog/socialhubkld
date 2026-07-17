@@ -159,6 +159,12 @@ function _renderMediaThumb(url, name, small) {
   if (_isVideo(name)) {
     return `<video src="${url}" style="width:100%;height:${h};object-fit:cover;display:block;border-radius:8px" muted preload="metadata"></video>`;
   }
+  if ((name||'').match(/\.pdf$/i)) {
+    return `<div style="width:100%;height:${h};background:#FEF2F2;display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:8px;gap:4px">
+      <span style="font-size:24px">📄</span>
+      <span style="font-size:9px;font-weight:700;color:#991B1B">PDF</span>
+    </div>`;
+  }
   return `<img src="${url}" loading="lazy" style="width:100%;height:${h};object-fit:cover;display:block;border-radius:8px" onerror="this.style.display='none'">`;
 }
 
@@ -283,7 +289,9 @@ function _openCpLightbox(url, name) {
   lb.id = 'cpLightbox';
   lb.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:3000;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px';
   lb.onclick = e => { if(e.target===lb) lb.remove(); };
-  const isVid = _isVideo(name||url);
+const isVid = _isVideo(name||url);
+  const isPdf = (name||url).match(/\.pdf$/i);
+  if (isPdf) { lb.remove(); window.open(url,'_blank'); return; }
   lb.innerHTML = `
     <button onclick="document.getElementById('cpLightbox').remove()" style="position:fixed;top:16px;right:16px;width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,.2);border:none;color:#fff;font-size:16px;cursor:pointer">✕</button>
     ${isVid
