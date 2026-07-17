@@ -162,7 +162,7 @@ function _renderMediaThumb(url, name, small) {
   if (_isVideo(name)) {
     return `<video src="${url}" style="width:100%;height:${h};object-fit:cover;display:block;border-radius:8px" muted preload="metadata"></video>`;
   }
-  if ((name||'').match(/\.pdf$/i)) {
+  if (_isPdf(name)) {
     return `<div style="width:100%;height:${h};background:#FEF2F2;display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:8px;gap:4px">
       <span style="font-size:24px">📄</span>
       <span style="font-size:9px;font-weight:700;color:#991B1B">PDF</span>
@@ -170,7 +170,6 @@ function _renderMediaThumb(url, name, small) {
   }
   return `<img src="${url}" loading="lazy" style="width:100%;height:${h};object-fit:cover;display:block;border-radius:8px" onerror="this.style.display='none'">`;
 }
-
 function _renderCpImages(images, campId, section) {
   if (!images.length) return `<div style="color:var(--text3);font-size:12px;padding:8px 0">No files yet</div>`;
   return `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(90px,1fr));gap:8px">` +
