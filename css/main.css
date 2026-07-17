@@ -3013,3 +3013,19 @@ body, #app { background: #F5F3EF; }
 
   /* Campaign popup header padding */
   #campaignPopup > div > div:first-child
+
+   #rolesTable table {
+  font-size: 11px !important;
+}
+#rolesTable th, #rolesTable td {
+  padding: 6px 4px !important;
+}
+#rolesTable .msc-label {
+  font-size: 9px !important;
+}
+@media (max-width: 1200px) {
+  #rolesTable {
+    overflow-x: auto !important;
+    display: block !important;
+  }
+}
