@@ -106,6 +106,7 @@ function _applyUserPermissions() {
 
 /* ── SESSION RESTORE ──────────────────────────────────────── */
 function tryRestoreSession() {
+  if (typeof DB !== 'undefined') { const loaded = DB.load(); if (loaded) Object.assign(state, loaded); }
   _mergeStateTeam();
   const sess = localStorage.getItem('sh_session');
   if (sess) {
