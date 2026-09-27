@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Save to SocialHub</title>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+  <style>
+    * { box-sizing:border-box; margin:0; padding:0; }
+    body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; background:#F5F3EF; min-height:100vh; display:flex; align-items:center; justify-content:center; padding:20px; }
+    .card { background:#fff; border-radius:24px; padding:32px 28px; max-width:420px; width:100%; box-shadow:0 8px 40px rgba(0,0,0,.12); text-align:center; }
+    .logo { font-size:48px; margin-bottom:12px; }
+    h1 { font-size:22px; font-weight:800; color:#1A1714; margin-bottom:6px; }
+    p  { font-size:14px; color:#A09990; margin-bottom:24px; }
+    .url-box { background:#F5F3EF; border-radius:12px; padding:12px 14px; font-size:13px; color:#44403C; word-break:break-all; text-align:left; margin-bottom:20px; border:1px solid #E2DED9; }
+    textarea { width:100%; padding:12px 14px; border:1.5px solid #E2DED9; border-radius:14px; font-size:14px; font-family:inherit; resize:none; min-height:80px; margin-bottom:16px; outline:none; }
+    textarea:focus { border-color:#2563EB; box-shadow:0 0 0 3px rgba(37,99,235,.1); }
+    button { width:100%; padding:14px; background:linear-gradient(135deg,#2563EB,#1D4ED8); color:#fff; border:none; border-radius:30px; font-size:15px; font-weight:700; cursor:pointer; font-family:inherit; box-shadow:0 4px 16px rgba(37,99,235,.35); }
+    button:hover { opacity:.9; }
+    .success { display:none; }
+    .success .check { font-size:56px; margin-bottom:12px; }
+  </style>
+</head>
+<body>
+<div class="card" id="saveCard">
+  <div class="logo">📌</div>
+  <h1>Save Reference</h1>
+  <p>Saving to SocialHub References Inbox</p>
+  <div class="url-box" id="urlDisplay">Loading…</div>
+  <textarea id="notes" placeholder="Add notes (optional) — what do you like about this?"></textarea>
+  <button onclick="saveRef()">Save to SocialHub</button>
+</div>
+
+<div class="card success" id="successCard">
+  <div class="check">✅</div>
+  <h1>Saved!</h1>
+  <p>Reference added to your inbox in Monthly Planner</p>
+  <button onclick="window.close()" style="margin-top:16px">Close</button>
+</div>
+
+<script>
+// Get shared URL from query params or Web Share Target API
+const params = new URLSearchParams(window.location.search);
+const sharedUrl = params.get('url') || params.get('text') || params.get('title') || '';
+document.getElementById('urlDisplay').textContent = sharedUrl || 'No URL detected — paste manually';
+
+const FIREBASE_CONFIG = {
+  apiKey:'AIzaSyCazqp3np3B5ZXQAppBRBvGad-pdsIx5ko',
+  databaseURL:'https://socialhubkld-default-rtdb.asia-southeast1.firebasedatabase.app',
+};
+
+firebase.initializeApp(FIREBASE_CONFIG);
+const db = firebase.database();
+
+function saveRef() {
+  const url   = sharedUrl || document.getElementById('urlDisplay').textContent;
+  const notes = document.getElementById('notes').value.trim();
+  const ref   = { url, notes, savedAt:new Date().toISOString(), used:false, savedBy:'shared' };
+
+  db.ref('socialhub/state/references').once('value').then(snap => {
+    const existing = snap.val() || [];
+    existing.unshift(ref);
+    return db.ref('socialhub/state/references').set(existing);
+  }).then(() => {
+    document.getElementById('saveCard').style.display = 'none';
+    document.getElementById('successCard').style.display = 'block';
+  }).catch(e => {
+    alert('Error saving: ' + e.message);
+  });
+}
+</script>
+</body>
+</html>
