@@ -66,7 +66,6 @@ function logout() {
 }
 
 function _enterApp() {
-  document.getElementById('loginScreen').style.display = 'none';
   document.getElementById('app').style.display = 'flex';
   _applyUserPermissions();
   _updateSidebarUser();
@@ -76,7 +75,13 @@ function _enterApp() {
   if (typeof renderAttachedDocs === 'function') renderAttachedDocs();
   if (typeof _refreshCalStickyBanner === 'function') _refreshCalStickyBanner();
   if (typeof _initActivityLogging === 'function') _initActivityLogging();
-  navigate('channels', document.querySelector('.nav-item[data-view="channels"]'));
+  // Navigate to calendar
+  const calNav = document.querySelector('.nav-item[data-view="channels"]');
+  navigate('channels', calNav);
+  // Force show view-channels
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  const cv = document.getElementById('view-channels');
+  if (cv) cv.classList.add('active');
 }
 
 function _updateSidebarUser() {
