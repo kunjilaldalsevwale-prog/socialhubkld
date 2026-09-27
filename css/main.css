@@ -2941,10 +2941,11 @@ body, #app { background: #F5F3EF; }
 /* ══════════════════════════════════════════
    MONTHLY PLANNER — Full height spreadsheet
 ══════════════════════════════════════════ */
-#view-agenda {
-  height: calc(100vh - 64px);
+#view-agenda.active {
   display: flex !important;
   flex-direction: column;
+  padding: 0 !important;
+  height: calc(100vh - 64px);
   overflow: hidden;
 }
 #plannerContent {
@@ -2966,14 +2967,4 @@ body, #app { background: #F5F3EF; }
   font-size: 12px !important;
   font-weight: 700 !important;
   background: var(--beige) !important;
-}
-
-#view-channels.active,
-#view-media.active,
-#view-publishing.active,
-#view-settings.active,
-#view-activity-log.active {
-  display: block !important;
-  height: auto !important;
-  overflow: visible !important;
 }
