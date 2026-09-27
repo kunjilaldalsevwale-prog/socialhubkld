@@ -36,7 +36,7 @@ function navigate(view, el) {
     agenda: () => { if(typeof renderMonthlyPlanner==='function') renderMonthlyPlanner(); },
     media:   () => { if(typeof renderMediaLibrary==='function') renderMediaLibrary(); },
     publishing: () => { if(typeof renderPublishing==='function') renderPublishing(); },
-    settings:   () => { if(typeof renderSettings==='function') renderSettings(); else if(typeof renderTeamSettings==='function') renderTeamSettings(); },
+    settings:   () => { if(typeof renderTeamSettings==='function') renderTeamSettings(); },
     'activity-log': () => { if(typeof renderActivityLog==='function') renderActivityLog(); },
   };
   if (renders[view]) renders[view]();
@@ -335,3 +335,5 @@ function toggleMobileMenu() {
     if (actBtn) actBtn.style.display = currentUser.role==='admin' ? '' : 'none';
   }
 }
+
+function renderSettings() { if(typeof renderTeamSettings==="function") renderTeamSettings(); }
