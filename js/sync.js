@@ -66,7 +66,7 @@ function _startListening() {
       'reminders','customerLists','googleAds','teamPermissions',
       'teamPasswords','settings','notes',
       'mediaLibrary','mediaFolders','ideaFolders',
-      'activityLog','attachedDocs'
+      'activityLog','attachedDocs','references','publishingQueue','teamMembers'
     ];
 
     let changed = false;
@@ -120,6 +120,9 @@ function _buildPushData() {
     settings:        state.settings        || {},
     notes:           state.notes           || '',
     attachedDocs:    state.attachedDocs    || [],
+    references:      state.references      || [],
+    publishingQueue: state.publishingQueue  || [],
+    teamMembers:     state.teamMembers      || [],
     ideaFolders:     state.ideaFolders     || [],
     activityLog:     state.activityLog     || [],
     mediaLibrary:    (state.mediaLibrary||[]).map(m=>({
