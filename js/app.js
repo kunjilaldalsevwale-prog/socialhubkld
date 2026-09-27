@@ -34,7 +34,7 @@ function navigate(view, el) {
 
   const renders = {
     channels: renderChannelCalendars,
-    calendar: buildCalendar,
+    calendar: renderChannelCalendars,
     posts: renderPosts,
     meta: renderMetaAds,
     whatsapp: () => { renderWhatsApp(); setTimeout(renderWAInteraktBanner, 50); },
@@ -107,7 +107,7 @@ function exportData() {
 
 window.addEventListener('DOMContentLoaded', () => {
   initSync();   // Firebase real-time sync
-  initAuth();   // Login & session
+  tryRestoreSession();   // Login & session
   checkReminders && checkReminders();
 });
 
