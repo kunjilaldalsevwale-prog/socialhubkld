@@ -97,9 +97,8 @@ function exportData() {
 }
 
 window.addEventListener('DOMContentLoaded', () => {
-  initSync();   // Firebase real-time sync
-  tryRestoreSession();   // Login & session
-  checkReminders && checkReminders();
+  tryRestoreSession();   // Login & session FIRST
+  
 });
 
 /* ── Nav group dropdown toggle ── */
