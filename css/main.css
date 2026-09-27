@@ -2967,3 +2967,13 @@ body, #app { background: #F5F3EF; }
   font-weight: 700 !important;
   background: var(--beige) !important;
 }
+
+#view-channels.active,
+#view-media.active,
+#view-publishing.active,
+#view-settings.active,
+#view-activity-log.active {
+  display: block !important;
+  height: auto !important;
+  overflow: visible !important;
+}
