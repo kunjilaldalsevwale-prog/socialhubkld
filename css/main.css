@@ -2938,94 +2938,32 @@ body, #app { background: #F5F3EF; }
   .mmm-grid { grid-template-columns: repeat(4,1fr); }
 }
 
-@media (max-width: 768px) {
-  /* Calendar sidebar — show as scrollable section below calendar */
-  .calendar-sidebar {
-    display: block !important;
-    width: 100% !important;
-    margin-top: 16px;
-    border-radius: 18px !important;
-    max-height: none !important;
-  }
-  .calendar-sidebar .panel {
-    border-radius: 18px !important;
-    height: auto !important;
-  }
-  /* Ideas sidebar */
-  .ideas-sidebar {
-    display: block !important;
-    margin-top: 16px;
-  }
-  /* Cal sidebar tabs — horizontal scroll */
-  .cal-sidebar-tabs {
-    overflow-x: auto;
-    display: flex;
-    gap: 6px;
-    padding-bottom: 4px;
-  }
-  .cst-tab {
-    white-space: nowrap;
-    flex-shrink: 0;
-  }
-  /* Sidebar panels full height */
-  #csp-ideas, #csp-docs, #csp-festivals {
-    max-height: 400px;
-    overflow-y: auto;
-  }
+/* ══════════════════════════════════════════
+   MONTHLY PLANNER — Full height spreadsheet
+══════════════════════════════════════════ */
+#view-agenda {
+  height: calc(100vh - 64px);
+  display: flex !important;
+  flex-direction: column;
+  overflow: hidden;
 }
-
-@media (max-width: 768px) {
-  /* Fix scrolling — only content area scrolls, not the whole page */
-  body, #app {
-    overflow: hidden !important;
-    height: 100vh !important;
-    height: 100dvh !important;
-  }
-  .main-wrapper {
-    height: 100vh !important;
-    height: 100dvh
-@media (max-width: 768px) {
-  /* Campaign cards stack vertically */
-  .campaign-card {
-    flex-direction: column !important;
-  }
-  .campaign-card-thumb {
-    width: 100% !important;
-    height: 160px !important;
-  }
-  .campaign-card-body {
-    padding: 14px !important;
-  }
-
-  /* Campaign popup full screen on mobile */
-  #campaignPopup {
-    padding: 0 !important;
-    align-items: flex-end !important;
-  }
-  #campaignPopup > div {
-    border-radius: 24px 24px 0 0 !important;
-    max-height: 95vh !important;
-    overflow-y: auto !important;
-    width: 100% !important;
-    max-width: 100% !important;
-    margin: 0 !important;
-  }
-
-  /* Campaign popup header padding */
-  #campaignPopup > div > div:first-child
-
-   #rolesTable table {
-  font-size: 11px !important;
+#plannerContent {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
 }
-#rolesTable th, #rolesTable td {
-  padding: 6px 4px !important;
+#hotContainer {
+  width: 100%;
+  height: 100%;
 }
-#rolesTable .msc-label {
-  font-size: 9px !important;
+/* Handsontable theme overrides */
+.handsontable td {
+  font-family: var(--font) !important;
+  font-size: 13px !important;
 }
-@media (max-width: 1200px) {
-  #rolesTable {
-    overflow-x: auto !important;
-    display: block !important;
-  }
+.handsontable th {
+  font-family: var(--font) !important;
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  background: var(--beige) !important;
 }
