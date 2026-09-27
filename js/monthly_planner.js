@@ -1,13 +1,20 @@
 /* ============================================================
-   MONTHLY PLANNER — Campaign-based
+   MONTHLY PLANNER — Role-based views
+   Strategist: Excel spreadsheet
+   Designer: Word document
+   Admin: Toggle between both + manage approvals
    ============================================================ */
 
 let plannerYear  = new Date().getFullYear();
 let plannerMonth = new Date().getMonth();
+let _plannerTab  = 'strategy';
 
 function renderMonthlyPlanner() {
   _renderPlannerHeader();
-  _renderCampaignsList();
+  _applyPlannerRoleView();
+  if (_plannerTab === 'strategy') renderStrategyView();
+  else if (_plannerTab === 'design') renderDesignView();
+  else if (_plannerTab === 'refs') renderReferencesInbox();
 }
 
 function _renderPlannerHeader() {
@@ -25,590 +32,556 @@ function changePlannerMonth(dir) {
 
 function _getPlannerKey() { return `${plannerYear}-${plannerMonth}`; }
 
-function _getCampaigns() {
+function _getPlannerData() {
   if (!state.monthlyPlans) state.monthlyPlans = {};
   const k = _getPlannerKey();
-  if (!state.monthlyPlans[k]) state.monthlyPlans[k] = { campaigns:[] };
-  if (!state.monthlyPlans[k].campaigns) state.monthlyPlans[k].campaigns = [];
-  return state.monthlyPlans[k].campaigns;
+  if (!state.monthlyPlans[k]) state.monthlyPlans[k] = {
+    spreadsheet: { cols:['Date','Platform','Caption','Hashtags','Notes'], rows:[] },
+    approvals: {},
+    approvalDays: 3,
+    createdAt: new Date().toISOString(),
+    designUploads: {},
+    designApprovals: {},
+  };
+  return state.monthlyPlans[k];
 }
 
-function _renderCampaignsList() {
-  const el = document.getElementById('plannerCampaignsList');
+/* ── Role detection ───────────────────────────────────────── */
+function _isStrategist() { return currentUser && currentUser.role === 'strategist'; }
+function _isDesigner()   { return currentUser && currentUser.role === 'designer'; }
+function _isAdmin()      { return currentUser && currentUser.role === 'admin'; }
+
+function _applyPlannerRoleView() {
+  const tabs = document.getElementById('plannerViewTabs');
+  if (!tabs) return;
+
+  if (_isStrategist()) {
+    // Strategist sees: Strategy + References
+    tabs.innerHTML = `
+      <button class="btn ${_plannerTab==='strategy'?'btn-primary':'btn-ghost'} btn-sm" onclick="switchPlannerTab('strategy')">📊 My Spreadsheet</button>
+      <button class="btn ${_plannerTab==='refs'?'btn-primary':'btn-ghost'} btn-sm" onclick="switchPlannerTab('refs')">📌 References</button>`;
+  } else if (_isDesigner()) {
+    // Designer sees: Design view + References
+    tabs.innerHTML = `
+      <button class="btn ${_plannerTab==='design'?'btn-primary':'btn-ghost'} btn-sm" onclick="switchPlannerTab('design')">🎨 My Posts</button>
+      <button class="btn ${_plannerTab==='refs'?'btn-primary':'btn-ghost'} btn-sm" onclick="switchPlannerTab('refs')">📌 References</button>`;
+  } else {
+    // Admin sees all
+    tabs.innerHTML = `
+      <button class="btn ${_plannerTab==='strategy'?'btn-primary':'btn-ghost'} btn-sm" onclick="switchPlannerTab('strategy')">📊 Strategy</button>
+      <button class="btn ${_plannerTab==='design'?'btn-primary':'btn-ghost'} btn-sm" onclick="switchPlannerTab('design')">🎨 Design</button>
+      <button class="btn ${_plannerTab==='refs'?'btn-primary':'btn-ghost'} btn-sm" onclick="switchPlannerTab('refs')">📌 References</button>`;
+  }
+}
+
+function switchPlannerTab(tab) {
+  _plannerTab = tab;
+  ['strategy','design','refs'].forEach(t => {
+    const el = document.getElementById('plannerTab-'+t);
+    if (el) el.style.display = t === tab ? '' : 'none';
+  });
+  _applyPlannerRoleView();
+  if (tab === 'strategy') renderStrategyView();
+  else if (tab === 'design') renderDesignView();
+  else renderReferencesInbox();
+}
+
+/* ══════════════════════════════════════════════════════════
+   STRATEGY VIEW — Excel spreadsheet
+══════════════════════════════════════════════════════════ */
+function renderStrategyView() {
+  const data     = _getPlannerData();
+  const sheet    = data.spreadsheet;
+  const locked   = _isSheetApproved(data);
+  const canEdit  = !locked || _isAdmin();
+
+  // Approval bar
+  _renderStratApprovalBar(data);
+
+  const el = document.getElementById('plannerSpreadsheet');
   if (!el) return;
-  const campaigns = _getCampaigns();
-  el.innerHTML = campaigns.length ? campaigns.map(c => `
-    <div class="campaign-card" onclick="openCampaignPopup('${c.id}')">
-      <div class="campaign-card-thumb">
-        ${c.stratImages&&c.stratImages[0]
-          ? (c.stratImages[0].name||'').match(/\.(mp4|mov|webm)/i)
-            ? `<video src="${c.stratImages[0].url}" style="width:100%;height:100%;object-fit:cover" muted></video>`
-            : `<img src="${c.stratImages[0].url}" style="width:100%;height:100%;object-fit:cover">`
-          : `<div style="font-size:28px;display:flex;align-items:center;justify-content:center;height:100%;background:var(--brand-pale)">📣</div>`}
-      </div>
-      <div class="campaign-card-body">
-        <div style="font-size:15px;font-weight:800;color:var(--text)">${c.name}</div>
-        <div style="font-size:11px;color:var(--text3);margin-top:3px">${c.startDate||''}${c.endDate?' → '+c.endDate:''}</div>
-        <div style="font-size:12px;color:var(--text2);margin-top:6px;line-height:1.5">${(c.brief||'').slice(0,80)}${(c.brief||'').length>80?'…':''}</div>
-        <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
-          <span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;background:var(--brand-pale);color:var(--brand)">${(c.stratImages||[]).length} refs</span>
-          <span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;background:var(--green-light);color:var(--green)">${(c.designImages||[]).length} designs</span>
-          <span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;background:${_allApproved(c)?'#ECFDF5':'#EFF6FF'};color:${_allApproved(c)?'#065F46':'#1D4ED8'}">${_approvalCount(c)}/3 approved</span>
+
+  if (!sheet.cols || !sheet.cols.length) sheet.cols = ['Date','Platform','Caption','Hashtags','Notes'];
+  if (!sheet.rows) sheet.rows = [];
+
+  el.innerHTML = `
+    <div style="overflow-x:auto;border-radius:16px;border:1px solid var(--border);box-shadow:var(--sh-sm)">
+      <table style="border-collapse:collapse;min-width:100%;font-size:13px;background:var(--white)">
+        <thead>
+          <tr style="background:var(--beige)">
+            <th style="padding:10px 8px;border:1px solid var(--border);width:36px;color:var(--text3);font-size:11px">#</th>
+            ${sheet.cols.map((col,ci) => `
+              <th style="padding:0;border:1px solid var(--border);min-width:130px;position:relative">
+                <div style="display:flex;align-items:center">
+                  <input value="${col}" style="padding:10px 8px;font-size:12px;font-weight:700;color:var(--text2);background:transparent;border:none;outline:none;width:100%;font-family:var(--font)"
+                    ${!canEdit?'readonly':''}
+                    onchange="renameSpreadsheetCol(${ci},this.value)"
+                    onfocus="this.style.background='var(--brand-pale)'" onblur="this.style.background='transparent'">
+                  ${canEdit?`<button onclick="deleteSpreadsheetCol(${ci})" style="padding:4px 6px;background:none;border:none;cursor:pointer;color:var(--text4);font-size:12px;flex-shrink:0" title="Delete column">✕</button>`:''}
+                </div>
+              </th>`).join('')}
+            <th style="padding:10px 8px;border:1px solid var(--border);width:40px"></th>
+          </tr>
+        </thead>
+        <tbody>
+          ${sheet.rows.map((row,ri) => `
+            <tr style="transition:background .1s" onmouseover="this.style.background='var(--beige)'" onmouseout="this.style.background=''">
+              <td style="padding:8px;border:1px solid var(--border);text-align:center;color:var(--text3);font-size:11px;font-weight:600">${ri+1}</td>
+              ${sheet.cols.map((col,ci) => `
+                <td style="padding:0;border:1px solid var(--border)">
+                  <textarea rows="1" style="width:100%;padding:8px;font-size:12px;border:none;outline:none;resize:none;font-family:var(--font);background:transparent;min-height:36px;line-height:1.4"
+                    ${!canEdit?'readonly':''}
+                    oninput="updateSpreadsheetCell(${ri},${ci},this.value);this.style.height='auto';this.style.height=this.scrollHeight+'px'"
+                    onfocus="this.parentElement.style.outline='2px solid var(--brand)'" onblur="this.parentElement.style.outline=''"
+                    >${(row[ci]||'')}</textarea>
+                </td>`).join('')}
+              <td style="padding:4px;border:1px solid var(--border);text-align:center">
+                ${canEdit?`<button onclick="deleteSpreadsheetRow(${ri})" style="background:none;border:none;cursor:pointer;color:var(--text4);font-size:14px">🗑</button>`:''}
+              </td>
+            </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>`;
+
+  // Show/hide add row/col buttons
+  const addBtns = el.nextElementSibling;
+  if (addBtns) addBtns.style.display = canEdit ? 'flex' : 'none';
+
+  if (locked && !_isAdmin()) {
+    el.insertAdjacentHTML('beforebegin', `
+      <div style="background:#ECFDF5;border:1px solid #6EE7B7;border-radius:12px;padding:10px 14px;margin-bottom:12px;font-size:12px;color:#065F46;font-weight:600">
+        ✅ This sheet has been approved — locked for editing. Admins can still make changes.
+      </div>`);
+  }
+}
+
+function _isSheetApproved(data) {
+  const ADMINS = ['anusha','anjani','tejasv'];
+  return ADMINS.every(a => {
+    const s = (data.approvals||{})[a];
+    return s === 'approved' || _isAutoApproved(data, a);
+  });
+}
+
+function _isAutoApproved(data, adminId) {
+  if (!data.createdAt) return false;
+  const days = data.approvalDays || 3;
+  return Date.now() > new Date(data.createdAt).getTime() + days*24*60*60*1000;
+}
+
+function _renderStratApprovalBar(data) {
+  const el = document.getElementById('stratApprovalBar');
+  if (!el) return;
+  const ADMINS = ['anusha','anjani','tejasv'];
+  const approved = ADMINS.filter(a=>(data.approvals||{})[a]==='approved'||_isAutoApproved(data,a)).length;
+  const rejected = ADMINS.some(a=>(data.approvals||{})[a]==='rejected');
+  const allApproved = approved === 3;
+
+  el.innerHTML = `
+    <div style="background:var(--white);border:1px solid var(--border);border-radius:16px;padding:14px 18px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
+      <div style="display:flex;align-items:center;gap:14px">
+        <div style="display:flex;gap:6px">
+          ${ADMINS.map(a => {
+            const s = (data.approvals||{})[a];
+            const status = s || (_isAutoApproved(data,a) ? 'auto' : 'pending');
+            const bg = status==='approved'||status==='auto' ? '#10B981' : status==='rejected' ? '#EF4444' : '#E5E7EB';
+            const icon = status==='approved'||status==='auto' ? '✓' : status==='rejected' ? '✕' : '';
+            const u = TEAM_USERS[a];
+            return `<div title="${u?u.name:a}" style="width:30px;height:30px;border-radius:50%;background:${bg};display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#fff;border:2px solid ${bg==='#E5E7EB'?'#D1D5DB':'transparent'}">${icon||''}</div>`;
+          }).join('')}
+        </div>
+        <div>
+          <div style="font-size:13px;font-weight:700;color:var(--text)">
+            ${rejected ? '❌ Changes requested' : allApproved ? '✅ Strategy approved' : `${approved}/3 approved`}
+          </div>
+          <div style="font-size:11px;color:var(--text3);margin-top:2px">
+            Auto-approve after
+            <input type="number" min="1" max="30" value="${data.approvalDays||3}"
+              style="width:36px;padding:2px 5px;border:1px solid var(--border2);border-radius:6px;font-size:11px;font-family:var(--font);text-align:center;margin:0 3px"
+              onchange="_updateApprovalDays(this.value)">
+            days
+          </div>
         </div>
       </div>
-      <div style="padding:14px;display:flex;flex-direction:column;gap:6px;justify-content:center">
-        <button class="btn btn-primary btn-sm" onclick="event.stopPropagation();openCampaignPopup('${c.id}')">Open →</button>
-        <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();deleteCampaign('${c.id}')" style="color:var(--coral);border-color:var(--coral)">Delete</button>
-      </div>
-    </div>`).join('')
-  : `<div style="text-align:center;padding:48px;color:var(--text3)">
-      <div style="font-size:48px;margin-bottom:12px">📋</div>
-      <div style="font-size:15px;font-weight:700;color:var(--text2);margin-bottom:6px">No campaigns yet</div>
-      <div style="font-size:13px;margin-bottom:20px">Add your first campaign for this month</div>
+      ${_isAdmin() ? `
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        ${ADMINS.map(a => {
+          const s = (data.approvals||{})[a];
+          const u = TEAM_USERS[a];
+          const name = u ? u.name : a;
+          if (s==='approved') return `<span style="font-size:11px;padding:5px 12px;border-radius:20px;background:#ECFDF5;color:#065F46;font-weight:700">${name} ✅</span>`;
+          if (s==='rejected') return `<span style="font-size:11px;padding:5px 12px;border-radius:20px;background:#FEF2F2;color:#991B1B;font-weight:700">${name} ❌</span>`;
+          if (_isAutoApproved(data,a)) return `<span style="font-size:11px;padding:5px 12px;border-radius:20px;background:#F0FDF4;color:#166534;font-weight:700">${name} auto ✓</span>`;
+          if (currentUser && currentUser.id === a) return `
+            <div style="display:flex;gap:5px;align-items:center">
+              <span style="font-size:11px;color:var(--text2);font-weight:600">${name}:</span>
+              <button onclick="approveStrategy('${a}','approved')" style="padding:4px 12px;background:#ECFDF5;color:#065F46;border:1.5px solid #6EE7B7;border-radius:16px;font-size:11px;font-weight:700;cursor:pointer;font-family:var(--font)">✅ Approve</button>
+              <button onclick="approveStrategy('${a}','rejected')" style="padding:4px 12px;background:#FEF2F2;color:#991B1B;border:1.5px solid #FCA5A5;border-radius:16px;font-size:11px;font-weight:700;cursor:pointer;font-family:var(--font)">❌ Reject</button>
+            </div>`;
+          return `<span style="font-size:11px;color:var(--text3)">${name}: pending</span>`;
+        }).join('')}
+      </div>` : ''}
     </div>`;
 }
 
-function addNewCampaign() {
-  const campaigns = _getCampaigns();
-  const id = 'camp_' + Date.now();
-  campaigns.push({
-    id, name:'New Campaign', brief:'', startDate:'', endDate:'',
-    stratImages:[], stratNotes:'', stratFeedback:'',
-    designRefs:[], designImages:[], designNotes:'', designFeedback:'',
-    driveFolderUrl:'', assignedDesigner:'',
-    approvals:{}, approvalDays:3,
-    createdAt: new Date().toISOString(),
-    created: new Date().toISOString()
-  });
+function approveStrategy(adminId, status) {
+  const data = _getPlannerData();
+  if (!data.approvals) data.approvals = {};
+  data.approvals[adminId] = status;
   saveState();
-  _renderCampaignsList();
-  openCampaignPopup(id);
-}
-
-function deleteCampaign(id) {
-  const k = _getPlannerKey();
-  if (!state.monthlyPlans[k]) return;
-  state.monthlyPlans[k].campaigns = state.monthlyPlans[k].campaigns.filter(c=>c.id!==id);
-  saveState(); _renderCampaignsList();
-}
-
-/* ══════════════════════════════════════════════════════════
-   APPROVAL HELPERS
-══════════════════════════════════════════════════════════ */
-function _approvalCount(c) {
-  return ['anusha','anjani','tejasv'].filter(a => {
-    const s = _getApprovalStatus(c,a);
-    return s==='approved'||s==='auto';
-  }).length;
-}
-function _allApproved(c) { return _approvalCount(c)===3; }
-
-function _getApprovalStatus(c, adminId) {
-  const approvals = c.approvals || {};
-  if (approvals[adminId]) return approvals[adminId].status;
-  if (c.createdAt) {
-    const days = c.approvalDays || 3;
-    const deadline = new Date(c.createdAt).getTime() + days*24*60*60*1000;
-    if (Date.now() > deadline) return 'auto';
+  _renderStratApprovalBar(data);
+  renderStrategyView();
+  showToast(status==='approved'?'✅ Strategy approved!':'Changes requested', status==='approved'?'success':'error');
+  // Push to designer view if all approved
+  if (_isSheetApproved(data)) {
+    showToast('📨 Strategy locked and sent to Designer!', 'success');
   }
-  return 'pending';
 }
 
-function _getDeadlineText(c) {
-  if (!c.createdAt) return '';
-  const days = c.approvalDays || 3;
-  const deadline = new Date(new Date(c.createdAt).getTime() + days*24*60*60*1000);
-  const diff = Math.ceil((deadline - Date.now()) / (1000*60*60*24));
-  if (diff <= 0) return '(auto-approved)';
-  return `(${diff}d left)`;
-}
-
-function _renderApprovalBadge(c) {
-  const rejected = ['anusha','anjani','tejasv'].some(a=>_getApprovalStatus(c,a)==='rejected');
-  if (rejected) return `<span style="padding:5px 14px;border-radius:20px;background:#FEF2F2;color:#991B1B;font-size:12px;font-weight:700">❌ Changes requested</span>`;
-  if (_allApproved(c)) return `<span style="padding:5px 14px;border-radius:20px;background:#ECFDF5;color:#065F46;font-size:12px;font-weight:700">✅ All approved</span>`;
-  return `<span style="padding:5px 14px;border-radius:20px;background:#EFF6FF;color:#1D4ED8;font-size:12px;font-weight:700">${_approvalCount(c)}/3 approved</span>`;
-}
-
-function setCampaignApproval(campId, adminId, status) {
-  const c = _getCampaigns().find(x=>x.id===campId);
-  if (!c) return;
-  if (!c.approvals) c.approvals = {};
-  c.approvals[adminId] = { status, ts: new Date().toISOString(), by: currentUser?currentUser.name:adminId };
+function _updateApprovalDays(val) {
+  const data = _getPlannerData();
+  data.approvalDays = parseInt(val)||3;
   saveState();
-  openCampaignPopup(campId);
-  showToast(status==='approved'?'✅ Approved!':'Changes requested', status==='approved'?'success':'error');
 }
 
-function updateApprovalDeadline(campId) {
-  const c = _getCampaigns().find(x=>x.id===campId);
-  if (!c) return;
-  const el = document.getElementById('strat-deadline-'+campId);
-  if (el) el.textContent = _getDeadlineText(c);
+/* ── Spreadsheet editing ─────────────────────────────────── */
+function addSpreadsheetRow() {
+  const data = _getPlannerData();
+  const cols = data.spreadsheet.cols.length || 5;
+  data.spreadsheet.rows.push(new Array(cols).fill(''));
+  saveState();
+  renderStrategyView();
+}
+
+function addSpreadsheetCol() {
+  const data = _getPlannerData();
+  const name = prompt('Column name:');
+  if (!name) return;
+  data.spreadsheet.cols.push(name);
+  data.spreadsheet.rows.forEach(r => r.push(''));
+  saveState();
+  renderStrategyView();
+}
+
+function renameSpreadsheetCol(ci, name) {
+  const data = _getPlannerData();
+  data.spreadsheet.cols[ci] = name;
+  saveState();
+}
+
+function deleteSpreadsheetCol(ci) {
+  if (!confirm('Delete this column?')) return;
+  const data = _getPlannerData();
+  data.spreadsheet.cols.splice(ci, 1);
+  data.spreadsheet.rows.forEach(r => r.splice(ci, 1));
+  saveState();
+  renderStrategyView();
+}
+
+function deleteSpreadsheetRow(ri) {
+  const data = _getPlannerData();
+  data.spreadsheet.rows.splice(ri, 1);
+  saveState();
+  renderStrategyView();
+}
+
+function updateSpreadsheetCell(ri, ci, value) {
+  const data = _getPlannerData();
+  if (!data.spreadsheet.rows[ri]) data.spreadsheet.rows[ri] = [];
+  data.spreadsheet.rows[ri][ci] = value;
+  clearTimeout(window._sheetSaveTimer);
+  window._sheetSaveTimer = setTimeout(()=>{ DB.save(state); if(typeof syncPush==='function') syncPush(); }, 500);
 }
 
 /* ══════════════════════════════════════════════════════════
-   MEDIA RENDERING
+   DESIGN VIEW — Word document style
 ══════════════════════════════════════════════════════════ */
-function _isVideo(name) {
+function renderDesignView() {
+  const data   = _getPlannerData();
+  const sheet  = data.spreadsheet;
+  const rows   = sheet.rows || [];
+  const cols   = sheet.cols || [];
+  const locked = _isSheetApproved(data);
+  const el     = document.getElementById('plannerDesignView');
+  if (!el) return;
+
+  if (!locked && !_isAdmin()) {
+    el.innerHTML = `
+      <div style="text-align:center;padding:48px;color:var(--text3)">
+        <div style="font-size:48px;margin-bottom:12px">⏳</div>
+        <div style="font-size:15px;font-weight:700;color:var(--text2)">Waiting for strategy approval</div>
+        <div style="font-size:13px;margin-top:6px">The strategy sheet needs to be approved by admins before you can start designing</div>
+      </div>`;
+    return;
+  }
+
+  if (!rows.length) {
+    el.innerHTML = `
+      <div style="text-align:center;padding:48px;color:var(--text3)">
+        <div style="font-size:48px;margin-bottom:12px">📄</div>
+        <div style="font-size:15px;font-weight:700;color:var(--text2)">No posts in the strategy yet</div>
+      </div>`;
+    return;
+  }
+
+  // Find caption column index
+  const captionIdx = cols.findIndex(c=>c.toLowerCase().includes('caption'));
+  const dateIdx    = cols.findIndex(c=>c.toLowerCase().includes('date'));
+  const platformIdx= cols.findIndex(c=>c.toLowerCase().includes('platform'));
+
+  el.innerHTML = `
+    <!-- Document header -->
+    <div style="background:var(--white);border-radius:20px;padding:32px;margin-bottom:24px;box-shadow:var(--sh-sm);border:1px solid var(--border)">
+      <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px">Content Plan</div>
+      <h1 style="font-size:28px;font-weight:800;color:var(--text);margin-bottom:6px">${new Date(plannerYear, plannerMonth, 1).toLocaleDateString('en-IN',{month:'long',year:'numeric'})}</h1>
+      <div style="font-size:13px;color:var(--text3)">${rows.length} post${rows.length!==1?'s':''} planned · Click ＋ to upload your design for each post</div>
+      ${locked ? '<div style="margin-top:10px;display:inline-block;padding:5px 14px;background:#ECFDF5;color:#065F46;border-radius:20px;font-size:12px;font-weight:700">✅ Strategy approved</div>' : ''}
+    </div>
+
+    <!-- Posts as document sections -->
+    ${rows.map((row, ri) => {
+      const caption  = captionIdx>=0 ? row[captionIdx]||'' : '';
+      const date     = dateIdx>=0    ? row[dateIdx]||''    : '';
+      const platform = platformIdx>=0? row[platformIdx]||'': '';
+      const upload   = (data.designUploads||{})[ri];
+      const dApproval= (data.designApprovals||{})[ri];
+
+      return `
+      <div style="background:var(--white);border-radius:20px;padding:28px;margin-bottom:20px;box-shadow:var(--sh-sm);border:1px solid var(--border)" id="design-post-${ri}">
+
+        <!-- Post header -->
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px">
+          <div style="display:flex;align-items:center;gap:12px">
+            <div style="width:36px;height:36px;border-radius:50%;background:var(--brand-pale);color:var(--brand);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px">${ri+1}</div>
+            <div>
+              <div style="font-size:16px;font-weight:800;color:var(--text)">Post ${ri+1}</div>
+              <div style="font-size:11px;color:var(--text3)">${date?'📅 '+date:''} ${platform?'· '+platform:''}</div>
+            </div>
+          </div>
+          ${dApproval==='approved' ? '<span style="padding:5px 14px;border-radius:20px;background:#ECFDF5;color:#065F46;font-size:12px;font-weight:700">✅ Design approved</span>' :
+            dApproval==='rejected' ? '<span style="padding:5px 14px;border-radius:20px;background:#FEF2F2;color:#991B1B;font-size:12px;font-weight:700">❌ Changes needed</span>' :
+            upload ? '<span style="padding:5px 14px;border-radius:20px;background:#FEF9C3;color:#92400E;font-size:12px;font-weight:700">⏳ Awaiting approval</span>' : ''}
+        </div>
+
+        <!-- Strategy details as bullet points -->
+        <div style="margin-bottom:20px;padding:16px;background:var(--beige);border-radius:14px;border-left:3px solid var(--brand)">
+          <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:10px">From Strategist</div>
+          ${cols.map((col,ci) => row[ci] ? `
+            <div style="margin-bottom:6px;font-size:13px;color:var(--text);line-height:1.6">
+              <span style="font-weight:700;color:var(--text2)">${col}:</span>
+              <span style="margin-left:6px">${row[ci]}</span>
+            </div>` : '').join('')}
+        </div>
+
+        <!-- Design upload -->
+        ${upload ? `
+          <div style="margin-bottom:16px">
+            <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:10px">My Design</div>
+            <div style="border-radius:16px;overflow:hidden;border:1px solid var(--border);position:relative">
+              ${_isVideoFile(upload.name)
+                ? `<video src="${upload.url}" controls style="width:100%;max-height:400px;display:block"></video>`
+                : `<img src="${upload.url}" style="width:100%;max-height:400px;object-fit:contain;display:block;background:#000">`}
+              <div style="padding:12px 14px;background:var(--surface2);display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+                <span style="font-size:12px;color:var(--text2);flex:1">${upload.name}</span>
+                ${(_isDesigner()||_isAdmin()) && dApproval!=='approved' ? `
+                  <label class="btn btn-ghost btn-sm" style="cursor:pointer">
+                    <input type="file" accept="image/*,video/*,.pdf" style="display:none" onchange="uploadDesignForPost(this,${ri})">
+                    🔄 Replace
+                  </label>` : ''}
+                <a href="${upload.url}" target="_blank" class="btn btn-ghost btn-sm" style="text-decoration:none">⬇ Download</a>
+              </div>
+            </div>
+            ${_isAdmin() && !dApproval ? `
+              <div style="display:flex;gap:8px;margin-top:10px">
+                <button onclick="approveDesign(${ri},'approved')" style="padding:7px 18px;background:#ECFDF5;color:#065F46;border:1.5px solid #6EE7B7;border-radius:20px;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--font)">✅ Approve design</button>
+                <button onclick="approveDesign(${ri},'rejected')" style="padding:7px 18px;background:#FEF2F2;color:#991B1B;border:1.5px solid #FCA5A5;border-radius:20px;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--font)">❌ Request changes</button>
+              </div>` : ''}
+            ${dApproval==='approved' ? `
+              <div style="margin-top:10px">
+                <button onclick="sendToPublishing(${ri})" class="btn btn-primary btn-sm">🚀 Send to Publishing</button>
+              </div>` : ''}
+          </div>` : ''}
+
+        <!-- Upload button -->
+        ${(_isDesigner()||_isAdmin()) && !upload ? `
+          <label style="display:flex;align-items:center;justify-content:center;gap:10px;padding:20px;background:var(--brand-pale);border:2px dashed var(--brand-mid);border-radius:16px;cursor:pointer;transition:all .15s"
+            onmouseover="this.style.background='var(--brand-light)'" onmouseout="this.style.background='var(--brand-pale)'">
+            <input type="file" accept="image/*,video/*,.pdf" style="display:none" onchange="uploadDesignForPost(this,${ri})">
+            <span style="font-size:24px">📁</span>
+            <div>
+              <div style="font-size:14px;font-weight:700;color:var(--brand)">Upload design for Post ${ri+1}</div>
+              <div style="font-size:11px;color:var(--text3);margin-top:2px">From your device or Google Drive</div>
+            </div>
+          </label>` : ''}
+
+      </div>`;
+    }).join('')}`;
+}
+
+async function uploadDesignForPost(input, postIndex) {
+  const file = input.files[0];
+  if (!file) return;
+  input.value = '';
+  showToast('☁️ Uploading design…');
+  try {
+    const result = await uploadToCloudinary(file);
+    const data = _getPlannerData();
+    if (!data.designUploads) data.designUploads = {};
+    data.designUploads[postIndex] = { url:result.url, name:file.name, source:'cloudinary', uploadedBy:currentUser?currentUser.name:'', uploadedAt:new Date().toISOString() };
+    if (!data.designApprovals) data.designApprovals = {};
+    delete data.designApprovals[postIndex]; // reset approval on new upload
+    DB.save(state);
+    if (typeof syncPush==='function') syncPush();
+    renderDesignView();
+    showToast('✅ Design uploaded!', 'success');
+    if (typeof autoSaveToMediaLibrary==='function') autoSaveToMediaLibrary(result.url, file.name, 'cloudinary');
+  } catch(e) {
+    showToast('Upload failed','error');
+  }
+}
+
+function approveDesign(postIndex, status) {
+  const data = _getPlannerData();
+  if (!data.designApprovals) data.designApprovals = {};
+  data.designApprovals[postIndex] = status;
+  DB.save(state);
+  if (typeof syncPush==='function') syncPush();
+  renderDesignView();
+  showToast(status==='approved'?'✅ Design approved — ready to send to publishing!':'Changes requested', status==='approved'?'success':'error');
+}
+
+function sendToPublishing(postIndex) {
+  const data   = _getPlannerData();
+  const sheet  = data.spreadsheet;
+  const row    = sheet.rows[postIndex] || [];
+  const cols   = sheet.cols || [];
+  const upload = (data.designUploads||{})[postIndex];
+  if (!upload) { showToast('No design uploaded','error'); return; }
+
+  const captionIdx  = cols.findIndex(c=>c.toLowerCase().includes('caption'));
+  const dateIdx     = cols.findIndex(c=>c.toLowerCase().includes('date'));
+  const platformIdx = cols.findIndex(c=>c.toLowerCase().includes('platform'));
+  const hashIdx     = cols.findIndex(c=>c.toLowerCase().includes('hashtag'));
+
+  if (!state.publishingQueue) state.publishingQueue = [];
+  const id = `pub_${_getPlannerKey()}_${postIndex}`;
+  // Remove if already exists
+  state.publishingQueue = state.publishingQueue.filter(p=>p.id!==id);
+  state.publishingQueue.push({
+    id, plannerKey:_getPlannerKey(), postIndex,
+    imageUrl: upload.url, imageName: upload.name,
+    caption:  captionIdx>=0  ? row[captionIdx]||''  : '',
+    hashtags: hashIdx>=0     ? row[hashIdx]||''     : '',
+    date:     dateIdx>=0     ? row[dateIdx]||''     : '',
+    platform: platformIdx>=0 ? row[platformIdx]||'' : '',
+    status:   'ready',
+    addedAt:  new Date().toISOString(),
+  });
+  DB.save(state);
+  if (typeof syncPush==='function') syncPush();
+  showToast('🚀 Sent to Publishing queue!', 'success');
+}
+
+function _isVideoFile(name) {
   return (name||'').match(/\.(mp4|mov|webm|avi|mkv)$/i);
 }
-function _isPdf(name) {
-  return (name||'').match(/\.pdf$/i);
-}
-
-function _renderMediaThumb(url, name, small) {
-  const h = small ? '80px' : '100px';
-  if (_isVideo(name)) {
-    return `<video src="${url}" style="width:100%;height:${h};object-fit:cover;display:block;border-radius:8px" muted preload="metadata"></video>`;
-  }
-  if (_isPdf(name)) {
-    return `<div style="width:100%;height:${h};background:#FEF2F2;display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:8px;gap:4px">
-      <span style="font-size:24px">📄</span>
-      <span style="font-size:9px;font-weight:700;color:#991B1B">PDF</span>
-    </div>`;
-  }
-  return `<img src="${url}" loading="lazy" style="width:100%;height:${h};object-fit:cover;display:block;border-radius:8px" onerror="this.style.display='none'">`;
-}
-function _renderCpImages(images, campId, section) {
-  if (!images.length) return `<div style="color:var(--text3);font-size:12px;padding:8px 0">No files yet</div>`;
-  return `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(90px,1fr));gap:8px">` +
-    images.map((img,i) => `
-    <div style="position:relative;border-radius:12px;overflow:hidden;background:var(--surface3);cursor:pointer" onclick="_openCpLightbox('${img.url}','${img.name||''}')">
-      ${_renderMediaThumb(img.url, img.name, true)}
-      ${_isVideo(img.name) ? `<div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,.5);border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:14px">▶</div>` : ''}
-      <button onclick="event.stopPropagation();removeCpImage('${campId}','${section}',${i})"
-        style="position:absolute;top:4px;right:4px;width:20px;height:20px;border-radius:50%;background:rgba(0,0,0,.65);color:#fff;border:none;cursor:pointer;font-size:10px;display:flex;align-items:center;justify-content:center">✕</button>
-    </div>`).join('') + `</div>`;
-}
-
-function _renderCpImagesWithBrief(images, campId, section) {
-  section = section || 'strat';
-  if (!images.length) return `<div style="color:var(--text3);font-size:12px;padding:8px 0">No files yet</div>`;
-  return images.map((img,i) => `
-    <div style="background:var(--white);border:1px solid var(--border);border-radius:14px;overflow:hidden;display:flex;gap:0;margin-bottom:8px">
-      <div style="width:90px;flex-shrink:0;cursor:pointer;position:relative" onclick="_openCpLightbox('${img.url}','${img.name||''}')">
-        ${_renderMediaThumb(img.url, img.name, true)}
-        ${_isVideo(img.name) ? `<div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,.5);border-radius:50%;width:24px;height:24px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px">▶</div>` : ''}
-      </div>
-      <div style="flex:1;padding:10px 12px">
-        <div style="font-size:11px;font-weight:600;color:var(--text3);margin-bottom:5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${img.name||''}</div>
-        <input class="form-input" value="${(img.brief||'').replace(/"/g,'&quot;')}"
-          placeholder="Add a brief for this reference…"
-          style="font-size:12px;padding:6px 10px"
-          oninput="updateCpImageBrief('${campId}',${i},this.value,'${section}')">
-      </div>
-      <button onclick="removeCpImage('${campId}','${section}',${i})"
-        style="width:30px;background:var(--coral-light);border:none;cursor:pointer;color:var(--coral);font-size:14px;flex-shrink:0">✕</button>
-    </div>`).join('');
-}
-
-function updateCpImageBrief(campId, idx, brief, section) {
-  const c = _getCampaigns().find(x=>x.id===campId);
-  const key = section==='designRefs' ? 'designRefs' : 'stratImages';
-  if (c && c[key] && c[key][idx]) {
-    c[key][idx].brief = brief;
-    clearTimeout(window._cpSaveTimer);
-    window._cpSaveTimer = setTimeout(()=>saveState(), 500);
-  }
-}
 
 /* ══════════════════════════════════════════════════════════
-   UPLOAD — fast with instant preview
+   REFERENCES INBOX
 ══════════════════════════════════════════════════════════ */
-async function uploadCpImages(input, campId, section) {
-  const files = Array.from(input.files||[]);
-  if (!files.length) return;
-  input.value = '';
-  const c = _getCampaigns().find(x=>x.id===campId);
-  if (!c) return;
-  const key = section==='strat' ? 'stratImages' : 'designImages';
-  if (!c[key]) c[key] = [];
+function renderReferencesInbox() {
+  const el   = document.getElementById('referencesInbox');
+  if (!el) return;
+  const refs = state.references || [];
 
-  // Show uploading indicator
-  showToast(`☁️ Uploading ${files.length} file${files.length>1?'s':''}…`);
-
-  // Upload all to Cloudinary, then save once at the end
-  const results = [];
-  for (const file of files) {
-    try {
-      const result = await uploadToCloudinary(file);
-      results.push({ url:result.url, name:file.name, brief:'', source:'cloudinary' });
-      if (typeof autoSaveToMediaLibrary==='function') autoSaveToMediaLibrary(result.url, file.name, 'cloudinary');
-    } catch(e) {
-      showToast('Upload failed: '+file.name,'error');
-    }
-  }
-
-  // Push all results at once
-  results.forEach(r => c[key].push(r));
-  DB.save(state);
-  if (typeof syncPush === 'function') syncPush();
-  openCampaignPopup(campId);
-  if (results.length) showToast(`✅ ${results.length} file${results.length>1?'s':''} uploaded!`,'success');
-}
-
-async function uploadCpDesignRefs(input, campId) {
-  const files = Array.from(input.files||[]);
-  if (!files.length) return;
-  input.value = '';
-  const c = _getCampaigns().find(x=>x.id===campId);
-  if (!c) return;
-  if (!c.designRefs) c.designRefs = [];
-
-  showToast(`☁️ Uploading…`);
-  const results = [];
-  for (const file of files) {
-    try {
-      const result = await uploadToCloudinary(file);
-      results.push({ url:result.url, name:file.name, brief:'', source:'cloudinary' });
-      if (typeof autoSaveToMediaLibrary==='function') autoSaveToMediaLibrary(result.url, file.name, 'cloudinary');
-    } catch(e) {
-      showToast('Upload failed: '+file.name,'error');
-    }
-  }
-  results.forEach(r => c.designRefs.push(r));
-  DB.save(state);
-  if (typeof syncPush === 'function') syncPush();
-  openCampaignPopup(campId);
-  if (results.length) showToast('✅ Uploaded!','success');
-}
-
-function removeCpImage(campId, section, idx) {
-  const c = _getCampaigns().find(x=>x.id===campId);
-  if (!c) return;
-  const key = section==='strat' ? 'stratImages' : section==='designRefs' ? 'designRefs' : 'designImages';
-  if (!c[key]) return;
-  c[key].splice(idx, 1);
-  saveState();
-  openCampaignPopup(campId);
-}
-
-function _openCpLightbox(url, name) {
-  const existing = document.getElementById('cpLightbox');
-  if (existing) existing.remove();
-  const lb = document.createElement('div');
-  lb.id = 'cpLightbox';
-  lb.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:3000;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px';
-  lb.onclick = e => { if(e.target===lb) lb.remove(); };
-const isVid = _isVideo(name||url);
-  const isPdf = (name||url).match(/\.pdf$/i);
-  if (isPdf) { lb.remove(); window.open(url,'_blank'); return; }
-  lb.innerHTML = `
-    <button onclick="document.getElementById('cpLightbox').remove()" style="position:fixed;top:16px;right:16px;width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,.2);border:none;color:#fff;font-size:16px;cursor:pointer">✕</button>
-    ${isVid
-      ? `<video src="${url}" controls autoplay style="max-width:90vw;max-height:80vh;border-radius:12px"></video>`
-      : `<img src="${url}" style="max-width:90vw;max-height:80vh;object-fit:contain;border-radius:12px">`}
-    <div style="margin-top:12px;font-size:12px;color:rgba(255,255,255,.6)">${name||''}</div>`;
-  document.body.appendChild(lb);
-}
-
-/* ══════════════════════════════════════════════════════════
-   DRIVE SYNC
-══════════════════════════════════════════════════════════ */
-const GDRIVE_API_KEY = 'AIzaSyDd5G37VmvL3xg5Dtqty8Enl15v-Kh6KJ0';
-
-async function syncDriveFolder(campId) {
-  const c = _getCampaigns().find(x=>x.id===campId);
-  if (!c) return;
-  const input = document.getElementById('cp-drive-'+campId);
-  const url = (input ? input.value.trim() : c.driveFolderUrl||'');
-  if (!url) { showToast('Paste a Drive folder or file link','error'); return; }
-  c.driveFolderUrl = url;
-
-  const folderMatch = url.match(/folders\/([a-zA-Z0-9_-]+)/);
-  if (folderMatch) {
-    const folderId = folderMatch[1];
-    showToast('☁️ Syncing from Drive…');
-    try {
-      const res = await fetch(`https://www.googleapis.com/drive/v3/files?q='${folderId}'+in+parents&key=${GDRIVE_API_KEY}&fields=files(id,name,mimeType)&pageSize=50`);
-      const data = await res.json();
-      if (data.error) { showToast('Drive error: '+data.error.message,'error'); return; }
-      if (!data.files||!data.files.length) { showToast('No files found — set folder to Anyone with link','error'); return; }
-      if (!c.designImages) c.designImages = [];
-      let added = 0;
-      data.files.forEach(file => {
-        const viewUrl = `https://lh3.googleusercontent.com/d/${file.id}`;
-        if (!c.designImages.find(img=>img.url===viewUrl)) {
-          c.designImages.push({ url:viewUrl, name:file.name, source:'drive' });
-          if (typeof autoSaveToMediaLibrary==='function') autoSaveToMediaLibrary(viewUrl, file.name, 'drive');
-          added++;
-        }
-      });
-      saveState();
-      openCampaignPopup(campId);
-      showToast(`✅ ${added} file${added!==1?'s':''} synced!`,'success');
-    } catch(e) { showToast('Could not reach Drive','error'); }
+  if (!refs.length) {
+    el.innerHTML = `
+      <div style="text-align:center;padding:48px;color:var(--text3)">
+        <div style="font-size:48px;margin-bottom:12px">📌</div>
+        <div style="font-size:15px;font-weight:700;color:var(--text2)">No references yet</div>
+        <div style="font-size:13px;margin-top:6px">Save Instagram posts, reels, and inspiration links here</div>
+        <div style="font-size:12px;margin-top:12px;color:var(--brand)">📱 On your phone: Share any link → Save to SocialHub</div>
+      </div>`;
     return;
   }
 
-  const fileMatch = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
-  if (fileMatch) {
-    const fileId = fileMatch[1];
-    const viewUrl = `https://lh3.googleusercontent.com/d/${fileId}`;
-    if (!c.designImages) c.designImages = [];
-    if (c.designImages.find(img=>img.url===viewUrl)) { showToast('Already added',''); return; }
-    c.designImages.push({ url:viewUrl, name:`drive-${fileId.slice(0,8)}.jpg`, source:'drive' });
-    if (typeof autoSaveToMediaLibrary==='function') autoSaveToMediaLibrary(viewUrl, `drive-${fileId.slice(0,8)}.jpg`, 'drive');
-    saveState();
-    openCampaignPopup(campId);
-    showToast('✅ Added from Drive!','success');
-    return;
-  }
-  showToast('Invalid Drive link','error');
+  el.innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px">
+    ${refs.map((ref,i) => `
+      <div style="background:var(--white);border-radius:18px;overflow:hidden;box-shadow:var(--sh-sm);border:1px solid var(--border)">
+        ${ref.imageUrl ? `<img src="${ref.imageUrl}" style="width:100%;height:180px;object-fit:cover;display:block">` :
+          `<div style="height:180px;background:linear-gradient(135deg,var(--brand-pale),var(--brand-light));display:flex;align-items:center;justify-content:center;font-size:48px">🔗</div>`}
+        <div style="padding:14px">
+          <div style="font-size:11px;color:var(--text3);margin-bottom:6px">${new Date(ref.savedAt||Date.now()).toLocaleDateString('en-IN')}</div>
+          ${ref.url ? `<a href="${ref.url}" target="_blank" style="font-size:12px;color:var(--brand);word-break:break-all;text-decoration:none">${ref.url.slice(0,60)}${ref.url.length>60?'…':''}</a>` : ''}
+          <textarea class="form-input" rows="2" placeholder="Add notes…" style="margin-top:10px;font-size:12px;min-height:50px"
+            oninput="updateRefNote(${i},this.value)">${ref.notes||''}</textarea>
+          <div style="display:flex;gap:6px;margin-top:8px">
+            <span style="flex:1;font-size:10px;padding:3px 8px;border-radius:10px;background:${ref.used?'#ECFDF5':'var(--beige)'};color:${ref.used?'#065F46':'var(--text3)'};font-weight:600">${ref.used?'✅ Used':'Pending'}</span>
+            <button onclick="toggleRefUsed(${i})" class="btn btn-ghost btn-sm" style="font-size:10px;padding:3px 8px">${ref.used?'Unmark':'Mark used'}</button>
+            <button onclick="deleteRef(${i})" class="btn btn-ghost btn-sm" style="font-size:10px;padding:3px 8px;color:var(--coral)">🗑</button>
+          </div>
+        </div>
+      </div>`).join('')}
+  </div>`;
+}
+
+function openAddReferenceModal() {
+  document.getElementById('modalTitle').textContent = '📌 Add Reference';
+  document.getElementById('modalBody').innerHTML = `
+    <div class="form-group"><label class="form-label">Link (Instagram, Pinterest, etc.)</label>
+      <input class="form-input" id="ref-url" placeholder="https://www.instagram.com/reel/..."></div>
+    <div class="form-group"><label class="form-label">Notes</label>
+      <textarea class="form-input" id="ref-notes" rows="3" placeholder="What do you like about this reference?"></textarea></div>`;
+  document.getElementById('modalFooter').innerHTML = `
+    <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+    <button class="btn btn-primary" onclick="saveReference()">Save reference</button>`;
+  document.getElementById('modalOverlay').classList.add('open');
+}
+
+function saveReference(url, notes) {
+  const u = url || document.getElementById('ref-url')?.value?.trim();
+  const n = notes || document.getElementById('ref-notes')?.value?.trim() || '';
+  if (!u) { showToast('Add a link','error'); return; }
+  if (!state.references) state.references = [];
+  state.references.unshift({ url:u, notes:n, savedAt:new Date().toISOString(), used:false, savedBy:currentUser?currentUser.name:'' });
+  DB.save(state);
+  if (typeof syncPush==='function') syncPush();
+  closeModal();
+  renderReferencesInbox();
+  showToast('📌 Reference saved!', 'success');
+}
+
+function updateRefNote(i, note) {
+  if (!state.references||!state.references[i]) return;
+  state.references[i].notes = note;
+  clearTimeout(window._refSaveTimer);
+  window._refSaveTimer = setTimeout(()=>{ DB.save(state); if(typeof syncPush==='function') syncPush(); }, 600);
+}
+
+function toggleRefUsed(i) {
+  if (!state.references||!state.references[i]) return;
+  state.references[i].used = !state.references[i].used;
+  DB.save(state);
+  if (typeof syncPush==='function') syncPush();
+  renderReferencesInbox();
+}
+
+function deleteRef(i) {
+  state.references = (state.references||[]).filter((_,idx)=>idx!==i);
+  DB.save(state);
+  if (typeof syncPush==='function') syncPush();
+  renderReferencesInbox();
 }
 
 /* ══════════════════════════════════════════════════════════
-   CAMPAIGN POPUP
-══════════════════════════════════════════════════════════ */
-function openCampaignPopup(id) {
-  const c = _getCampaigns().find(x=>x.id===id);
-  if (!c) return;
-  let popup = document.getElementById('campaignPopup');
-  if (!popup) {
-    popup = document.createElement('div');
-    popup.id = 'campaignPopup';
-    popup.style.cssText = 'position:fixed;inset:0;background:rgba(20,18,16,.55);z-index:2000;display:flex;align-items:flex-start;justify-content:center;padding:20px;overflow-y:auto;backdrop-filter:blur(6px)';
-    document.body.appendChild(popup);
-  }
-
-  const ADMINS = ['anusha','anjani','tejasv'];
-
-  popup.innerHTML = `
-    <div style="background:var(--white);border-radius:24px;width:100%;max-width:780px;box-shadow:0 32px 80px rgba(0,0,0,.2);overflow:hidden;margin:auto">
-
-      <!-- Header -->
-      <div style="background:linear-gradient(135deg,var(--brand),var(--brand-dark));padding:24px 28px;display:flex;align-items:center;gap:16px">
-        <div style="flex:1">
-          <input id="cp-name" value="${c.name}" placeholder="Campaign name…"
-            style="background:rgba(255,255,255,.15);border:none;border-radius:10px;padding:8px 14px;font-size:20px;font-weight:800;color:#fff;font-family:var(--font);width:100%;outline:none"
-            oninput="updateCampaignField('${id}','name',this.value)">
-          <div style="display:flex;gap:10px;margin-top:10px;flex-wrap:wrap">
-            <input type="date" value="${c.startDate||''}"
-              style="background:rgba(255,255,255,.15);border:none;border-radius:8px;padding:5px 10px;font-size:12px;color:#fff;font-family:var(--font);outline:none;color-scheme:dark"
-              oninput="updateCampaignField('${id}','startDate',this.value)">
-            <span style="color:rgba(255,255,255,.6);line-height:2">→</span>
-            <input type="date" value="${c.endDate||''}"
-              style="background:rgba(255,255,255,.15);border:none;border-radius:8px;padding:5px 10px;font-size:12px;color:#fff;font-family:var(--font);outline:none;color-scheme:dark"
-              oninput="updateCampaignField('${id}','endDate',this.value)">
-          </div>
-        </div>
-        <button onclick="closeCampaignPopup()"
-          style="display:flex;align-items:center;gap:7px;padding:8px 16px;background:rgba(255,255,255,.2);border:none;color:#fff;font-size:14px;font-weight:700;cursor:pointer;border-radius:20px;font-family:var(--font)">
-          ← Back
-        </button>
-      </div>
-
-      <!-- Body -->
-      <div style="padding:28px;display:flex;flex-direction:column;gap:24px">
-
-        <!-- Brief -->
-        <div>
-          <div class="cp-section-label">📋 Campaign brief & reasoning</div>
-          <textarea class="form-input form-textarea" rows="3" placeholder="Describe the campaign goal, target audience, key message…"
-            style="min-height:80px" oninput="updateCampaignField('${id}','brief',this.value)">${c.brief||''}</textarea>
-        </div>
-
-        <!-- ══ STRATEGIST ══ -->
-        <div style="background:var(--beige);border-radius:18px;padding:20px;border:1px solid var(--border)">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px">
-            <div style="display:flex;align-items:center;gap:10px">
-              <div style="width:36px;height:36px;border-radius:50%;background:#DBEAFE;color:#1D4ED8;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:800">S</div>
-              <div>
-                <div style="font-size:14px;font-weight:800;color:var(--text)">Strategist</div>
-                <div style="font-size:11px;color:var(--text3)">Upload images or videos with brief · add consolidated thought</div>
-              </div>
-            </div>
-            <div>${_renderApprovalBadge(c)}</div>
-          </div>
-
-          <!-- Reference media -->
-          <div style="margin-bottom:14px">
-            <div class="cp-field-label">Reference images / videos <span style="font-weight:400;opacity:.6;text-transform:none;font-size:10px">(add brief for each)</span></div>
-            <div id="cp-strat-images-${id}" style="margin-bottom:10px">
-              ${_renderCpImagesWithBrief(c.stratImages||[], id, 'strat')}
-            </div>
-            <label class="cp-upload-btn">
-<input type="file" accept="image/*,video/*,.pdf" multiple style="display:none" onchange="uploadCpImages(this,'${id}','strat')">
-              ＋ Add images, videos or PDF
-            </label>
-          </div>
-
-          <!-- Consolidated thought -->
-          <div style="margin-bottom:14px">
-            <div class="cp-field-label">Consolidated thought / overall strategy</div>
-            <textarea class="form-input form-textarea" rows="4"
-              placeholder="Summarise the strategy — angles, hooks, tone, platform notes…"
-              oninput="updateCampaignField('${id}','stratNotes',this.value)">${c.stratNotes||''}</textarea>
-          </div>
-
-          <!-- Approval slab -->
-          <div style="background:var(--white);border-radius:14px;padding:16px;border:1.5px solid var(--border)">
-            <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
-              <div style="display:flex;align-items:center;gap:14px">
-                <div style="display:flex;gap:6px">
-                  ${ADMINS.map(a => {
-                    const s = _getApprovalStatus(c,a);
-                    const bg = s==='approved'||s==='auto' ? '#10B981' : s==='rejected' ? '#EF4444' : '#E5E7EB';
-                    const icon = s==='approved'||s==='auto' ? '✓' : s==='rejected' ? '✕' : '';
-                    const u = typeof TEAM_USERS!=='undefined'&&TEAM_USERS[a] ? TEAM_USERS[a].name : a;
-                    return `<div style="width:32px;height:32px;border-radius:50%;background:${bg};display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:#fff;border:2px solid ${bg==='#E5E7EB'?'#D1D5DB':'transparent'}" title="${u}">${icon}</div>`;
-                  }).join('')}
-                </div>
-                <div>
-                  <div>${_renderApprovalBadge(c)}</div>
-                  <div style="font-size:11px;color:var(--text3);margin-top:3px">
-                    Auto-approve after
-                    <input type="number" min="1" max="30" value="${c.approvalDays||3}"
-                      style="width:36px;padding:2px 6px;border:1px solid var(--border2);border-radius:6px;font-size:11px;font-family:var(--font);text-align:center;margin:0 3px"
-                      onchange="updateCampaignField('${id}','approvalDays',parseInt(this.value));updateApprovalDeadline('${id}')">
-                    days · <span id="strat-deadline-${id}">${_getDeadlineText(c)}</span>
-                  </div>
-                </div>
-              </div>
-              <div style="display:flex;gap:6px;flex-wrap:wrap">
-                ${ADMINS.map(a => {
-                  const u = typeof TEAM_USERS!=='undefined'&&TEAM_USERS[a] ? TEAM_USERS[a].name : a;
-                  const s = _getApprovalStatus(c,a);
-                  if (s==='pending') return `<div style="font-size:11px;color:var(--text2);display:flex;align-items:center;gap:5px">
-                    <strong>${u}</strong>
-                    <button onclick="setCampaignApproval('${id}','${a}','approved')" style="padding:4px 10px;background:#ECFDF5;color:#065F46;border:1px solid #6EE7B7;border-radius:16px;font-size:11px;font-weight:700;cursor:pointer;font-family:var(--font)">✅</button>
-                    <button onclick="setCampaignApproval('${id}','${a}','rejected')" style="padding:4px 10px;background:#FEF2F2;color:#991B1B;border:1px solid #FCA5A5;border-radius:16px;font-size:11px;font-weight:700;cursor:pointer;font-family:var(--font)">❌</button>
-                  </div>`;
-                  return `<div style="font-size:11px;color:var(--text3)"><strong>${u}</strong>: ${s==='auto'?'auto ✓':s}</div>`;
-                }).join('')}
-              </div>
-            </div>
-            <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border)">
-              <div class="cp-field-label">💬 Feedback on strategy</div>
-              <textarea class="form-input form-textarea" rows="2" placeholder="Leave feedback for the strategist…"
-                oninput="updateCampaignField('${id}','stratFeedback',this.value)">${c.stratFeedback||''}</textarea>
-            </div>
-          </div>
-        </div>
-
-        <!-- ══ DESIGNER ══ -->
-        <div style="background:var(--beige);border-radius:18px;padding:20px;border:1px solid var(--border)">
-          <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
-            <div style="width:36px;height:36px;border-radius:50%;background:#DCFCE7;color:#065F46;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:800">D</div>
-            <div>
-              <div style="font-size:14px;font-weight:800;color:var(--text)">Designer</div>
-              <div style="font-size:11px;color:var(--text3)">Upload references · add notes · upload designs · sync from Drive</div>
-            </div>
-          </div>
-
-          <!-- Assign -->
-          <div style="margin-bottom:14px">
-            <div class="cp-field-label">Assign designer</div>
-            <select class="form-select" onchange="updateCampaignField('${id}','assignedDesigner',this.value)">
-              <option value="">— select designer —</option>
-              ${typeof TEAM_USERS!=='undefined' ? Object.values(TEAM_USERS).filter(u=>u.role!=='admin').map(u=>`<option value="${u.name}" ${c.assignedDesigner===u.name?'selected':''}>${u.name}</option>`).join('') : ''}
-            </select>
-          </div>
-
-          <!-- Design refs -->
-          <div style="margin-bottom:14px">
-            <div class="cp-field-label">Reference images for drafts <span style="font-weight:400;opacity:.6;text-transform:none;font-size:10px">(add brief for each)</span></div>
-            <div id="cp-design-refs-${id}" style="margin-bottom:10px">
-              ${_renderCpImagesWithBrief(c.designRefs||[], id, 'designRefs')}
-            </div>
-            <label class="cp-upload-btn">
-              <input type="file" accept="image/*,video/*" multiple style="display:none" onchange="uploadCpDesignRefs(this,'${id}')">
-              ＋ Add reference images
-            </label>
-          </div>
-
-          <!-- Designer notes -->
-          <div style="margin-bottom:14px">
-            <div class="cp-field-label">Designer notes</div>
-            <textarea class="form-input form-textarea" rows="3"
-              placeholder="Design decisions, font choices, colour palette, revisions…"
-              oninput="updateCampaignField('${id}','designNotes',this.value)">${c.designNotes||''}</textarea>
-          </div>
-
-          <!-- Feedback -->
-          <div style="margin-bottom:14px;background:var(--white);border-radius:14px;padding:14px;border:1.5px solid ${c.designFeedback?'var(--amber)':'var(--border)'}">
-            <div class="cp-field-label">💬 Feedback on design</div>
-            <textarea class="form-input form-textarea" rows="2" placeholder="Leave feedback for the designer…"
-              oninput="updateCampaignField('${id}','designFeedback',this.value)">${c.designFeedback||''}</textarea>
-          </div>
-
-          <!-- Design uploads -->
-          <div style="margin-bottom:14px">
-            <div class="cp-field-label">Design uploads</div>
-            <div id="cp-design-images-${id}" style="margin-bottom:10px">
-              ${_renderCpImages(c.designImages||[], id, 'design')}
-            </div>
-            <label class="cp-upload-btn">
-              <input type="file" accept="image/*,video/*,.pdf" multiple style="display:none" onchange="uploadCpImages(this,'${id}','design')">
-              ＋ Add designs
-            </label>
-          </div>
-
-          <!-- Drive sync -->
-          <div style="background:var(--white);border-radius:12px;padding:12px 14px;border:1.5px solid var(--border)">
-            <div class="cp-field-label">📁 Google Drive sync</div>
-            <div style="display:flex;gap:8px">
-              <input class="form-input" id="cp-drive-${id}" value="${c.driveFolderUrl||''}"
-                placeholder="Paste Drive folder or file link…"
-                style="font-size:12px;flex:1"
-                onchange="updateCampaignField('${id}','driveFolderUrl',this.value)">
-              <button onclick="syncDriveFolder('${id}')"
-                style="padding:8px 14px;background:var(--brand);color:#fff;border:none;border-radius:12px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;font-family:var(--font)">🔄 Sync</button>
-            </div>
-            <div style="font-size:11px;color:var(--text3);margin-top:5px">Paste folder link → Sync → all images appear above</div>
-          </div>
-        </div>
-
-      </div>
-
-      <!-- Footer -->
-      <div style="padding:16px 28px;border-top:1px solid var(--border);background:var(--beige);display:flex;justify-content:space-between;align-items:center;border-radius:0 0 24px 24px">
-        <button class="btn btn-ghost btn-sm" onclick="deleteCampaign('${id}');closeCampaignPopup()" style="color:var(--coral);border-color:var(--coral)">🗑 Delete</button>
-        <button class="btn btn-primary" onclick="saveCampaignAndClose('${id}')">💾 Save & close</button>
-      </div>
-    </div>`;
-
-  popup.style.display = 'flex';
-}
-
-function closeCampaignPopup() {
-  clearTimeout(window._cpSaveTimer);
-  DB.save(state);
-  if (typeof syncPush === 'function') syncPush();
-  const p = document.getElementById('campaignPopup');
-  if (p) p.style.display = 'none';
-  _renderCampaignsList();
-}
-
-function saveCampaignAndClose(id) {
-  clearTimeout(window._cpSaveTimer);
-  DB.save(state);
-  if (typeof syncPush === 'function') syncPush();
-  closeCampaignPopup();
-  showToast('✅ Campaign saved!','success');
-}
-
-function updateCampaignField(id, field, value) {
-  const c = _getCampaigns().find(x=>x.id===id);
-  if (c) c[field] = value;
-  clearTimeout(window._cpSaveTimer);
-  window._cpSaveTimer = setTimeout(()=>{
-    DB.save(state);
-    if (typeof syncPush === 'function') syncPush();
-  }, 300);
-}
-
-/* ══════════════════════════════════════════════════════════
-   STICKY NOTES
+   STICKY NOTES (calendar banner)
 ══════════════════════════════════════════════════════════ */
 function addStickyNote() {
   const key = _getPlannerKey();
   if (!state.monthlyPlans) state.monthlyPlans = {};
   if (!state.monthlyPlans[key]) state.monthlyPlans[key] = {};
   if (!state.monthlyPlans[key].stickyNotes) state.monthlyPlans[key].stickyNotes = [];
-  const id = Date.now();
-  state.monthlyPlans[key].stickyNotes.push({ id, text:'', color:'#FEF9C3' });
+  state.monthlyPlans[key].stickyNotes.push({ id:Date.now(), text:'', color:'#FEF9C3' });
   saveState(); _refreshCalStickyBanner();
 }
 
@@ -622,30 +595,21 @@ function _ensureMonth(y, m) {
 function _refreshCalStickyBanner() {
   const banner = document.getElementById('calStickyBanner');
   if (!banner) return;
-  const plan = _ensureMonth(
-    typeof channelCalYear!=='undefined'?channelCalYear:plannerYear,
-    typeof channelCalMonth!=='undefined'?channelCalMonth:plannerMonth
-  );
+  const plan  = _ensureMonth(typeof channelCalYear!=='undefined'?channelCalYear:plannerYear, typeof channelCalMonth!=='undefined'?channelCalMonth:plannerMonth);
   const notes = plan.stickyNotes || [];
   if (notes.length) {
     banner.innerHTML = notes.map(n => `
       <div class="cal-sticky-banner-note" style="background:${n.color||'#FEF9C3'};position:relative;padding-right:22px">
         <span class="sticky-pin-icon">📌</span>
-        <span>${(n.text||'').trim() || '<em style="opacity:.5">empty note</em>'}</span>
-        <button onclick="deleteStickyNoteFromBanner(${n.id})"
-          style="position:absolute;top:3px;right:5px;background:none;border:none;cursor:pointer;font-size:12px;color:rgba(0,0,0,.35)">✕</button>
+        <span>${(n.text||'').trim()||'<em style="opacity:.5">empty note</em>'}</span>
+        <button onclick="deleteStickyNoteFromBanner(${n.id})" style="position:absolute;top:3px;right:5px;background:none;border:none;cursor:pointer;font-size:12px;color:rgba(0,0,0,.35)">✕</button>
       </div>`).join('');
     banner.style.display = 'flex';
-  } else {
-    banner.style.display = 'none';
-  }
+  } else banner.style.display = 'none';
 }
 
 function deleteStickyNoteFromBanner(noteId) {
-  const plan = _ensureMonth(
-    typeof channelCalYear!=='undefined'?channelCalYear:plannerYear,
-    typeof channelCalMonth!=='undefined'?channelCalMonth:plannerMonth
-  );
+  const plan = _ensureMonth(typeof channelCalYear!=='undefined'?channelCalYear:plannerYear, typeof channelCalMonth!=='undefined'?channelCalMonth:plannerMonth);
   plan.stickyNotes = (plan.stickyNotes||[]).filter(n=>n.id!==noteId);
   saveState(); _refreshCalStickyBanner();
 }
