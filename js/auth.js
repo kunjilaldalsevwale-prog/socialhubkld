@@ -66,6 +66,7 @@ function logout() {
 }
 
 function _enterApp() {
+  document.getElementById('loginScreen').style.display = 'none';
   document.getElementById('app').style.display = 'flex';
   _applyUserPermissions();
   _updateSidebarUser();
