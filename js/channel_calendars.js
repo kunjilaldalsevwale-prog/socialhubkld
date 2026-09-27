@@ -163,9 +163,9 @@ function _updateChannelHeader() {
 ══════════════════════════════════════════════════════════ */
 function renderChannelGrid() {
   const grid  = document.getElementById('channelCalGrid');
-  const label = document.getElementById('channelCalLabel');
+  const label = document.getElementById('channelMonthLabel');
   if (!grid) return;
-  label.textContent = MONTH_NAMES[channelCalMonth] + ' ' + channelCalYear;
+  if (label) label.textContent = MONTH_NAMES[channelCalMonth] + ' ' + channelCalYear;
 
   // Keep bottom nav prev/next labels in sync
   const prevMo = channelCalMonth === 0 ? 11 : channelCalMonth - 1;
