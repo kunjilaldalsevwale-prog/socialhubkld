@@ -52,7 +52,7 @@ function doLogin(emailInput, pwInput) {
   if (pw !== _getPassword(user.id)) { if(errEl) errEl.textContent = 'Incorrect password'; return; }
 
   currentUser = user;
-  sessionStorage.setItem('sh_session', JSON.stringify({ id: user.id }));
+  localStorage.setItem('sh_session', JSON.stringify({ id: user.id }));
   document.getElementById('loginScreen').style.display = 'none';
   if (typeof logActivity === 'function') setTimeout(()=>logActivity('Logged in', user.email, 'login'), 100);
   _enterApp();
@@ -61,7 +61,7 @@ function doLogin(emailInput, pwInput) {
 function logout() {
   if (currentUser && typeof logActivity === 'function') logActivity('Logged out', currentUser.email, 'login');
   currentUser = null;
-  sessionStorage.removeItem('sh_session');
+  localStorage.removeItem('sh_session');
   showLoginScreen();
 }
 
@@ -107,7 +107,7 @@ function _applyUserPermissions() {
 /* ── SESSION RESTORE ──────────────────────────────────────── */
 function tryRestoreSession() {
   _mergeStateTeam();
-  const sess = sessionStorage.getItem('sh_session');
+  const sess = localStorage.getItem('sh_session');
   if (sess) {
     try {
       const { id } = JSON.parse(sess);
