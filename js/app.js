@@ -12,9 +12,7 @@ const VIEW_TITLES = {
 };
 
 const ALL_VIEWS = [
-  'channels','calendar','posts','create',
-  'meta','whatsapp','email','media','ideas',
-  'reminders','agenda','analytics','integrations','activity-log','team','settings'
+  'channels','agenda','media','publishing','settings','activity-log'
 ];
 
 function navigate(view, el) {
