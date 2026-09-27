@@ -35,18 +35,11 @@ function navigate(view, el) {
   const renders = {
     channels: renderChannelCalendars,
     calendar: renderChannelCalendars,
-    posts: renderPosts,
-    meta: renderMetaAds,
-    whatsapp: () => { renderWhatsApp(); setTimeout(renderWAInteraktBanner, 50); },
-    agenda: renderMonthlyPlanner,
-    analytics: renderAnalytics,
-    team: renderTeam,
-    settings: renderSettings,
-    email: renderEmail,
-    media: renderMediaLibrary,
-    ideas: renderIdeasBoard,
-    integrations: () => { renderInteraktSettings(); _syncInteraktNavBadge(); },
-    reminders: renderReminders,
+    agenda: () => { if(typeof renderMonthlyPlanner==='function') renderMonthlyPlanner(); },
+    media:   () => { if(typeof renderMediaLibrary==='function') renderMediaLibrary(); },
+    publishing: () => { if(typeof renderPublishing==='function') renderPublishing(); },
+    settings:   () => { if(typeof renderSettings==='function') renderSettings(); else if(typeof renderTeamSettings==='function') renderTeamSettings(); },
+    'activity-log': () => { if(typeof renderActivityLog==='function') renderActivityLog(); },
   };
   if (renders[view]) renders[view]();
   updateBadge();
