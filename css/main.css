@@ -2948,6 +2948,9 @@ body, #app { background: #F5F3EF; }
   height: calc(100vh - 64px);
   overflow: hidden;
 }
+#view-agenda:not(.active) {
+  display: none !important;
+}
 #plannerContent {
   flex: 1;
   min-height: 0;
