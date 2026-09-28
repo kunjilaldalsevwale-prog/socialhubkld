@@ -176,72 +176,61 @@ function _renderDesignerView() {
   const colHeaders = data.hotColHeaders || ['Col 1','Col 2','Col 3','Col 4','Col 5','Col 6','Col 7','Col 8'];
   const rows       = data.hotData || [];
 
-  const filledRows0 = rows.filter(r=>r.some(c=>c&&c.toString().trim()));
-  if (!filledRows0.length) {
-    content.innerHTML = `<div style="padding:32px">
-      <div style="background:var(--white);border-radius:16px;padding:32px;text-align:center;border:1px solid var(--border)">
-        <div style="font-size:40px;margin-bottom:12px">📄</div>
-        <div style="font-size:15px;font-weight:700;color:var(--text2);margin-bottom:6px">No strategy added yet</div>
-        <div style="font-size:13px;color:var(--text3)">The strategist needs to fill in the spreadsheet first. You can still upload designs below.</div>
+  // Use row 1 as data headers if filled, otherwise use colHeaders
+  // Each subsequent row = one post
+  const allFilledRows = rows.filter(r=>r.some(c=>c&&c.toString().trim()));
+
+  // Check if first row looks like headers (short text, no long content)
+  const firstRow = allFilledRows[0] || [];
+  const isFirstRowHeader = firstRow.length && firstRow.every(c => !c || c.toString().trim().length < 30);
+  const headers = isFirstRowHeader && allFilledRows.length > 1
+    ? firstRow.map((h,i) => h||colHeaders[i]||('Col '+(i+1)))
+    : colHeaders;
+  const dataRows = isFirstRowHeader && allFilledRows.length > 1
+    ? allFilledRows.slice(1)
+    : allFilledRows;
+
+  if (!dataRows.length) {
+    content.innerHTML = `<div style="padding:24px">
+      <div style="background:var(--white);border-radius:16px;padding:28px;text-align:center;border:1px solid var(--border);margin-bottom:20px">
+        <div style="font-size:36px;margin-bottom:10px">📄</div>
+        <div style="font-size:14px;font-weight:700;color:var(--text2);margin-bottom:4px">No posts in strategy yet</div>
+        <div style="font-size:12px;color:var(--text3)">Strategist needs to fill the spreadsheet first</div>
       </div>
-      <div style="margin-top:20px">
-        <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:10px">Upload your designs</div>
-        ${Array.from({length:5},(_,i)=>`
-          <div style="background:var(--white);border-radius:14px;padding:16px;margin-bottom:12px;border:1px solid var(--border)">
-            <div style="font-size:13px;font-weight:700;margin-bottom:10px">Post ${i+1}</div>
-            ${(data.designUploads||{})[i] ? `
-              <img src="${(data.designUploads||{})[i].url}" style="width:100%;max-height:200px;object-fit:contain;border-radius:10px;background:#f0f0f0;display:block;margin-bottom:8px">
-              <a href="${(data.designUploads||{})[i].url}" target="_blank" class="btn btn-ghost btn-sm" style="text-decoration:none">⬇ Download</a>
-            ` : `
-              <label style="display:flex;align-items:center;gap:10px;padding:14px;background:var(--brand-pale);border:2px dashed var(--brand-mid);border-radius:12px;cursor:pointer">
-                <input type="file" accept="image/*,video/*,.pdf" style="display:none" onchange="uploadDesignForPost(this,${i})">
-                <span style="font-size:18px">📁</span>
-                <span style="font-size:13px;font-weight:700;color:var(--brand)">Upload design for Post ${i+1}</span>
-              </label>`}
-          </div>`).join('')}
-      </div>
+      <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:12px">Upload your designs</div>
+      ${Array.from({length:5},(_,i)=>`
+        <div style="background:var(--white);border-radius:14px;padding:16px;margin-bottom:10px;border:1px solid var(--border)">
+          <div style="font-size:13px;font-weight:700;margin-bottom:10px;color:var(--text)">Post ${i+1}</div>
+          ${(data.designUploads||{})[i] ? `
+            <img src="${(data.designUploads||{})[i].url}" style="width:100%;max-height:200px;object-fit:contain;border-radius:10px;display:block;margin-bottom:8px">
+            <a href="${(data.designUploads||{})[i].url}" target="_blank" class="btn btn-ghost btn-sm" style="text-decoration:none">⬇ Download</a>
+          ` : `
+            <label style="display:flex;align-items:center;gap:10px;padding:12px;background:var(--brand-pale);border:2px dashed var(--brand-mid);border-radius:12px;cursor:pointer">
+              <input type="file" accept="image/*,video/*,.pdf" style="display:none" onchange="uploadDesignForPost(this,${i})">
+              <span>📁</span><span style="font-size:13px;font-weight:700;color:var(--brand)">Upload design for Post ${i+1}</span>
+            </label>`}
+        </div>`).join('')}
     </div>`;
     return;
   }
 
-  // Filter non-empty rows
-  const filledRows = rows.filter(r=>r.some(c=>c&&c.toString().trim()));
-  const captionIdx  = colHeaders.findIndex(h=>h.toLowerCase().includes('caption'));
-  const dateIdx     = colHeaders.findIndex(h=>h.toLowerCase().includes('date'));
-  const platformIdx = colHeaders.findIndex(h=>h.toLowerCase().includes('platform'));
-  const hashIdx     = colHeaders.findIndex(h=>h.toLowerCase().includes('hashtag'));
-  const refIdx      = colHeaders.findIndex(h=>h.toLowerCase().includes('ref'));
-
-  content.innerHTML = `<div style="padding:16px;max-width:860px">` +
-    filledRows.map((row, ri) => {
+  content.innerHTML = `<div style="padding:16px">` +
+    dataRows.map((row, ri) => {
       const upload    = (data.designUploads||{})[ri];
       const dApproval = (data.designApprovals||{})[ri];
-      const caption   = captionIdx>=0  ? row[captionIdx]||''  : '';
-      const date      = dateIdx>=0     ? row[dateIdx]||''     : '';
-      const platform  = platformIdx>=0 ? row[platformIdx]||'' : '';
-      const hashtags  = hashIdx>=0     ? row[hashIdx]||''     : '';
-      const refLink   = refIdx>=0      ? row[refIdx]||''      : '';
-
       return `<div style="background:var(--white);border-radius:16px;padding:20px;margin-bottom:16px;border:1px solid var(--border);box-shadow:var(--sh-sm)">
-
-        <!-- Compact post header -->
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
           <div style="width:28px;height:28px;border-radius:50%;background:var(--brand-pale);color:var(--brand);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;flex-shrink:0">${ri+1}</div>
-          <div style="font-size:13px;font-weight:700;color:var(--text2)">${date} ${platform?'· '+platform:''}</div>
+          <div style="font-size:13px;font-weight:700;color:var(--text)">${row[0]||'Post '+(ri+1)}</div>
           <div style="margin-left:auto">
-            ${dApproval==='approved' ? '<span style="padding:3px 10px;border-radius:20px;background:#ECFDF5;color:#065F46;font-size:11px;font-weight:700">✅ Approved</span>' :
-              dApproval==='rejected' ? '<span style="padding:3px 10px;border-radius:20px;background:#FEF2F2;color:#991B1B;font-size:11px;font-weight:700">❌ Changes needed</span>' :
-              upload ? '<span style="padding:3px 10px;border-radius:20px;background:#FEF9C3;color:#92400E;font-size:11px;font-weight:700">⏳ Awaiting approval</span>' : ''}
+            ${dApproval==='approved'?'<span style="padding:3px 10px;border-radius:20px;background:#ECFDF5;color:#065F46;font-size:11px;font-weight:700">✅ Approved</span>':
+              dApproval==='rejected'?'<span style="padding:3px 10px;border-radius:20px;background:#FEF2F2;color:#991B1B;font-size:11px;font-weight:700">❌ Changes needed</span>':
+              upload?'<span style="padding:3px 10px;border-radius:20px;background:#FEF9C3;color:#92400E;font-size:11px;font-weight:700">⏳ Awaiting approval</span>':''}
           </div>
         </div>
-
-        <!-- Strategy details as bullet points -->
-        <div style="margin-bottom:14px;font-size:13px;color:var(--text);line-height:1.8">
-          ${colHeaders.map((h,ci) => row[ci]&&row[ci].toString().trim() ? `<div><span style="color:var(--text3);font-size:11px;font-weight:700">${h}:</span> ${row[ci]}</div>` : '').join('')}
-          ${refLink ? `<div style="margin-top:6px"><a href="${refLink}" target="_blank" style="color:var(--brand);font-size:12px">🔗 View reference</a></div>` : ''}
+        <div style="margin-bottom:14px;font-size:13px;color:var(--text);line-height:1.9">
+          ${headers.map((h,ci) => row[ci]&&row[ci].toString().trim() ? `<div><span style="color:var(--text3);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em">${h}</span><span style="margin-left:8px">${row[ci]}</span></div>` : '').join('')}
         </div>
-
-        <!-- Uploaded design -->
         ${upload ? `
           <div style="margin-bottom:12px;border-radius:12px;overflow:hidden;border:1px solid var(--border)">
             ${_isVideoFile(upload.name)
@@ -250,21 +239,15 @@ function _renderDesignerView() {
             <div style="padding:8px 12px;background:var(--surface2);display:flex;gap:8px;align-items:center">
               <span style="font-size:12px;color:var(--text2);flex:1">${upload.name}</span>
               <a href="${upload.url}" target="_blank" class="btn btn-ghost btn-sm" style="text-decoration:none;font-size:11px">⬇</a>
-              ${dApproval!=='approved' ? `<label class="btn btn-ghost btn-sm" style="cursor:pointer;font-size:11px">
-                <input type="file" accept="image/*,video/*,.pdf" style="display:none" onchange="uploadDesignForPost(this,${ri})">🔄</label>` : ''}
+              ${dApproval!=='approved'?`<label class="btn btn-ghost btn-sm" style="cursor:pointer;font-size:11px"><input type="file" accept="image/*,video/*,.pdf" style="display:none" onchange="uploadDesignForPost(this,${ri})">🔄</label>`:''}
             </div>
           </div>` : ''}
-
-        <!-- Upload button -->
-        ${!upload ? `
-          <label style="display:flex;align-items:center;gap:10px;padding:14px;background:var(--brand-pale);border:2px dashed var(--brand-mid);border-radius:12px;cursor:pointer">
+        ${!upload?`
+          <label style="display:flex;align-items:center;gap:10px;padding:12px;background:var(--brand-pale);border:2px dashed var(--brand-mid);border-radius:12px;cursor:pointer">
             <input type="file" accept="image/*,video/*,.pdf" style="display:none" onchange="uploadDesignForPost(this,${ri})">
-            <span style="font-size:20px">📁</span>
-            <div style="font-size:13px;font-weight:700;color:var(--brand)">Upload design for Post ${ri+1}</div>
-          </label>` : ''}
-
-        ${dApproval==='approved' ? `
-          <button onclick="sendToPublishing(${ri})" class="btn btn-primary btn-sm" style="margin-top:10px">🚀 Send to Publishing</button>` : ''}
+            <span>📁</span><span style="font-size:13px;font-weight:700;color:var(--brand)">Upload design for Post ${ri+1}</span>
+          </label>`:''}
+        ${dApproval==='approved'?`<button onclick="sendToPublishing(${ri})" class="btn btn-primary btn-sm" style="margin-top:10px">🚀 Send to Publishing</button>`:''}
       </div>`;
     }).join('') + `</div>`;
 }
@@ -556,3 +539,4 @@ function openAllSheetsModal() {
   document.getElementById('modalFooter').innerHTML = `<button class="btn btn-ghost" onclick="closeModal()">Close</button>`;
   document.getElementById('modalOverlay').classList.add('open');
 }
+     
