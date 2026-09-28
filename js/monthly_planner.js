@@ -16,7 +16,8 @@ function renderMonthlyPlanner() {
     const t = document.getElementById('plannerTopActions');
     if (t) t.innerHTML = `
       <button class="btn btn-ghost btn-sm" onclick="_showRefsPanel()">📌 Refs</button>
-      <button class="btn btn-primary btn-sm" onclick="_saveHot();showToast('✅ Saved!','success')">💾 Save</button>`;
+      <button class="btn btn-ghost btn-sm" onclick="changePlannerMonth(1)">Next month →</button>
+      <button class="btn btn-primary btn-sm" onclick="_saveHot();showToast('✅ Sheet saved!','success')">💾 Save</button>`;
     _renderStrategistView();
   } else if (role === 'designer') {
     const t = document.getElementById('plannerTopActions');
@@ -167,8 +168,31 @@ function _renderDesignerView() {
   const colHeaders = data.hotColHeaders || ['Col 1','Col 2','Col 3','Col 4','Col 5','Col 6','Col 7','Col 8'];
   const rows       = data.hotData || [];
 
-  if (!rows.length || rows.every(r=>r.every(c=>!c))) {
-    content.innerHTML = `<div style="padding:40px;text-align:center;color:var(--text3)"><div style="font-size:40px;margin-bottom:12px">📄</div><div style="font-size:15px;font-weight:700;color:var(--text2)">No posts in the strategy yet</div></div>`;
+  const filledRows0 = rows.filter(r=>r.some(c=>c&&c.toString().trim()));
+  if (!filledRows0.length) {
+    content.innerHTML = `<div style="padding:32px">
+      <div style="background:var(--white);border-radius:16px;padding:32px;text-align:center;border:1px solid var(--border)">
+        <div style="font-size:40px;margin-bottom:12px">📄</div>
+        <div style="font-size:15px;font-weight:700;color:var(--text2);margin-bottom:6px">No strategy added yet</div>
+        <div style="font-size:13px;color:var(--text3)">The strategist needs to fill in the spreadsheet first. You can still upload designs below.</div>
+      </div>
+      <div style="margin-top:20px">
+        <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:10px">Upload your designs</div>
+        ${Array.from({length:5},(_,i)=>`
+          <div style="background:var(--white);border-radius:14px;padding:16px;margin-bottom:12px;border:1px solid var(--border)">
+            <div style="font-size:13px;font-weight:700;margin-bottom:10px">Post ${i+1}</div>
+            ${(data.designUploads||{})[i] ? `
+              <img src="${(data.designUploads||{})[i].url}" style="width:100%;max-height:200px;object-fit:contain;border-radius:10px;background:#f0f0f0;display:block;margin-bottom:8px">
+              <a href="${(data.designUploads||{})[i].url}" target="_blank" class="btn btn-ghost btn-sm" style="text-decoration:none">⬇ Download</a>
+            ` : `
+              <label style="display:flex;align-items:center;gap:10px;padding:14px;background:var(--brand-pale);border:2px dashed var(--brand-mid);border-radius:12px;cursor:pointer">
+                <input type="file" accept="image/*,video/*,.pdf" style="display:none" onchange="uploadDesignForPost(this,${i})">
+                <span style="font-size:18px">📁</span>
+                <span style="font-size:13px;font-weight:700;color:var(--brand)">Upload design for Post ${i+1}</span>
+              </label>`}
+          </div>`).join('')}
+      </div>
+    </div>`;
     return;
   }
 
