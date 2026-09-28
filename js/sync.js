@@ -88,7 +88,8 @@ function _startListening() {
         if (currentView === 'agenda'   && typeof renderMonthlyPlanner === 'function') renderMonthlyPlanner();
         if (currentView === 'channels' && typeof renderChannelGrid    === 'function') renderChannelGrid();
         if (currentView === 'media'    && typeof renderMediaLibrary   === 'function') renderMediaLibrary();
-        if (currentView === 'home'     && typeof renderHomePage       === 'function') renderHomePage();
+        if (currentView === 'home'       && typeof renderHomePage     === 'function') renderHomePage();
+        if (currentView === 'publishing'  && typeof renderPublishing    === 'function') renderPublishing();
       }
       // Always refresh docs panel
       if (typeof renderAttachedDocs === 'function') renderAttachedDocs();
