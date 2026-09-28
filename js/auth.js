@@ -69,7 +69,8 @@ function logout() {
 }
 
 function _enterApp() {
-  document.getElementById('app').style.display = 'flex';
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('app').style.display = 'flex';  document.getElementById('app').style.display = 'flex';
   _applyUserPermissions();
   _updateSidebarUser();
   if (typeof initSync === 'function') initSync();
