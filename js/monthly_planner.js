@@ -235,8 +235,8 @@ function _renderDesignerView() {
         ${upload ? `
           <div style="margin-bottom:12px;border-radius:16px;overflow:hidden;border:1px solid var(--border);box-shadow:var(--sh-sm)">
             ${_isVideoFile(upload.name)
-              ? `<video src="${upload.url}" controls style="width:100%;max-height:600px;display:block"></video>`
-              : `<img src="${upload.url}" style="width:100%;max-height:600px;object-fit:contain;display:block;background:#000;cursor:zoom-in" onclick="window.open('${upload.url}','_blank')">`}
+              ? `<video src="${upload.url}" controls style="width:100%;max-height:200px;display:block;object-fit:contain"></video>`
+              : `<img src="${upload.url}" style="width:100%;max-height:200px;object-fit:contain;display:block;background:#f0f0f0;cursor:zoom-in" onclick="window.open('${upload.url}','_blank')">`}
             <div style="padding:10px 14px;background:var(--surface2);display:flex;gap:8px;align-items:center;flex-wrap:wrap">
               <span style="font-size:12px;color:var(--text2);flex:1">${upload.name}</span>
               <a href="${upload.url}" download target="_blank" class="btn btn-ghost btn-sm" style="text-decoration:none;font-size:11px">⬇ Download</a>
