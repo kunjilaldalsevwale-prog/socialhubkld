@@ -122,11 +122,13 @@
       <div id="view-agenda" class="view" style="padding:0 !important;display:flex;flex-direction:column;height:100%">
 
         <!-- Single slim top bar -->
-        <div style="display:flex;align-items:center;gap:10px;padding:8px 16px;border-bottom:1px solid var(--border);background:var(--white);flex-shrink:0">
+        <div style="display:flex;align-items:center;gap:8px;padding:8px 16px;border-bottom:1px solid var(--border);background:var(--white);flex-shrink:0;flex-wrap:wrap">
           <button style="background:none;border:none;cursor:pointer;font-size:16px;color:var(--text3);padding:2px 6px;border-radius:6px" onclick="changePlannerMonth(-1)">‹</button>
-          <span id="plannerMonthLabel" style="font-size:13px;font-weight:700;color:var(--text);min-width:100px;text-align:center"></span>
+          <span id="plannerMonthLabel" style="font-size:12px;font-weight:600;color:var(--text3);min-width:80px;text-align:center"></span>
           <button style="background:none;border:none;cursor:pointer;font-size:16px;color:var(--text3);padding:2px 6px;border-radius:6px" onclick="changePlannerMonth(1)">›</button>
-          <div id="stratApprovalBar" style="margin-left:8px;flex:1"></div>
+          <input id="plannerSheetName" placeholder="Sheet name…" style="border:1px solid var(--border);border-radius:8px;padding:4px 10px;font-size:13px;font-weight:600;color:var(--text);font-family:var(--font);outline:none;min-width:160px;flex:1">
+          <button class="btn btn-ghost btn-sm" onclick="openAllSheetsModal()" style="font-size:11px">📋 All sheets</button>
+          <div id="stratApprovalBar" style="display:flex;align-items:center"></div>
           <div id="plannerTopActions" style="display:flex;gap:6px"></div>
         </div>
 
@@ -310,10 +312,10 @@
           <div style="flex:1;min-width:0">
             <div id="stab-team-settings" class="stab">
               <div class="settings-section-title" style="font-size:18px;font-weight:800;margin-bottom:20px">Team & Permissions</div>
-              <div style="margin-bottom:16px">
+              <div style="margin-bottom:20px">
                 <button class="btn btn-primary" onclick="openAddTeamMemberModal()">＋ Add team member</button>
               </div>
-              <div id="rolesTable"></div>         
+              <div id="rolesTable"></div>
             </div>
           </div>
         </div>
