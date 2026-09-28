@@ -222,6 +222,7 @@ function _renderDesignerView() {
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
           <div style="width:28px;height:28px;border-radius:50%;background:var(--brand-pale);color:var(--brand);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;flex-shrink:0">${ri+1}</div>
           <div style="font-size:13px;font-weight:700;color:var(--text)">${row[0]||'Post '+(ri+1)}</div>
+          ${(() => { const di = headers.findIndex(h=>h.toLowerCase().includes('date')||h.toLowerCase().includes('deadline')); return di>=0&&row[di]?`<span style="font-size:11px;font-weight:700;padding:2px 10px;border-radius:20px;background:#FEF9C3;color:#92400E">📅 ${row[di]}</span>`:''; })()}
           <div style="margin-left:auto">
             ${dApproval==='approved'?'<span style="padding:3px 10px;border-radius:20px;background:#ECFDF5;color:#065F46;font-size:11px;font-weight:700">✅ Approved</span>':
               dApproval==='rejected'?'<span style="padding:3px 10px;border-radius:20px;background:#FEF2F2;color:#991B1B;font-size:11px;font-weight:700">❌ Changes needed</span>':
@@ -377,25 +378,43 @@ function sendToPublishing(postIndex) {
   const data = _getPlannerData();
   const upload = (data.designUploads||{})[postIndex];
   if (!upload) { showToast('No design uploaded','error'); return; }
-  const colHeaders = data.hotColHeaders||['Date','Platform','Post Type','Caption','Hashtags','Reference Link','Notes','Status'];
-  const rows       = data.hotData||[];
-  const filledRows = rows.filter(r=>r.some(c=>c&&c.toString().trim()));
-  const row        = filledRows[postIndex]||[];
-  const captionIdx = colHeaders.findIndex(h=>h.toLowerCase().includes('caption'));
-  const dateIdx    = colHeaders.findIndex(h=>h.toLowerCase().includes('date'));
-  const platformIdx= colHeaders.findIndex(h=>h.toLowerCase().includes('platform'));
-  const hashIdx    = colHeaders.findIndex(h=>h.toLowerCase().includes('hashtag'));
-  if (!state.publishingQueue) state.publishingQueue=[];
+
+  const colHeaders = data.hotColHeaders || [];
+  const rows       = data.hotData || [];
+
+  // Use row 1 as headers if filled
+  const allFilledRows = rows.filter(r=>r.some(c=>c&&c.toString().trim()));
+  const firstRow = allFilledRows[0] || [];
+  const isFirstRowHeader = firstRow.every(c=>!c||c.toString().trim().length<30);
+  const headers  = isFirstRowHeader && allFilledRows.length>1 ? firstRow.map((h,i)=>h||colHeaders[i]||'') : colHeaders;
+  const dataRows = isFirstRowHeader && allFilledRows.length>1 ? allFilledRows.slice(1) : allFilledRows;
+  const row      = dataRows[postIndex] || [];
+
+  // Auto-detect column indices from headers
+  const find = (keywords) => headers.findIndex(h=>keywords.some(k=>h.toLowerCase().includes(k)));
+  const dateIdx     = find(['date','deadline','posting date','schedule']);
+  const platformIdx = find(['platform','channel','where']);
+  const captionIdx  = find(['caption','copy','text','content']);
+  const hashIdx     = find(['hashtag','hash','tags']);
+
+  if (!state.publishingQueue) state.publishingQueue = [];
   const id = `pub_${_getPlannerKey()}_${postIndex}`;
   state.publishingQueue = state.publishingQueue.filter(p=>p.id!==id);
+
+  const postDate = dateIdx>=0 ? row[dateIdx]||'' : '';
+
   state.publishingQueue.push({
     id, postIndex,
-    imageUrl:  upload.url, imageName: upload.name,
-    caption:   captionIdx>=0  ? row[captionIdx]||''  : '',
-    hashtags:  hashIdx>=0     ? row[hashIdx]||''     : '',
-    date:      dateIdx>=0     ? row[dateIdx]||''     : '',
-    platform:  platformIdx>=0 ? row[platformIdx]||'' : 'Instagram',
-    status:    'ready', addedAt: new Date().toISOString(),
+    imageUrl:    upload.url,
+    imageName:   upload.name,
+    caption:     captionIdx>=0  ? row[captionIdx]||''  : '',
+    hashtags:    hashIdx>=0     ? row[hashIdx]||''     : '',
+    date:        postDate,
+    scheduleDate:postDate,
+    platform:    platformIdx>=0 ? row[platformIdx]||'' : 'Instagram',
+    allDetails:  headers.map((h,i)=>({label:h,value:row[i]||''})).filter(x=>x.label&&x.value),
+    status:      'queue',
+    addedAt:     new Date().toISOString(),
   });
   DB.save(state);
   if (typeof syncPush==='function') syncPush();
@@ -570,10 +589,10 @@ function approveDesignByAdmin(postIndex, adminId, status) {
 
   // Check if all admins approved
   const admins = Object.values(TEAM_USERS).filter(u=>u.role==='admin').map(u=>u.id);
-  const anyApproved = Object.values(data.designAdminApprovals[postIndex]).some(s => s === 'approved');
-  const anyRejected = Object.values(data.designAdminApprovals[postIndex]).some(s => s === 'rejected');
+  const allApproved = admins.length > 0 && admins.every(a => data.designAdminApprovals[postIndex][a] === 'approved');
+  const anyRejected = admins.some(a => data.designAdminApprovals[postIndex][a] === 'rejected');
 
-  if (anyApproved) data.designApprovals[postIndex] = 'approved';
+  if (allApproved) data.designApprovals[postIndex] = 'approved';
   else if (anyRejected) data.designApprovals[postIndex] = 'rejected';
   else data.designApprovals[postIndex] = 'pending';
 
