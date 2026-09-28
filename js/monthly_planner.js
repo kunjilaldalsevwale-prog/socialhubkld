@@ -214,7 +214,7 @@ function _renderDesignerView() {
     return;
   }
 
-  content.innerHTML = `<div style="padding:16px">` +
+  content.innerHTML = `<div style="padding:16px;display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px">` +
     dataRows.map((row, ri) => {
       const upload    = (data.designUploads||{})[ri];
       const dApproval = (data.designApprovals||{})[ri];
