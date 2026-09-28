@@ -32,6 +32,17 @@ function _renderPlannerMonth() {
   const el = document.getElementById('plannerMonthLabel');
   if (el) el.textContent = new Date(plannerYear, plannerMonth, 1)
     .toLocaleDateString('en-IN', { month:'long', year:'numeric' });
+  // Render sheet name input
+  const data = _getPlannerData();
+  const nameEl = document.getElementById('plannerSheetName');
+  if (nameEl) {
+    nameEl.value = data.sheetName || '';
+    nameEl.oninput = () => {
+      data.sheetName = nameEl.value;
+      clearTimeout(window._sheetNameTimer);
+      window._sheetNameTimer = setTimeout(()=>{ DB.save(state); if(typeof syncPush==='function') syncPush(); }, 500);
+    };
+  }
 }
 
 function changePlannerMonth(dir) {
@@ -49,6 +60,7 @@ function _getPlannerData() {
   const k = _getPlannerKey();
   if (!state.monthlyPlans[k]) state.monthlyPlans[k] = {
     hotData: null, hotColHeaders: null,
+    sheetName: new Date(plannerYear, plannerMonth, 1).toLocaleDateString('en-IN',{month:'long',year:'numeric'}),
     approvals: {}, approvalDays: 3,
     createdAt: new Date().toISOString(),
     designUploads: {}, designApprovals: {},
@@ -507,4 +519,41 @@ function addStickyNote(){
   if(!state.monthlyPlans[key].stickyNotes)state.monthlyPlans[key].stickyNotes=[];
   state.monthlyPlans[key].stickyNotes.push({id:Date.now(),text:'',color:'#FEF9C3'});
   saveState();_refreshCalStickyBanner();
+}
+
+/* ══════════════════════════════════════════════════════════
+   ALL SHEETS MODAL
+══════════════════════════════════════════════════════════ */
+function openAllSheetsModal() {
+  const plans = state.monthlyPlans || {};
+  const sheets = Object.entries(plans)
+    .filter(([k, v]) => v.hotData || v.sheetName)
+    .sort(([a],[b]) => b.localeCompare(a))
+    .map(([k, v]) => {
+      const [y, m] = k.split('-');
+      const monthName = new Date(parseInt(y), parseInt(m), 1)
+        .toLocaleDateString('en-IN', {month:'long', year:'numeric'});
+      const rowCount = (v.hotData||[]).filter(r=>r.some(c=>c&&c.toString().trim())).length;
+      const approved = _isSheetApproved(v);
+      return { k, y:parseInt(y), m:parseInt(m), name:v.sheetName||monthName, monthName, rowCount, approved };
+    });
+
+  document.getElementById('modalTitle').textContent = '📋 All Sheets';
+  document.getElementById('modalBody').innerHTML = !sheets.length
+    ? `<div style="text-align:center;padding:32px;color:var(--text3)">No sheets yet — start adding content to the planner</div>`
+    : `<div style="display:flex;flex-direction:column;gap:8px">
+        ${sheets.map(s => `
+          <div style="display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--surface2);border-radius:12px;border:1px solid var(--border);cursor:pointer"
+            onclick="plannerYear=${s.y};plannerMonth=${s.m};if(_hotInstance){_hotInstance.destroy();_hotInstance=null;}renderMonthlyPlanner();closeModal()">
+            <div style="flex:1">
+              <div style="font-size:13px;font-weight:700;color:var(--text)">${s.name}</div>
+              <div style="font-size:11px;color:var(--text3);margin-top:2px">${s.monthName} · ${s.rowCount} row${s.rowCount!==1?'s':''}</div>
+            </div>
+            <span style="font-size:11px;padding:3px 10px;border-radius:20px;font-weight:700;background:${s.approved?'#ECFDF5':'#EFF6FF'};color:${s.approved?'#065F46':'#1D4ED8'}">
+              ${s.approved?'✅ Approved':'Pending'}
+            </span>
+          </div>`).join('')}
+      </div>`;
+  document.getElementById('modalFooter').innerHTML = `<button class="btn btn-ghost" onclick="closeModal()">Close</button>`;
+  document.getElementById('modalOverlay').classList.add('open');
 }
