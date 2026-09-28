@@ -2971,4 +2971,15 @@ body, #app { background: #F5F3EF; }
   font-weight: 700 !important;
   background: var(--beige) !important;
 }
-.stab { display: block !important; }
+
+/* ── Publishing Kanban — mobile ── */
+@media (max-width: 768px) {
+  #view-publishing .content > div > div:last-child {
+    grid-template-columns: 1fr 1fr !important;
+  }
+}
+@media (max-width: 480px) {
+  #view-publishing .content > div > div:last-child {
+    grid-template-columns: 1fr !important;
+  }
+}
