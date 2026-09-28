@@ -264,7 +264,10 @@ function _renderDesignerView() {
             <button onclick="approveDesignByAdmin('${ri}','tejasv','approved')" style="padding:6px 14px;background:#ECFDF5;color:#065F46;border:1.5px solid #6EE7B7;border-radius:20px;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--font)">✅ Tejasv</button>
             <button onclick="approveDesignByAdmin('${ri}','anusha','rejected')" style="padding:6px 14px;background:#FEF2F2;color:#991B1B;border:1.5px solid #FCA5A5;border-radius:20px;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--font)">❌ Reject</button>
           </div>` : ''}
-        ${dApproval==='approved'?`<button onclick="sendToPublishing(${ri})" class="btn btn-primary btn-sm" style="margin-top:10px">🚀 Send to Publishing</button>`:''}
+        <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
+          ${dApproval==='approved'?`<button onclick="sendToPublishing(${ri})" class="btn btn-primary">🚀 Send to Publishing</button>`:''}
+          ${upload && currentUser && currentUser.role==='admin'?`<button onclick="sendToPublishing(${ri})" class="btn btn-ghost btn-sm">📤 Send anyway</button>`:''}
+        </div>
       </div>`;
     }).join('') + `</div>`;
 }
@@ -565,9 +568,9 @@ function approveDesignByAdmin(postIndex, adminId, status) {
   if (!data.designAdminApprovals[postIndex]) data.designAdminApprovals[postIndex] = {};
   data.designAdminApprovals[postIndex][adminId] = status;
 
-  // Check if all 3 approved
-  const admins = ['anusha','anjani','tejasv'];
-  const allApproved = admins.every(a => data.designAdminApprovals[postIndex][a] === 'approved');
+  // Check if all admins approved
+  const admins = Object.values(TEAM_USERS).filter(u=>u.role==='admin').map(u=>u.id);
+  const allApproved = admins.length > 0 && admins.every(a => data.designAdminApprovals[postIndex][a] === 'approved');
   const anyRejected = admins.some(a => data.designAdminApprovals[postIndex][a] === 'rejected');
 
   if (allApproved) data.designApprovals[postIndex] = 'approved';
