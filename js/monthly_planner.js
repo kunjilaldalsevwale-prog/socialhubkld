@@ -170,8 +170,9 @@ function _renderDesignerView() {
 
   if (_hotInstance) { _hotInstance.destroy(); _hotInstance = null; }
 
-  if (topActs) topActs.innerHTML = `<button class="btn btn-ghost btn-sm" onclick="_showRefsPanel()">📌 References</button>`;
-
+  if (topActs) topActs.innerHTML = `
+    <button class="btn btn-ghost btn-sm" onclick="_showRefsPanel()">📌 Refs</button>
+    <button class="btn btn-ghost btn-sm" onclick="openAllSheetsModal()" style="font-size:11px">📋 All sheets</button>`;
   _renderStratApprovalBar(data);
 
   const colHeaders = data.hotColHeaders || ['Col 1','Col 2','Col 3','Col 4','Col 5','Col 6','Col 7','Col 8'];
