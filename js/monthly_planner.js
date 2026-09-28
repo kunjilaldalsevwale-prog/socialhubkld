@@ -164,17 +164,7 @@ function _renderDesignerView() {
 
   _renderStratApprovalBar(data);
 
-  if (!locked) {
-    content.innerHTML = `
-      <div style="padding:40px;text-align:center;color:var(--text3)">
-        <div style="font-size:40px;margin-bottom:12px">⏳</div>
-        <div style="font-size:15px;font-weight:700;color:var(--text2)">Waiting for strategy approval</div>
-        <div style="font-size:13px;margin-top:6px">The strategy needs to be approved by admins before you can start designing</div>
-      </div>`;
-    return;
-  }
-
-  const colHeaders = data.hotColHeaders || ['Date','Platform','Post Type','Caption','Hashtags','Reference Link','Notes','Status'];
+  const colHeaders = data.hotColHeaders || ['Col 1','Col 2','Col 3','Col 4','Col 5','Col 6','Col 7','Col 8'];
   const rows       = data.hotData || [];
 
   if (!rows.length || rows.every(r=>r.every(c=>!c))) {
