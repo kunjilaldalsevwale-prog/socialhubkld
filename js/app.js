@@ -5,7 +5,7 @@ let sidebarCollapsed = false;
 const VIEW_TITLES = {
   channels:'Calendar', ideas:'Ideas Board', agenda:'Monthly Planner', integrations:'Integrations', 'activity-log':'Activity Log', meta:'Meta Ads Manager', whatsapp:'WhatsApp Marketing',
   email:'Email Marketing', media:'Media Library',
-  reminders:'Reminders', agenda:'Monthly Agenda', analytics:'Analytics',
+  reminders:'Reminders', agenda:'Monthly Planner', analytics:'Analytics',
   team:'Team', settings:'Settings',
   // kept in ALL_VIEWS so views don't crash if navigated programmatically
   calendar:'Calendar', posts:'Posts', create:'Create Post',
@@ -36,7 +36,7 @@ function navigate(view, el) {
     agenda: () => { if(typeof renderMonthlyPlanner==='function') renderMonthlyPlanner(); },
     media:   () => { if(typeof renderMediaLibrary==='function') renderMediaLibrary(); },
     publishing: () => { if(typeof renderPublishing==='function') renderPublishing(); },
-    settings:   () => { if(typeof renderTeamSettings==='function') renderTeamSettings(); },
+    settings:   () => { setTimeout(()=>{ if(typeof renderTeamSettings==='function') renderTeamSettings(); },50); },
     'activity-log': () => { if(typeof renderActivityLog==='function') renderActivityLog(); },
   };
   if (renders[view]) renders[view]();
@@ -229,9 +229,9 @@ const DOC_ICONS = {
 };
 
 function addGoogleDoc() {
-  const title = (document.getElementById('doc-title').value || '').trim();
-  const url   = (document.getElementById('doc-url').value   || '').trim();
-  const type  = document.getElementById('doc-type').value;
+  const title = (document.getElementById('docName').value || '').trim();
+  const url   = (document.getElementById('docUrl').value   || '').trim();
+  const type  = document.getElementById('docType').value;
 
   if (!title) { showToast('Enter a name for this doc', 'error'); return; }
   if (!url)   { showToast('Paste the Google Doc link', 'error'); return; }
@@ -248,8 +248,8 @@ function addGoogleDoc() {
   saveState();
 
   // Clear form
-  document.getElementById('doc-title').value = '';
-  document.getElementById('doc-url').value   = '';
+  document.getElementById('docName').value = '';
+  document.getElementById('docUrl').value   = '';
 
   renderAttachedDocs();
   showToast('📄 Doc attached!', 'success');
