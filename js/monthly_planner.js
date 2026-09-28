@@ -158,12 +158,9 @@ function _renderDesignerView() {
   const topActs = document.getElementById('plannerTopActions');
   if (!content) return;
 
-  // Clear HOT if switching from strategy
   if (_hotInstance) { _hotInstance.destroy(); _hotInstance = null; }
 
-  // Top actions — add reference
-  if (topActs) topActs.innerHTML = `
-    <button class="btn btn-ghost btn-sm" onclick="_showRefsPanel()">📌 References</button>`;
+  if (topActs) topActs.innerHTML = `<button class="btn btn-ghost btn-sm" onclick="_showRefsPanel()">📌 References</button>`;
 
   _renderStratApprovalBar(data);
 
@@ -172,7 +169,7 @@ function _renderDesignerView() {
       <div style="padding:40px;text-align:center;color:var(--text3)">
         <div style="font-size:40px;margin-bottom:12px">⏳</div>
         <div style="font-size:15px;font-weight:700;color:var(--text2)">Waiting for strategy approval</div>
-        <div style="font-size:13px;margin-top:6px">Admins need to approve the strategy sheet first</div>
+        <div style="font-size:13px;margin-top:6px">The strategy needs to be approved by admins before you can start designing</div>
       </div>`;
     return;
   }
@@ -271,8 +268,10 @@ function _renderAdminView() {
    APPROVAL
 ══════════════════════════════════════════════════════════ */
 function _isSheetApproved(data) {
-  return ['anusha','anjani','tejasv'].every(a =>
-    (data.approvals||{})[a]==='approved' || _isAutoApproved(data,a)
+  const admins = Object.values(TEAM_USERS).filter(u=>u.role==='admin');
+  if (!admins.length) return false;
+  return admins.every(u =>
+    (data.approvals||{})[u.id]==='approved' || _isAutoApproved(data,u.id)
   );
 }
 
@@ -284,28 +283,21 @@ function _isAutoApproved(data, adminId) {
 function _renderStratApprovalBar(data) {
   const el = document.getElementById('stratApprovalBar');
   if (!el) return;
-  const ADMINS   = ['anusha','anjani','tejasv'];
-  const approved = ADMINS.filter(a=>(data.approvals||{})[a]==='approved'||_isAutoApproved(data,a)).length;
-  const rejected = ADMINS.some(a=>(data.approvals||{})[a]==='rejected');
-  const allOk    = approved===3;
+  const ADMINS   = Object.values(TEAM_USERS).filter(u=>u.role==='admin');
+  const approved = ADMINS.filter(a=>(data.approvals||{})[a.id]==='approved'||_isAutoApproved(data,a.id)).length;
+  const rejected = ADMINS.some(a=>(data.approvals||{})[a.id]==='rejected');
+  const allOk    = ADMINS.length > 0 && approved===ADMINS.length;
 
-  const circlesHtml = ADMINS.map(a => {
-    const s  = (data.approvals||{})[a]||(_isAutoApproved(data,a)?'auto':'pending');
-    const bg = s==='approved'||s==='auto'?'#10B981':s==='rejected'?'#EF4444':'#D1D5DB';
-    const ic = s==='approved'||s==='auto'?'✓':s==='rejected'?'✕':'';
-    return `<div title="${TEAM_USERS[a]?TEAM_USERS[a].name:a}" style="width:22px;height:22px;border-radius:50%;background:${bg};display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:#fff">${ic}</div>`;
-  }).join('');
-
-  const myStatus = currentUser && TEAM_USERS[currentUser.id] && TEAM_USERS[currentUser.id].role==='admin'
-    ? (data.approvals||{})[currentUser.id] : null;
-  const showBtns = currentUser && ['anusha','anjani','tejasv'].includes(currentUser.id) && !myStatus && !_isAutoApproved(data,currentUser.id);
+  // Show approve buttons for ANY admin (not just anusha/anjani/tejasv)
+  const isAdminUser = currentUser && currentUser.role === 'admin';
+  const myApproval = isAdminUser ? (data.approvals||{})[currentUser.id] : null;
+  const showMyBtns = isAdminUser && !myApproval && !_isAutoApproved(data, currentUser.id);
 
   el.innerHTML = `<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-    <div style="display:flex;gap:4px">${circlesHtml}</div>
     <span style="font-size:11px;font-weight:700;color:${rejected?'#991B1B':allOk?'#065F46':'var(--text3)'}">
-      ${rejected?'❌ Changes requested':allOk?'✅ Approved':`${approved}/3 approved`}
+      ${rejected?'❌ Changes requested':allOk?'✅ Strategy approved':`${approved}/3 approved`}
     </span>
-    ${showBtns?`
+    ${showMyBtns?`
     <button onclick="approveStrategy('${currentUser.id}','approved')" style="padding:3px 12px;background:#ECFDF5;color:#065F46;border:1px solid #6EE7B7;border-radius:14px;font-size:11px;font-weight:700;cursor:pointer;font-family:var(--font)">✅ Approve</button>
     <button onclick="approveStrategy('${currentUser.id}','rejected')" style="padding:3px 12px;background:#FEF2F2;color:#991B1B;border:1px solid #FCA5A5;border-radius:14px;font-size:11px;font-weight:700;cursor:pointer;font-family:var(--font)">❌ Reject</button>`:''}
   </div>`;
