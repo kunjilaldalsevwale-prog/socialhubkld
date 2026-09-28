@@ -169,7 +169,10 @@ function _renderDesignerView() {
 
   if (_hotInstance) { _hotInstance.destroy(); _hotInstance = null; }
 
-  if (topActs) topActs.innerHTML = `<button class="btn btn-ghost btn-sm" onclick="_showRefsPanel()">📌 References</button>`;
+  // Only set top actions if NOT admin (admin sets its own buttons)
+  if (topActs && currentUser && currentUser.role !== 'admin') {
+    topActs.innerHTML = `<button class="btn btn-ghost btn-sm" onclick="_showRefsPanel()">📌 References</button>`;
+  }
 
   _renderStratApprovalBar(data);
 
@@ -214,7 +217,7 @@ function _renderDesignerView() {
     return;
   }
 
-  content.innerHTML = `<div style="padding:16px;display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px">` +
+  content.innerHTML = `<div style="padding:16px">` +
     dataRows.map((row, ri) => {
       const upload    = (data.designUploads||{})[ri];
       const dApproval = (data.designApprovals||{})[ri];
@@ -235,8 +238,8 @@ function _renderDesignerView() {
         ${upload ? `
           <div style="margin-bottom:12px;border-radius:16px;overflow:hidden;border:1px solid var(--border);box-shadow:var(--sh-sm)">
             ${_isVideoFile(upload.name)
-              ? `<video src="${upload.url}" controls style="width:100%;max-height:200px;display:block;object-fit:contain"></video>`
-              : `<img src="${upload.url}" style="width:100%;max-height:200px;object-fit:contain;display:block;background:#f0f0f0;cursor:zoom-in" onclick="window.open('${upload.url}','_blank')">`}
+              ? `<video src="${upload.url}" controls style="width:100%;max-height:600px;display:block"></video>`
+              : `<img src="${upload.url}" style="width:100%;max-height:600px;object-fit:contain;display:block;background:#000;cursor:zoom-in" onclick="window.open('${upload.url}','_blank')">`}
             <div style="padding:10px 14px;background:var(--surface2);display:flex;gap:8px;align-items:center;flex-wrap:wrap">
               <span style="font-size:12px;color:var(--text2);flex:1">${upload.name}</span>
               <a href="${upload.url}" download target="_blank" class="btn btn-ghost btn-sm" style="text-decoration:none;font-size:11px">⬇ Download</a>
@@ -279,16 +282,19 @@ function _renderDesignerView() {
 let _adminPlannerView = 'strategy';
 
 function _renderAdminView() {
-  const topActs = document.getElementById('plannerTopActions');
-  if (topActs) topActs.innerHTML = `
-    <button class="btn ${_adminPlannerView==='strategy'?'btn-primary':'btn-ghost'} btn-sm" onclick="_adminPlannerView='strategy';renderMonthlyPlanner()">📊 Strategy</button>
-    <button class="btn ${_adminPlannerView==='design'?'btn-primary':'btn-ghost'} btn-sm" onclick="_adminPlannerView='design';renderMonthlyPlanner()">🎨 Design</button>
-    <button class="btn ${_adminPlannerView==='refs'?'btn-primary':'btn-ghost'} btn-sm" onclick="_adminPlannerView='refs';renderMonthlyPlanner()">📌 Refs</button>
-    <button class="btn btn-primary btn-sm" onclick="_saveHot();showToast('✅ Saved!','success')">💾 Save</button>`;
-
   if (_adminPlannerView === 'strategy') _renderStrategistView();
   else if (_adminPlannerView === 'design') _renderDesignerView();
   else _showRefsPanel();
+
+  // Set admin toggle buttons AFTER sub-view renders (so they don't get overwritten)
+  setTimeout(() => {
+    const topActs = document.getElementById('plannerTopActions');
+    if (topActs) topActs.innerHTML = `
+      <button class="btn ${_adminPlannerView==='strategy'?'btn-primary':'btn-ghost'} btn-sm" onclick="_adminPlannerView='strategy';renderMonthlyPlanner()">📊 Strategy</button>
+      <button class="btn ${_adminPlannerView==='design'?'btn-primary':'btn-ghost'} btn-sm" onclick="_adminPlannerView='design';renderMonthlyPlanner()">🎨 Design</button>
+      <button class="btn ${_adminPlannerView==='refs'?'btn-primary':'btn-ghost'} btn-sm" onclick="_adminPlannerView='refs';renderMonthlyPlanner()">📌 Refs</button>
+      ${_adminPlannerView==='strategy'?`<button class="btn btn-primary btn-sm" onclick="_saveHot();showToast('✅ Saved!','success')">💾 Save</button>`:''}`;
+  }, 50);
 }
 
 /* ══════════════════════════════════════════════════════════
