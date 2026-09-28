@@ -232,21 +232,38 @@ function _renderDesignerView() {
           ${headers.map((h,ci) => row[ci]&&row[ci].toString().trim() ? `<div><span style="color:var(--text3);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em">${h}</span><span style="margin-left:8px">${row[ci]}</span></div>` : '').join('')}
         </div>
         ${upload ? `
-          <div style="margin-bottom:12px;border-radius:12px;overflow:hidden;border:1px solid var(--border)">
+          <div style="margin-bottom:12px;border-radius:16px;overflow:hidden;border:1px solid var(--border);box-shadow:var(--sh-sm)">
             ${_isVideoFile(upload.name)
-              ? `<video src="${upload.url}" controls style="width:100%;max-height:360px;display:block"></video>`
-              : `<img src="${upload.url}" style="width:100%;max-height:360px;object-fit:contain;display:block;background:#f0f0f0">`}
-            <div style="padding:8px 12px;background:var(--surface2);display:flex;gap:8px;align-items:center">
+              ? `<video src="${upload.url}" controls style="width:100%;max-height:600px;display:block"></video>`
+              : `<img src="${upload.url}" style="width:100%;max-height:600px;object-fit:contain;display:block;background:#000;cursor:zoom-in" onclick="window.open('${upload.url}','_blank')">`}
+            <div style="padding:10px 14px;background:var(--surface2);display:flex;gap:8px;align-items:center;flex-wrap:wrap">
               <span style="font-size:12px;color:var(--text2);flex:1">${upload.name}</span>
-              <a href="${upload.url}" target="_blank" class="btn btn-ghost btn-sm" style="text-decoration:none;font-size:11px">⬇</a>
-              ${dApproval!=='approved'?`<label class="btn btn-ghost btn-sm" style="cursor:pointer;font-size:11px"><input type="file" accept="image/*,video/*,.pdf" style="display:none" onchange="uploadDesignForPost(this,${ri})">🔄</label>`:''}
+              <a href="${upload.url}" download target="_blank" class="btn btn-ghost btn-sm" style="text-decoration:none;font-size:11px">⬇ Download</a>
+              ${dApproval!=='approved'?`
+                <label class="btn btn-ghost btn-sm" style="cursor:pointer;font-size:11px">
+                  <input type="file" accept="image/*,video/*" style="display:none" onchange="uploadDesignForPost(this,${ri})">🔄 Replace
+                </label>`:''}
             </div>
           </div>` : ''}
         ${!upload?`
-          <label style="display:flex;align-items:center;gap:10px;padding:12px;background:var(--brand-pale);border:2px dashed var(--brand-mid);border-radius:12px;cursor:pointer">
-            <input type="file" accept="image/*,video/*,.pdf" style="display:none" onchange="uploadDesignForPost(this,${ri})">
-            <span>📁</span><span style="font-size:13px;font-weight:700;color:var(--brand)">Upload design for Post ${ri+1}</span>
-          </label>`:''}
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <label style="flex:1;display:flex;align-items:center;gap:8px;padding:12px;background:var(--brand-pale);border:2px dashed var(--brand-mid);border-radius:12px;cursor:pointer;min-width:140px">
+              <input type="file" accept="image/*" style="display:none" onchange="uploadDesignForPost(this,${ri})">
+              <span>🖼</span><span style="font-size:13px;font-weight:700;color:var(--brand)">Upload image</span>
+            </label>
+            <label style="flex:1;display:flex;align-items:center;gap:8px;padding:12px;background:#F0FDF4;border:2px dashed #6EE7B7;border-radius:12px;cursor:pointer;min-width:140px">
+              <input type="file" accept="video/*" style="display:none" onchange="uploadDesignForPost(this,${ri})">
+              <span>🎬</span><span style="font-size:13px;font-weight:700;color:#065F46">Upload video</span>
+            </label>
+          </div>`:''}
+        <!-- Admin approval buttons -->
+        ${upload && !dApproval ? `
+          <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+            <button onclick="approveDesignByAdmin('${ri}','anusha','approved')" style="padding:6px 14px;background:#ECFDF5;color:#065F46;border:1.5px solid #6EE7B7;border-radius:20px;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--font)">✅ Anusha</button>
+            <button onclick="approveDesignByAdmin('${ri}','anjani','approved')" style="padding:6px 14px;background:#ECFDF5;color:#065F46;border:1.5px solid #6EE7B7;border-radius:20px;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--font)">✅ Anjani</button>
+            <button onclick="approveDesignByAdmin('${ri}','tejasv','approved')" style="padding:6px 14px;background:#ECFDF5;color:#065F46;border:1.5px solid #6EE7B7;border-radius:20px;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--font)">✅ Tejasv</button>
+            <button onclick="approveDesignByAdmin('${ri}','anusha','rejected')" style="padding:6px 14px;background:#FEF2F2;color:#991B1B;border:1.5px solid #FCA5A5;border-radius:20px;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--font)">❌ Reject</button>
+          </div>` : ''}
         ${dApproval==='approved'?`<button onclick="sendToPublishing(${ri})" class="btn btn-primary btn-sm" style="margin-top:10px">🚀 Send to Publishing</button>`:''}
       </div>`;
     }).join('') + `</div>`;
@@ -539,4 +556,26 @@ function openAllSheetsModal() {
   document.getElementById('modalFooter').innerHTML = `<button class="btn btn-ghost" onclick="closeModal()">Close</button>`;
   document.getElementById('modalOverlay').classList.add('open');
 }
-     
+
+/* ── Design approval per admin ───────────────────────────── */
+function approveDesignByAdmin(postIndex, adminId, status) {
+  const data = _getPlannerData();
+  if (!data.designApprovals) data.designApprovals = {};
+  if (!data.designAdminApprovals) data.designAdminApprovals = {};
+  if (!data.designAdminApprovals[postIndex]) data.designAdminApprovals[postIndex] = {};
+  data.designAdminApprovals[postIndex][adminId] = status;
+
+  // Check if all 3 approved
+  const admins = ['anusha','anjani','tejasv'];
+  const allApproved = admins.every(a => data.designAdminApprovals[postIndex][a] === 'approved');
+  const anyRejected = admins.some(a => data.designAdminApprovals[postIndex][a] === 'rejected');
+
+  if (allApproved) data.designApprovals[postIndex] = 'approved';
+  else if (anyRejected) data.designApprovals[postIndex] = 'rejected';
+  else data.designApprovals[postIndex] = 'pending';
+
+  DB.save(state);
+  if (typeof syncPush === 'function') syncPush();
+  renderMonthlyPlanner();
+  showToast(status === 'approved' ? '✅ Approved!' : '❌ Changes requested', status === 'approved' ? 'success' : 'error');
+}
