@@ -65,22 +65,26 @@ function renderPublishing() {
                 <!-- Caption -->
                 ${post.caption ? `<div style="font-size:12px;color:var(--text);line-height:1.5;margin-bottom:8px;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden">${post.caption}</div>` : ''}
 
-                <!-- Meta -->
-                <div style="display:flex;align-items:center;gap:6px;margin-bottom:10px;flex-wrap:wrap">
-                  ${post.platform?`<span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;background:var(--brand-pale);color:var(--brand)">${post.platform}</span>`:''}
-                  ${post.date?`<span style="font-size:10px;color:var(--text3)">📅 ${post.date}</span>`:''}
-                  ${post.scheduleTime?`<span style="font-size:10px;color:var(--text3)">🕐 ${post.scheduleTime}</span>`:''}
+                <!-- Meta + all strategy details -->
+                <div style="margin-bottom:10px">
+                  <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:6px">
+                    ${post.platform?`<span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;background:var(--brand-pale);color:var(--brand)">${post.platform}</span>`:''}
+                    ${post.date?`<span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;background:#FEF9C3;color:#92400E">📅 ${post.date}</span>`:''}
+                  </div>
+                  ${post.allDetails&&post.allDetails.length?`
+                  <div style="font-size:11px;color:var(--text2);line-height:1.8;background:var(--beige);border-radius:8px;padding:8px 10px">
+                    ${post.allDetails.map(d=>`<div><span style="color:var(--text3);font-weight:700">${d.label}:</span> ${d.value}</div>`).join('')}
+                  </div>`:''}
                 </div>
 
                 <!-- Edit caption inline -->
                 <textarea rows="2" placeholder="Edit caption…" style="width:100%;font-size:11px;padding:6px 8px;border:1px solid var(--border);border-radius:8px;font-family:var(--font);resize:none;margin-bottom:8px;box-sizing:border-box"
                   oninput="_pubUpdateField('${post.id}','caption',this.value)">${post.caption||''}</textarea>
 
-                <!-- Schedule -->
-                <div style="display:flex;gap:6px;margin-bottom:10px">
-                  <input type="date" value="${post.scheduleDate||post.date||''}" style="flex:1;font-size:11px;padding:4px 6px;border:1px solid var(--border);border-radius:8px;font-family:var(--font)"
-                    oninput="_pubUpdateField('${post.id}','scheduleDate',this.value)">
-                  <input type="time" value="${post.scheduleTime||'09:00'}" style="flex:1;font-size:11px;padding:4px 6px;border:1px solid var(--border);border-radius:8px;font-family:var(--font)"
+                <!-- Time only - date comes from strategy -->
+                <div style="display:flex;gap:6px;margin-bottom:10px;align-items:center">
+                  <span style="font-size:11px;color:var(--text3)">Post at:</span>
+                  <input type="time" value="${post.scheduleTime||'09:00'}" style="font-size:11px;padding:4px 6px;border:1px solid var(--border);border-radius:8px;font-family:var(--font)"
                     oninput="_pubUpdateField('${post.id}','scheduleTime',this.value)">
                 </div>
 
