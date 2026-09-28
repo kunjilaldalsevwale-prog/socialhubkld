@@ -3,23 +3,25 @@
    Roles: admin | strategist | designer | member
    ============================================================ */
 
-const TEAM_USERS = {
-  anusha:  { id:'anusha',  name:'Anusha',   email:'anusha@kunjilal.com',  role:'admin',      avatar:'AN', color:'#DBEAFE', textColor:'#1D4ED8', permissions:['all'] },
-  anjani:  { id:'anjani',  name:'Anjani',   email:'anjani@kunjilal.com',  role:'admin',      avatar:'AJ', color:'#EDE9FE', textColor:'#5B21B6', permissions:['all'] },
-  tejasv:  { id:'tejasv',  name:'Tejasv',   email:'tejasv@kunjilal.com',  role:'admin',      avatar:'TJ', color:'#DCFCE7', textColor:'#065F46', permissions:['all'] },
-  ashish:  { id:'ashish',  name:'Ashish',   email:'ashish@kunjilal.com',  role:'member',     avatar:'AS', color:'#FEF9C3', textColor:'#92400E', permissions:['calendar','media','planner'] },
-  mukul:   { id:'mukul',   name:'Mukul',    email:'mukul@kunjilal.com',   role:'member',     avatar:'MK', color:'#FCE7F3', textColor:'#9D174D', permissions:['calendar','media','planner'] },
-  varshang:{ id:'varshang',name:'Varshang', email:'varshang@kunjilal.com',role:'strategist', avatar:'VS', color:'#FFF7ED', textColor:'#92400E', permissions:['calendar','media','planner'] },
-  vidhi:   { id:'vidhi',   name:'Vidhi',    email:'vidhi@kunjilal.com',   role:'designer',   avatar:'VI', color:'#F0FDF4', textColor:'#065F46', permissions:['calendar','media','planner'] },
-};
+const TEAM_USERS = {}; // populated from state.teamMembers
+
+// Bootstrap: always ensure at least one admin exists
+function _ensureBootstrapAdmin() {
+  if (!state.teamMembers || !state.teamMembers.length) {
+    // No team yet — add default bootstrap admin
+    const bootstrap = { id:'admin_bootstrap', name:'Admin', email:'admin@socialhub.com', role:'admin', avatar:'AD', color:'#DBEAFE', textColor:'#1D4ED8', permissions:['all'] };
+    if (!state.teamMembers) state.teamMembers = [];
+    state.teamMembers.push(bootstrap);
+    if (!state.teamPasswords) state.teamPasswords = {};
+    state.teamPasswords['admin_bootstrap'] = 'admin123';
+    saveState();
+  }
+}
 
 let currentUser = null;
 
 /* ── PASSWORDS ────────────────────────────────────────────── */
-const DEFAULT_PASSWORDS = {
-  anusha:'anusha123', anjani:'anjani123', tejasv:'tejasv123',
-  ashish:'ashish123', mukul:'mukul123', varshang:'varshang123', vidhi:'vidhi123',
-};
+const DEFAULT_PASSWORDS = {};
 
 function _getPassword(userId) {
   return (state.teamPasswords && state.teamPasswords[userId]) || DEFAULT_PASSWORDS[userId] || '123456';
@@ -34,6 +36,7 @@ function showLoginScreen() {
 }
 
 function _mergeStateTeam() {
+  _ensureBootstrapAdmin();
   if (state.teamMembers) {
     state.teamMembers.forEach(m => {
       if (!TEAM_USERS[m.id]) TEAM_USERS[m.id] = m;
@@ -66,7 +69,6 @@ function logout() {
 }
 
 function _enterApp() {
-  document.getElementById('loginScreen').style.display = 'none';
   document.getElementById('app').style.display = 'flex';
   _applyUserPermissions();
   _updateSidebarUser();
