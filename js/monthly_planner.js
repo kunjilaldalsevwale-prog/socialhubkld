@@ -66,9 +66,6 @@ function _renderStrategistView() {
   const topActs = document.getElementById('plannerTopActions');
   if (!content) return;
 
-  // Top actions
-  if (topActs) topActs.innerHTML = '';
-
   // Approval bar
   _renderStratApprovalBar(data);
 
