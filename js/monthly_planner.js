@@ -13,9 +13,10 @@ function renderMonthlyPlanner() {
   _renderPlannerMonth();
   const role = currentUser ? currentUser.role : 'admin';
   if (role === 'strategist') {
-    // hide top action buttons
     const t = document.getElementById('plannerTopActions');
-    if (t) t.innerHTML = '';
+    if (t) t.innerHTML = `
+      <button class="btn btn-ghost btn-sm" onclick="_showRefsPanel()">📌 Refs</button>
+      <button class="btn btn-primary btn-sm" onclick="_saveHot();showToast('✅ Saved!','success')">💾 Save</button>`;
     _renderStrategistView();
   } else if (role === 'designer') {
     const t = document.getElementById('plannerTopActions');
@@ -247,7 +248,8 @@ function _renderAdminView() {
   if (topActs) topActs.innerHTML = `
     <button class="btn ${_adminPlannerView==='strategy'?'btn-primary':'btn-ghost'} btn-sm" onclick="_adminPlannerView='strategy';renderMonthlyPlanner()">📊 Strategy</button>
     <button class="btn ${_adminPlannerView==='design'?'btn-primary':'btn-ghost'} btn-sm" onclick="_adminPlannerView='design';renderMonthlyPlanner()">🎨 Design</button>
-    <button class="btn ${_adminPlannerView==='refs'?'btn-primary':'btn-ghost'} btn-sm" onclick="_adminPlannerView='refs';renderMonthlyPlanner()">📌 Refs</button>`;
+    <button class="btn ${_adminPlannerView==='refs'?'btn-primary':'btn-ghost'} btn-sm" onclick="_adminPlannerView='refs';renderMonthlyPlanner()">📌 Refs</button>
+    <button class="btn btn-primary btn-sm" onclick="_saveHot();showToast('✅ Saved!','success')">💾 Save</button>`;
 
   if (_adminPlannerView === 'strategy') _renderStrategistView();
   else if (_adminPlannerView === 'design') _renderDesignerView();
