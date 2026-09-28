@@ -6,6 +6,17 @@
 const DB = {
   _key: 'socialhub_v2',
   defaults: {
+    publishingQueue: [],
+    references: [],
+    ideaFolders: [],
+    activityLog: [],
+    attachedDocs: [],
+    teamMembers: [],
+    teamPasswords: {},
+    teamPermissions: {},
+    monthlyPlans: {},
+    mediaLibrary: [],
+    mediaFolders: [],
     posts: [
       { id:1, title:'Summer sale launch reel', platform:'Instagram', date:'2026-05-08', time:'10:00', status:'scheduled', type:'Video / Reel', caption:'Summer is here! 🌞 Up to 40% off everything. Swipe → 👉 #SummerSale #Fashion', hashtags:'#SummerSale #Fashion', brief:'Upbeat reel with trending audio', assignee:'Priya Sharma', priority:'high', notes:'Use trending IG audio', platforms:['Instagram'], created:'2026-04-28' },
       { id:2, title:'Product teaser', platform:'Instagram', date:'2026-05-05', time:'09:00', status:'scheduled', type:'Image post', caption:'Something exciting is coming… 👀 #ComingSoon #NewCollection', hashtags:'#ComingSoon', brief:'Dark moody teaser image', assignee:'Arjun Mehta', priority:'normal', notes:'', platforms:['Instagram'], created:'2026-04-25' },
