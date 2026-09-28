@@ -82,9 +82,8 @@ function _renderStrategistView() {
   content.innerHTML = `<div id="hotContainer" style="width:100%;height:100%"></div>`;
 
   // Default data
-  const defaultHeaders = ['Date', 'Platform', 'Post Type', 'Caption', 'Hashtags', 'Reference Link', 'Notes', 'Status'];
-  const colHeaders = data.hotColHeaders || defaultHeaders;
-  const rawData    = data.hotData || Array.from({length:30}, ()=>new Array(colHeaders.length).fill(''));
+  const colHeaders = data.hotColHeaders || Array.from({length:8},(_,i)=>'Col '+(i+1));
+  const rawData    = data.hotData || Array.from({length:30},()=>new Array(8).fill(''));
 
   if (!_hotInstance) {
     _hotInstance = new Handsontable(document.getElementById('hotContainer'), {
