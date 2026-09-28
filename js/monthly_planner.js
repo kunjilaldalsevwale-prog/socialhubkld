@@ -570,10 +570,10 @@ function approveDesignByAdmin(postIndex, adminId, status) {
 
   // Check if all admins approved
   const admins = Object.values(TEAM_USERS).filter(u=>u.role==='admin').map(u=>u.id);
-  const allApproved = admins.length > 0 && admins.every(a => data.designAdminApprovals[postIndex][a] === 'approved');
-  const anyRejected = admins.some(a => data.designAdminApprovals[postIndex][a] === 'rejected');
+  const anyApproved = Object.values(data.designAdminApprovals[postIndex]).some(s => s === 'approved');
+  const anyRejected = Object.values(data.designAdminApprovals[postIndex]).some(s => s === 'rejected');
 
-  if (allApproved) data.designApprovals[postIndex] = 'approved';
+  if (anyApproved) data.designApprovals[postIndex] = 'approved';
   else if (anyRejected) data.designApprovals[postIndex] = 'rejected';
   else data.designApprovals[postIndex] = 'pending';
 
