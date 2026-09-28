@@ -11,10 +11,19 @@ let _hotInstance = null; // Handsontable instance
 
 function renderMonthlyPlanner() {
   _renderPlannerMonth();
-  const role = currentUser ? currentUser.role : 'member';
-  if (role === 'strategist') _renderStrategistView();
-  else if (role === 'designer') _renderDesignerView();
-  else _renderAdminView(); // admin / member
+  const role = currentUser ? currentUser.role : 'admin';
+  if (role === 'strategist') {
+    // hide top action buttons
+    const t = document.getElementById('plannerTopActions');
+    if (t) t.innerHTML = '';
+    _renderStrategistView();
+  } else if (role === 'designer') {
+    const t = document.getElementById('plannerTopActions');
+    if (t) t.innerHTML = `<button class="btn btn-ghost btn-sm" onclick="_showRefsPanel()">📌 References</button>`;
+    _renderDesignerView();
+  } else {
+    _renderAdminView();
+  }
 }
 
 function _renderPlannerMonth() {
@@ -242,7 +251,7 @@ function _renderDesignerView() {
 }
 
 /* ══════════════════════════════════════════════════════════
-   ADMIN VIEW — toggle between both
+   ADMIN VIEW — toggle between strategy, design, refs
 ══════════════════════════════════════════════════════════ */
 let _adminPlannerView = 'strategy';
 
@@ -254,32 +263,8 @@ function _renderAdminView() {
     <button class="btn ${_adminPlannerView==='refs'?'btn-primary':'btn-ghost'} btn-sm" onclick="_adminPlannerView='refs';renderMonthlyPlanner()">📌 Refs</button>`;
 
   if (_adminPlannerView === 'strategy') _renderStrategistView();
-  else if (_adminPlannerView === 'design') _renderAdminDesignView();
+  else if (_adminPlannerView === 'design') _renderDesignerView();
   else _showRefsPanel();
-}
-
-function _renderAdminDesignView() {
-  // Same as designer view but with approve/reject buttons
-  _renderDesignerView();
-  // After rendering, add approve buttons
-  setTimeout(() => {
-    const data = _getPlannerData();
-    const rows = (data.hotData||[]).filter(r=>r.some(c=>c&&c.toString().trim()));
-    rows.forEach((row, ri) => {
-      const upload    = (data.designUploads||{})[ri];
-      const dApproval = (data.designApprovals||{})[ri];
-      if (upload && !dApproval) {
-        const card = document.querySelector(`#design-post-${ri}`);
-        if (card) {
-          card.insertAdjacentHTML('beforeend', `
-            <div style="display:flex;gap:8px;margin-top:10px">
-              <button onclick="approveDesign(${ri},'approved')" style="padding:7px 18px;background:#ECFDF5;color:#065F46;border:1.5px solid #6EE7B7;border-radius:20px;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--font)">✅ Approve</button>
-              <button onclick="approveDesign(${ri},'rejected')" style="padding:7px 18px;background:#FEF2F2;color:#991B1B;border:1.5px solid #FCA5A5;border-radius:20px;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--font)">❌ Request changes</button>
-            </div>`);
-        }
-      }
-    });
-  }, 100);
 }
 
 /* ══════════════════════════════════════════════════════════
