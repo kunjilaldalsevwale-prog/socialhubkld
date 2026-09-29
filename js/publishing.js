@@ -171,9 +171,19 @@ async function _openInInstagram(postId) {
   // Show toast then open Instagram
   showToast('📥 Image downloading + caption copied! Opening Instagram…', 'success');
   
-  setTimeout(() => {
-    window.open('https://www.instagram.com/create/story/', '_blank');
-  }, 1000);
+  async function _openInInstagram(postId) {
+  const post = (state.publishingQueue||[]).find(p=>p.id===postId);
+  if (!post || !post.imageUrl) { showToast('No image found','error'); return; }
+
+  // Copy caption
+  if (post.caption) {
+    try {
+      await navigator.clipboard.writeText(post.caption + (post.hashtags ? '\n\n' + post.hashtags : ''));
+    } catch(e) {}
+  }
+
+  showToast('📋 Caption copied! Download image and open Instagram', 'success');
+  _showInstagramInstructions(post);
 }
 function _showInstagramInstructions(post) {
   document.getElementById('modalTitle').textContent = '📸 Post to Instagram';
