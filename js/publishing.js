@@ -158,31 +158,23 @@ async function _openInInstagram(postId) {
   if (post.caption) {
     try {
       await navigator.clipboard.writeText(post.caption + (post.hashtags ? '\n\n' + post.hashtags : ''));
-      showToast('📋 Caption copied! Opening Instagram…', 'success');
     } catch(e) {}
   }
 
-  // Download image first, then open Instagram
-  // On mobile this downloads the image and opens Instagram
-  const isPhone = /iPhone|iPad|Android/i.test(navigator.userAgent);
+  // Download image automatically
+  const a = document.createElement('a');
+  a.href = post.imageUrl;
+  a.download = post.imageName || 'post.jpg';
+  a.target = '_blank';
+  a.click();
 
-  if (isPhone) {
-    // Open image in new tab so user can save it, then open Instagram
-    const img = window.open(post.imageUrl, '_blank');
-    setTimeout(() => {
-      // Try Instagram URL scheme
-      window.location.href = 'instagram://camera';
-      // Fallback to Instagram web
-      setTimeout(() => {
-        window.open('https://www.instagram.com', '_blank');
-      }, 1500);
-    }, 500);
-  } else {
-    // Desktop: show instructions
-    _showInstagramInstructions(post);
-  }
+  // Show toast then open Instagram
+  showToast('📥 Image downloading + caption copied! Opening Instagram…', 'success');
+  
+  setTimeout(() => {
+    window.open('https://www.instagram.com/create/story/', '_blank');
+  }, 1000);
 }
-
 function _showInstagramInstructions(post) {
   document.getElementById('modalTitle').textContent = '📸 Post to Instagram';
   document.getElementById('modalBody').innerHTML = `
