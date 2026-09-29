@@ -84,11 +84,14 @@ function _renderPubCard(post, isPublished) {
         `}
 
         <!-- Actions -->
-        <div style="display:flex;gap:8px">
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
           ${!isPublished?`
-            <button onclick="_pubMarkPublished('${post.id}')" class="btn btn-primary" style="flex:1">✅ Mark as published</button>
-            <a href="${post.imageUrl||'#'}" download target="_blank" class="btn btn-ghost" style="text-decoration:none">⬇</a>
-            <button onclick="_pubRemoveCard('${post.id}')" class="btn btn-ghost" style="color:var(--coral)">🗑</button>
+            <button onclick="_openInInstagram('${post.id}')" class="btn btn-primary" style="flex:1;background:linear-gradient(135deg,#E1306C,#833AB4);border:none">
+              📸 Open in Instagram
+            </button>
+            <button onclick="_pubMarkPublished('${post.id}')" class="btn btn-ghost btn-sm">✅ Mark posted</button>
+            <a href="${post.imageUrl||'#'}" download target="_blank" class="btn btn-ghost btn-sm" style="text-decoration:none">⬇</a>
+            <button onclick="_pubRemoveCard('${post.id}')" class="btn btn-ghost btn-sm" style="color:var(--coral)">🗑</button>
           ` : `
             <button onclick="_pubMarkPublished('${post.id}')" class="btn btn-ghost btn-sm" style="flex:1">↩ Unmark</button>
             <button onclick="_pubRemoveCard('${post.id}')" class="btn btn-ghost btn-sm" style="color:var(--coral)">🗑</button>
@@ -142,4 +145,65 @@ function _openPubLightbox(url, name) {
       ? `<video src="${url}" controls autoplay style="max-width:90vw;max-height:90vh;border-radius:12px"></video>`
       : `<img src="${url}" style="max-width:90vw;max-height:90vh;object-fit:contain;border-radius:12px">`}`;
   document.body.appendChild(lb);
+}
+
+/* ══════════════════════════════════════════════════════════
+   OPEN IN INSTAGRAM
+══════════════════════════════════════════════════════════ */
+async function _openInInstagram(postId) {
+  const post = (state.publishingQueue||[]).find(p=>p.id===postId);
+  if (!post || !post.imageUrl) { showToast('No image found','error'); return; }
+
+  // Copy caption to clipboard
+  if (post.caption) {
+    try {
+      await navigator.clipboard.writeText(post.caption + (post.hashtags ? '\n\n' + post.hashtags : ''));
+      showToast('📋 Caption copied! Opening Instagram…', 'success');
+    } catch(e) {}
+  }
+
+  // Download image first, then open Instagram
+  // On mobile this downloads the image and opens Instagram
+  const isPhone = /iPhone|iPad|Android/i.test(navigator.userAgent);
+
+  if (isPhone) {
+    // Open image in new tab so user can save it, then open Instagram
+    const img = window.open(post.imageUrl, '_blank');
+    setTimeout(() => {
+      // Try Instagram URL scheme
+      window.location.href = 'instagram://camera';
+      // Fallback to Instagram web
+      setTimeout(() => {
+        window.open('https://www.instagram.com', '_blank');
+      }, 1500);
+    }, 500);
+  } else {
+    // Desktop: show instructions
+    _showInstagramInstructions(post);
+  }
+}
+
+function _showInstagramInstructions(post) {
+  document.getElementById('modalTitle').textContent = '📸 Post to Instagram';
+  document.getElementById('modalBody').innerHTML = `
+    <div style="text-align:center;margin-bottom:20px">
+      ${post.imageUrl?`<img src="${post.imageUrl}" style="max-height:200px;max-width:100%;border-radius:12px;object-fit:contain;background:#000">`:'' }
+    </div>
+    <div style="background:var(--beige);border-radius:14px;padding:16px;margin-bottom:16px">
+      <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;margin-bottom:8px">Caption (already copied to clipboard ✅)</div>
+      <div style="font-size:13px;color:var(--text);line-height:1.7;white-space:pre-wrap">${post.caption||''}${post.hashtags?'\n\n'+post.hashtags:''}</div>
+    </div>
+    <div style="font-size:13px;color:var(--text2);line-height:1.8">
+      <div style="font-weight:700;margin-bottom:8px">Steps:</div>
+      <div>1️⃣ <a href="${post.imageUrl}" download target="_blank" style="color:var(--brand);font-weight:700">Download the image</a></div>
+      <div>2️⃣ Open Instagram → + New Post</div>
+      <div>3️⃣ Select the downloaded image</div>
+      <div>4️⃣ Paste caption (already copied ✅)</div>
+      <div>5️⃣ Add music, tags, then Post</div>
+    </div>`;
+  document.getElementById('modalFooter').innerHTML = `
+    <a href="${post.imageUrl}" download target="_blank" class="btn btn-primary" style="text-decoration:none">⬇ Download image</a>
+    <a href="https://www.instagram.com" target="_blank" class="btn btn-ghost" style="text-decoration:none">Open Instagram →</a>
+    <button class="btn btn-ghost" onclick="closeModal()">Close</button>`;
+  document.getElementById('modalOverlay').classList.add('open');
 }
